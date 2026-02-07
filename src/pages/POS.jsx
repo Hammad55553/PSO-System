@@ -242,7 +242,7 @@ const POS = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 350px', gap: '2px', padding: '2px', overflow: 'hidden' }}>
 
                 {/* LEFT SIDEBAR: CATEGORIES & QUICK ACCESS */}
-                <div style={{ background: 'white', display: 'flex', flexDirection: 'column', gap: '1px', background: '#e2e8f0' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: '#e2e8f0' }}>
                     <div style={{ background: '#334155', color: 'white', padding: '12px 15px', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <LayoutGrid size={14} /> CATEGORIES
                     </div>
