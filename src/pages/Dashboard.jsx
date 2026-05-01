@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     TrendingUp,
@@ -14,10 +14,12 @@ import {
     ChevronRight,
     Search,
     Calendar,
-    ClipboardList
+    ClipboardList,
+    Trash2
 } from 'lucide-react';
 
 const Dashboard = () => {
+    const dispatch = useDispatch();
     const { history } = useSelector(state => state.sales);
     const { items } = useSelector(state => state.inventory);
     const { activeShift } = useSelector(state => state.shift);
@@ -308,7 +310,36 @@ const Dashboard = () => {
                                                 {sale.paymentMethod.toUpperCase()}
                                             </span>
                                         </td>
-                                        <td style={{ padding: '15px', textAlign: 'right', borderRadius: '0 12px 12px 0', fontWeight: 950, fontSize: '1rem' }}>Rs {sale.total.toLocaleString()}</td>
+                                        <td style={{ padding: '15px', textAlign: 'right', borderRadius: '0 12px 12px 0', fontWeight: 950, fontSize: '1rem' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '15px' }}>
+                                                Rs {sale.total.toLocaleString()}
+                                                {isAdmin && (
+                                                    <button 
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            if (window.confirm('Delete this transaction permanently?')) {
+                                                                const { deleteSale } = await import('../store/slices/salesSlice');
+                                                                const { db } = await import('../firebase');
+                                                                const { doc, deleteDoc } = await import('firebase/firestore');
+                                                                
+                                                                dispatch(deleteSale(sale.id));
+                                                                if (navigator.onLine) {
+                                                                    try {
+                                                                        await deleteDoc(doc(db, "sales", sale.id));
+                                                                        toast.success('Transaction Purged');
+                                                                    } catch (err) { console.error(err); }
+                                                                }
+                                                            }
+                                                        }}
+                                                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                        onMouseOver={e => e.currentTarget.style.background = '#fee2e2'}
+                                                        onMouseOut={e => e.currentTarget.style.background = 'none'}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
                                     </motion.tr>
                                 ))}
                             </tbody>
