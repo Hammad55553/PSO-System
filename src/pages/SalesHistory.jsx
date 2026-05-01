@@ -132,13 +132,12 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', borderBottom: '2px solid #e2e8f0', fontSize: '0.75rem', color: '#64748b' }}>
                             <tr>
-                                <th style={{ padding: '15px 20px' }}>DOCUMENT ID</th>
-                                <th style={{ padding: '15px 20px' }}>ACCOUNT</th>
+                                <th style={{ padding: '15px 20px' }}>ID</th>
+                                <th style={{ padding: '15px 20px' }}>CLIENT / ACCOUNT</th>
                                 <th style={{ padding: '15px 20px' }}>TIMESTAMP</th>
-                                <th style={{ padding: '15px 20px' }}>METHOD</th>
-                                <th style={{ padding: '15px 20px' }}>REVENUE</th>
-                                <th style={{ padding: '15px 20px' }}>STATUS</th>
-                                <th style={{ padding: '15px 20px', textAlign: 'right' }}>DETAILS</th>
+                                <th style={{ padding: '15px 20px' }}>OPERATOR</th>
+                                <th style={{ padding: '15px 20px', textAlign: 'right' }}>REVENUE</th>
+                                <th style={{ padding: '15px 20px', textAlign: 'center' }}>STATUS</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -148,8 +147,10 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                                     onClick={() => setSelectedSale(sale)}
                                     style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: selectedSale?.id === sale.id ? '#f0f9ff' : 'white' }}
                                 >
-                                    <td style={{ padding: '15px 20px', fontWeight: 800, color: '#1e3a8a' }}>{sale.id}</td>
-                                    <td style={{ padding: '15px 20px', fontWeight: 700 }}>{sale.customerName || 'Walk-in'}</td>
+                                    <td style={{ padding: '15px 20px', fontWeight: 900, color: '#10b981', fontSize: '0.7rem' }}>
+                                        #{sale.id.toString().toUpperCase()}
+                                    </td>
+                                    <td style={{ padding: '15px 20px', fontWeight: 700 }}>{sale.customerName || '—'}</td>
                                     <td style={{ padding: '15px 20px', fontSize: '0.8rem', color: '#64748b' }}>
                                         {new Date(sale.date).toLocaleDateString()} {new Date(sale.date).toLocaleTimeString()}
                                     </td>
@@ -193,7 +194,7 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                         <div style={{ textAlign: 'center', marginBottom: '30px', paddingBottom: '20px', borderBottom: '2px solid #f1f5f9' }}>
                             <div style={{ width: '50px', height: '50px', background: '#1e293b', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', fontSize: '1.2rem', fontWeight: 900 }}>V</div>
                             <h2 style={{ fontSize: '1.1rem', fontWeight: 900 }}>BILAL VET CLINIC</h2>
-                            <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>INVOICE DOCUMENT: #{selectedSale.id}</p>
+                            <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>INVOICE NUMBER: #{selectedSale.id}</p>
                         </div>
 
                         <div style={{ marginBottom: '25px' }}>

@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+dist_desktop
+build
+out
+release

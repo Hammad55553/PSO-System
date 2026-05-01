@@ -48,58 +48,94 @@ body {
 }
 
 .desktop-sidebar {
-  width: 200px;
-  background: var(--sidebar-bg);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  box-shadow: 2px 0 5px rgba(0,0,0,0.05);
-  z-index: 50;
-}
-
-.brand-section {
-  padding: 20px 15px;
-  background: var(--primary);
+  width: 250px;
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
   color: white;
   display: flex;
   flex-direction: column;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 10px 0 30px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.brand-section {
+  padding: 25px 20px;
+  display: flex;
+  flex-direction: column;
   gap: 2px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .brand-name {
-  font-size: 1.1rem;
-  font-weight: 700;
-  letter-spacing: -0.2px;
+  font-size: 1.3rem;
+  font-weight: 950;
+  letter-spacing: -0.5px;
+  background: linear-gradient(45deg, #818cf8, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .nav-group {
-  padding: 10px 0;
+  flex: 1;
+  padding: 15px 12px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-label {
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 15px 0 8px 10px;
 }
 
 .nav-link {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 15px 5px;
-  color: var(--sidebar-text);
+  gap: 12px;
+  padding: 10px 15px;
+  color: #94a3b8;
   text-decoration: none;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-bottom: 1px solid #f1f5f9;
-  transition: all 0.2s;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 10px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
 }
 
 .nav-link:hover {
-  background: #f1f5f9;
+  background: rgba(255, 255, 255, 0.03);
+  color: white;
+  transform: translateX(4px);
 }
 
 .nav-link.active {
-  background: var(--sidebar-active);
-  color: var(--primary);
-  border-left: 4px solid var(--primary);
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.15) 0%, rgba(99, 102, 241, 0) 100%);
+  color: #818cf8;
+}
+
+.nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 20%;
+  height: 60%;
+  width: 3px;
+  background: #6366f1;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 10px #6366f1;
+}
+
+.nav-link svg {
+  transition: transform 0.2s;
+}
+
+.nav-link:hover svg {
+  transform: scale(1.1);
 }
 
 .nav-link svg {
@@ -127,6 +163,8 @@ body {
 
 .view-container {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow: hidden; /* Each view handles its own scroll */
   padding: 0;
 }
@@ -265,25 +303,49 @@ body {
   display: none;
 }
 
+@page {
+  size: 80mm auto; /* Specific to thermal printers */
+  margin: 0;
+}
+
 @media print {
-  body * {
-    visibility: hidden;
+  body {
+    background: white !important;
   }
-  .print-only, .receipt-print, .receipt-print * {
-    visibility: visible;
+  
+  .no-print, header, footer, .app-header, .desktop-sidebar {
+    display: none !important;
   }
-  .receipt-print {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 80mm !important;
+
+  .app-container, .main-area, .view-container {
     padding: 0 !important;
     margin: 0 !important;
+    height: auto !important;
+    display: block !important;
+    overflow: visible !important;
   }
+
   .print-only {
     display: block !important;
   }
-  .no-print { display: none !important; }
+
+  .receipt-thermal-terminal {
+    width: 80mm !important;
+    visibility: visible !important;
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+  
+  .receipt-thermal-terminal, .receipt-thermal-terminal * {
+    visibility: visible !important;
+    color: black !important;
+  }
 }
 
 @keyframes spin {
@@ -292,4 +354,14 @@ body {
 }
 .animate-spin {
   animation: spin 1s linear infinite;
+}
+
+/* Hide Spinners (Arrows) in Number Inputs */
+.qty-input-no-spin::-webkit-inner-spin-button,
+.qty-input-no-spin::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.qty-input-no-spin {
+  -moz-appearance: textfield;
 }

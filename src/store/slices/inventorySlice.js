@@ -14,7 +14,14 @@ const inventorySlice = createSlice({
             const { id, quantity, mode } = action.payload;
             const item = state.items.find(i => i.id === id);
             if (item) {
-                if (mode === 'add') item.stock += quantity;
+                if (mode === 'add') {
+                    item.stock += quantity;
+                    if (!item.restockHistory) item.restockHistory = [];
+                    item.restockHistory.push({
+                        date: new Date().toISOString(),
+                        quantity: quantity
+                    });
+                }
                 else if (mode === 'remove') item.stock -= quantity;
             }
             localStorage.setItem('bilal_vet_inventory', JSON.stringify(state.items));

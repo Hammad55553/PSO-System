@@ -1,17 +1,20 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useSelector } from 'react-redux';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     TrendingUp,
     Package,
     AlertCircle,
     ShoppingCart,
     ArrowUpRight,
-    ArrowDownRight,
-    ClipboardList,
-    Wallet,
     Users,
-    Box,
-    BarChart3
+    BarChart3,
+    DollarSign,
+    CreditCard,
+    ChevronRight,
+    Search,
+    Calendar,
+    ClipboardList
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -19,203 +22,341 @@ const Dashboard = () => {
     const { items } = useSelector(state => state.inventory);
     const { activeShift } = useSelector(state => state.shift);
     const customers = useSelector(state => state.customers.list);
+    const user = useSelector(state => state.auth.user);
+    const isAdmin = user?.role === 'admin';
 
-    // Advanced Metrics
-    const totalSales = history.reduce((acc, sale) => acc + sale.total, 0);
-    const totalReceivables = customers.reduce((acc, c) => acc + c.balance, 0);
-    const lowStockItems = items.filter(item => item.stock <= 10);
-    const recentSales = history.slice(0, 5);
+    // 1. DATA PROCESSING FOR CHARTS
+    const filteredHistory = useMemo(() => 
+        isAdmin ? history : history.filter(s => s.sellerName === user?.name || s.uid === user?.uid)
+    , [history, isAdmin, user]);
 
-    // Today's Stats
-    const today = new Date().toLocaleDateString();
-    const todaySales = history.filter(s => new Date(s.date).toLocaleDateString() === today);
-    const todayRevenue = todaySales.reduce((acc, s) => acc + s.total, 0);
+    const totalSales = useMemo(() => filteredHistory.reduce((acc, s) => acc + s.total, 0), [filteredHistory]);
+    const totalReceivables = useMemo(() => customers.reduce((acc, c) => acc + (c.balance || 0), 0), [customers]);
+    const today = new Date().toISOString().split('T')[0];
+    const todaySales = useMemo(() => filteredHistory.filter(s => new Date(s.date).toISOString().split('T')[0] === today), [filteredHistory, today]);
+    const todayRevenue = useMemo(() => todaySales.reduce((acc, s) => acc + s.total, 0), [todaySales]);
 
-    // Top Selling Products Calculation
-    const productSalesCount = {};
-    history.forEach(sale => {
-        sale.items.forEach(item => {
-            productSalesCount[item.name] = (productSalesCount[item.name] || 0) + item.quantity;
+    // Revenue Trend (Last 7 Days)
+    const revenueTrend = useMemo(() => {
+        const days = [...Array(7)].map((_, i) => {
+            const d = new Date();
+            d.setDate(d.getDate() - i);
+            return d.toISOString().split('T')[0];
+        }).reverse();
+
+        return days.map(day => {
+            const daySales = filteredHistory.filter(s => new Date(s.date).toISOString().split('T')[0] === day);
+            return {
+                day: new Date(day).toLocaleDateString('en-US', { weekday: 'short' }),
+                revenue: daySales.reduce((sum, s) => sum + s.total, 0)
+            };
         });
-    });
-    const topProducts = Object.entries(productSalesCount)
-        .sort(([, a], [, b]) => b - a)
-        .slice(0, 5);
+    }, [filteredHistory]);
+
+    // Payment Distribution
+    const paymentStats = useMemo(() => {
+        const stats = { Cash: 0, Credit: 0, Card: 0 };
+        filteredHistory.forEach(s => {
+            if (stats[s.paymentMethod] !== undefined) stats[s.paymentMethod] += s.total;
+            else stats['Cash'] += s.total; // Default/Fallback
+        });
+        const total = Object.values(stats).reduce((a, b) => a + b, 0) || 1;
+        return Object.entries(stats).map(([label, value]) => ({
+            label,
+            value,
+            percent: (value / total) * 100
+        }));
+    }, [filteredHistory]);
+
+    // Profit Calculation Logic
+    const calculateProfit = (salesList) => {
+        if (!salesList) return 0;
+        return salesList.reduce((acc, sale) => {
+            const saleProfit = (sale.items || []).reduce((sum, item) => {
+                const buyPrice = item.buyPrice || 0;
+                return sum + ((item.price - buyPrice) * item.quantity);
+            }, 0);
+            return acc + (saleProfit - (sale.discount || 0));
+        }, 0);
+    };
+
+    const totalProfit = isAdmin ? calculateProfit(history) : 0;
+    const maxRevenue = Math.max(...revenueTrend.map(d => d.revenue)) || 1000;
 
     return (
-        <div style={{ height: '100%', overflowY: 'auto', paddingBottom: '40px' }}>
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div style={{ height: '100%', overflowY: 'auto', padding: '25px', backgroundColor: '#f4f7fa', color: '#1e293b' }}>
+            
+            {/* 1. TOP PREMIUM HEADER */}
+            <motion.header 
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}
+            >
                 <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-main)', letterSpacing: '-0.5px' }}>Management Dashboard</h2>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Daily operations summary and financial health indicators.</p>
+                    <h2 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#0f172a', letterSpacing: '-0.8px' }}>
+                        Command Terminal <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 800, verticalAlign: 'middle', background: '#ecfdf5', padding: '4px 10px', borderRadius: '20px', marginLeft: '10px' }}>PRO EDITION</span>
+                    </h2>
+                    <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600, marginTop: '5px' }}>
+                        Welcome back, <span style={{ color: '#0f172a', fontWeight: 900 }}>{user?.name || 'Administrator'}</span>
+                    </p>
                 </div>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                    <div style={{ background: 'white', padding: '8px 15px', borderRadius: '4px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: activeShift ? 'var(--accent-green)' : 'var(--accent-red)' }}></div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>{activeShift ? 'Terminal #01 Active' : 'Terminal Locked'}</span>
+                <div style={{ display: 'flex', gap: '15px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'white', padding: '10px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+                        <div style={{ width: '10px', height: '100%', background: activeShift ? '#10b981' : '#f59e0b', borderRadius: '5px', height: '10px' }}></div>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{activeShift ? 'LIVE OPERATIONS' : 'TERMINAL IDLE'}</span>
                     </div>
                 </div>
-            </header>
+            </motion.header>
 
-            {/* Primary KPI Grid (Candela Style) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '15px', marginBottom: '25px' }}>
-
-                <div style={{ background: 'white', padding: '20px', borderRadius: '4px', border: '1px solid var(--border)', borderTop: '4px solid var(--primary)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)' }}>GROSS REVENUE (ALL TIME)</span>
-                        <TrendingUp size={16} color="var(--primary)" />
-                    </div>
-                    <h3 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Rs {totalSales.toLocaleString()}</h3>
-                    <p style={{ fontSize: '0.7rem', marginTop: '5px', color: 'var(--accent-green)', fontWeight: 700 }}>Total Invoiced Volume</p>
-                </div>
-
-                <div style={{ background: 'white', padding: '20px', borderRadius: '4px', border: '1px solid var(--border)', borderTop: '4px solid #f97316' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)' }}>TOTAL RECEIVABLES (KHATTA)</span>
-                        <Users size={16} color="#f97316" />
-                    </div>
-                    <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f97316' }}>Rs {totalReceivables.toLocaleString()}</h3>
-                    <p style={{ fontSize: '0.7rem', marginTop: '5px', color: 'var(--text-muted)', fontWeight: 700 }}>Pending Payments from Clients</p>
-                </div>
-
-                <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '4px', border: '1px solid var(--border)', borderTop: '4px solid var(--accent-green)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)' }}>TODAY'S SALES</span>
-                        <BarChart3 size={16} color="var(--accent-green)" />
-                    </div>
-                    <h3 style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--accent-green)' }}>Rs {todayRevenue.toLocaleString()}</h3>
-                    <p style={{ fontSize: '0.7rem', marginTop: '5px', color: 'var(--text-muted)', fontWeight: 700 }}>{todaySales.length} Transactions Created Today</p>
-                </div>
-
-                <div style={{ background: activeShift ? '#ecfdf5' : '#fff1f1', padding: '20px', borderRadius: '4px', border: '1px solid var(--border)', borderTop: activeShift ? '4px solid var(--accent-green)' : '4px solid var(--accent-red)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)' }}>CASH IN HAND (SHIFT)</span>
-                        <Wallet size={16} color={activeShift ? 'var(--accent-green)' : 'var(--accent-red)'} />
-                    </div>
-                    <h3 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Rs {(activeShift?.openingCash + activeShift?.sales - activeShift?.expenses || 0).toLocaleString()}</h3>
-                    <p style={{ fontSize: '0.7rem', marginTop: '5px', color: 'var(--text-muted)', fontWeight: 700 }}>Net Cash in Active Drawer</p>
-                </div>
+            {/* 2. STATS OVERVIEW CARDS */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+                {[
+                    { label: isAdmin ? 'TOTAL CLINIC REVENUE' : 'MY REVENUE', value: `Rs ${totalSales.toLocaleString()}`, color: '#6366f1', icon: <DollarSign size={20} />, sub: isAdmin ? 'Global gross billing' : 'Total cumulative sales' },
+                    ...(isAdmin ? [{ label: 'NET CLINIC PROFIT', value: `Rs ${totalProfit.toLocaleString()}`, color: '#059669', icon: <TrendingUp size={20} />, sub: 'After cost & discounts' }] : []),
+                    { label: "TODAY'S TURNOVER", value: `Rs ${todayRevenue.toLocaleString()}`, color: '#10b981', icon: <BarChart3 size={20} />, sub: `${todaySales.length} Transactions completed` },
+                    ...(isAdmin ? [{ label: 'TOTAL TAX COLLECTED', value: `Rs ${filteredHistory.reduce((s, x) => s + (x.tax || 0), 0).toLocaleString()}`, color: '#06b6d4', icon: <DollarSign size={20} />, sub: 'GST/Tax accumulation' }] : []),
+                    { label: 'ACTIVE UDHAAR', value: `Rs ${totalReceivables.toLocaleString()}`, color: '#f59e0b', icon: <Users size={20} />, sub: 'Outstanding patient balance' },
+                    { label: 'INVENTORY HEALTH', value: `${items.length} SKUs`, color: '#ec4899', icon: <Package size={20} />, sub: `${items.filter(i => i.stock < 10).length} Items low stock` }
+                ].map((stat, i) => (
+                    <motion.div 
+                        key={i}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: i * 0.05 }}
+                        whileHover={{ y: -5 }}
+                        style={{ background: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)', position: 'relative', overflow: 'hidden' }}
+                    >
+                        <div style={{ position: 'absolute', right: '-10px', top: '-10px', opacity: 0.1, color: stat.color }}>{stat.icon}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                            <div style={{ background: `${stat.color}15`, padding: '8px', borderRadius: '10px' }}>{React.cloneElement(stat.icon, { color: stat.color, size: 18 })}</div>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</span>
+                        </div>
+                        <h3 style={{ fontSize: '1.65rem', fontWeight: 950, color: '#0f172a' }}>{stat.value}</h3>
+                        <p style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '5px', fontWeight: 700 }}>{stat.sub}</p>
+                    </motion.div>
+                ))}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '20px' }}>
-
-                {/* Left Side: Recent Activity & Top Selling */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-                    {/* Recent Invoices */}
-                    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '0.85rem', background: '#f8fafc', display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Recent Terminal Invoices</span>
-                            <a href="/history" style={{ fontSize: '0.7rem', color: 'var(--primary)', textDecoration: 'none' }}>View Full History →</a>
+            {/* 3. CHARTING SECTION */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '25px', marginBottom: '30px' }}>
+                
+                {/* REVENUE BAR CHART */}
+                <motion.div 
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    style={{ background: 'white', borderRadius: '24px', padding: '30px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', position: 'relative' }}
+                >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+                        <div>
+                            <h4 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <TrendingUp size={20} color="#6366f1" /> Revenue Volatility Trend
+                            </h4>
+                            <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Interactive performance monitoring for last 7 days</p>
                         </div>
-                        <table className="erp-table">
-                            <thead>
-                                <tr>
-                                    <th>Inv #</th>
-                                    <th>Customer</th>
-                                    <th>Method</th>
-                                    <th>Value</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
+                        <div style={{ background: '#f8fafc', padding: '8px 15px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900, color: '#6366f1', border: '1px solid #e2e8f0' }}>7-DAY PULSE</div>
+                    </div>
+
+                    <div style={{ height: '240px', display: 'flex', alignItems: 'flex-end', gap: '20px', paddingBottom: '30px', position: 'relative' }}>
+                        {/* Grid Lines */}
+                        {[0, 1, 2, 3].map((_, i) => (
+                            <div key={i} style={{ position: 'absolute', bottom: `${(i + 1) * 25}%`, left: 0, right: 0, borderTop: '1px dashed #f1f5f9', zIndex: 0 }}></div>
+                        ))}
+
+                        {revenueTrend.map((data, i) => {
+                            const isToday = i === 6;
+                            return (
+                                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: '15px', position: 'relative', zIndex: 1 }}>
+                                    <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', height: '100%', alignItems: 'flex-end' }}>
+                                        <motion.div 
+                                            initial={{ height: 0 }}
+                                            animate={{ height: `${(data.revenue / maxRevenue) * 100}%` }}
+                                            transition={{ duration: 1, delay: i * 0.1, ease: "circOut" }}
+                                            whileHover={{ scaleX: 1.1, filter: 'brightness(1.1)' }}
+                                            style={{ 
+                                                width: '65%', 
+                                                maxWidth: '50px',
+                                                background: isToday 
+                                                    ? 'linear-gradient(180deg, #10b981 0%, #059669 100%)' 
+                                                    : 'linear-gradient(180deg, #6366f1 0%, #4f46e5 100%)', 
+                                                borderRadius: '10px 10px 6px 6px',
+                                                boxShadow: isToday 
+                                                    ? '0 10px 15px -3px rgba(16, 185, 129, 0.3)' 
+                                                    : '0 10px 15px -3px rgba(99, 102, 241, 0.2)',
+                                                position: 'relative',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {/* Tooltip on Hover */}
+                                            <motion.div 
+                                                initial={{ opacity: 0, y: 10 }}
+                                                whileHover={{ opacity: 1, y: -5 }}
+                                                style={{ 
+                                                    position: 'absolute', 
+                                                    top: '-45px', 
+                                                    left: '50%', 
+                                                    transform: 'translateX(-50%)', 
+                                                    background: '#1e293b', 
+                                                    color: 'white', 
+                                                    padding: '6px 12px', 
+                                                    borderRadius: '8px', 
+                                                    fontSize: '0.75rem', 
+                                                    fontWeight: 900,
+                                                    whiteSpace: 'nowrap',
+                                                    pointerEvents: 'none',
+                                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)',
+                                                    zIndex: 10
+                                                }}
+                                            >
+                                                Rs {data.revenue.toLocaleString()}
+                                                <div style={{ position: 'absolute', bottom: '-4px', left: '50%', transform: 'translateX(-50%)', width: '8px', height: '8px', background: '#1e293b', transform: 'translateX(-50%) rotate(45deg)' }}></div>
+                                            </motion.div>
+
+                                            {/* Glow effect for today */}
+                                            {isToday && (
+                                                <div style={{ position: 'absolute', inset: 0, background: 'inherit', borderRadius: 'inherit', filter: 'blur(10px)', opacity: 0.4, zIndex: -1 }}></div>
+                                            )}
+                                        </motion.div>
+                                    </div>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 900, color: isToday ? '#10b981' : '#64748b', textTransform: 'uppercase' }}>{data.day}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </motion.div>
+
+                {/* PAYMENT DISTRIBUTION DONUT */}
+                <motion.div 
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    style={{ background: 'white', borderRadius: '24px', padding: '30px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}
+                >
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', marginBottom: '5px' }}>Settlement Distribution</h4>
+                    <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginBottom: '30px' }}>Breakdown of transaction channels</p>
+
+                    <div style={{ position: 'relative', width: '180px', height: '180px', margin: '0 auto 30px' }}>
+                        <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                            {paymentStats.map((stat, i) => {
+                                let offset = 0;
+                                for(let j=0; j<i; j++) offset += paymentStats[j].percent;
+                                return (
+                                    <motion.circle
+                                        key={i}
+                                        cx="50" cy="50" r="40"
+                                        fill="transparent"
+                                        stroke={stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : '#6366f1'}
+                                        strokeWidth="10"
+                                        strokeDasharray={`${stat.percent} 100`}
+                                        strokeDashoffset={-offset}
+                                        initial={{ pathLength: 0 }}
+                                        animate={{ pathLength: 1 }}
+                                        transition={{ duration: 1.5, ease: "easeOut" }}
+                                    />
+                                );
+                            })}
+                        </svg>
+                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: '1.5rem', fontWeight: 950, color: '#1e293b' }}>{filteredHistory.length}</span>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748b' }}>TOTAL TX</span>
+                        </div>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {paymentStats.map((stat, i) => (
+                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : '#6366f1' }}></div>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>{stat.label} Settlement</span>
+                                </div>
+                                <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#64748b' }}>{stat.percent.toFixed(0)}%</span>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
+            </div>
+
+            {/* 4. MODULAR FEED SECTION */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 350px', gap: '25px' }}>
+                
+                {/* RECENT SETTLEMENTS */}
+                <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '24px', overflow: 'hidden' }}>
+                    <div style={{ padding: '20px 25px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h5 style={{ fontWeight: 950, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <ClipboardList size={20} color="#6366f1" /> RECENT SETTLEMENTS
+                        </h5>
+                        <button style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            VIEW ALL <ChevronRight size={14} />
+                        </button>
+                    </div>
+                    <div style={{ padding: '10px' }}>
+                        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
                             <tbody>
-                                {recentSales.map(sale => (
-                                    <tr key={sale.id}>
-                                        <td style={{ fontWeight: 800, color: 'var(--primary)', fontSize: '0.75rem' }}>{sale.id}</td>
-                                        <td style={{ fontSize: '0.8rem' }}>{sale.customerName}</td>
-                                        <td><span style={{ fontSize: '0.7rem', fontWeight: 700 }}>{sale.paymentMethod}</span></td>
-                                        <td style={{ fontWeight: 800, fontSize: '0.85rem' }}>Rs {sale.total.toLocaleString()}</td>
-                                        <td><span className={`badge ${sale.status === 'Paid' ? 'badge-green' : 'badge-red'}`}>{sale.status}</span></td>
-                                    </tr>
+                                {filteredHistory.slice(0, 6).map((sale, i) => (
+                                    <motion.tr 
+                                        key={sale.id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: i * 0.05 }}
+                                        style={{ background: '#fcfdfe' }}
+                                    >
+                                        <td style={{ padding: '15px', borderRadius: '12px 0 0 12px', fontWeight: 800, fontSize: '0.85rem', color: '#6366f1' }}>#{sale.id}</td>
+                                        <td style={{ padding: '15px' }}>
+                                            <div style={{ fontWeight: 900, fontSize: '0.85rem' }}>{sale.customerName}</div>
+                                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>{new Date(sale.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                        </td>
+                                        <td style={{ padding: '15px' }}>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 900, background: sale.paymentMethod === 'Cash' ? '#ecfdf5' : '#fff7ed', color: sale.paymentMethod === 'Cash' ? '#059669' : '#c2410c', padding: '4px 10px', borderRadius: '8px' }}>
+                                                {sale.paymentMethod.toUpperCase()}
+                                            </span>
+                                        </td>
+                                        <td style={{ padding: '15px', textAlign: 'right', borderRadius: '0 12px 12px 0', fontWeight: 950, fontSize: '1rem' }}>Rs {sale.total.toLocaleString()}</td>
+                                    </motion.tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
+                </div>
 
-                    {/* Today's Fast Moving Items */}
-                    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '0.85rem', background: '#f8fafc' }}>Top Selling Products (Quantity Based)</div>
-                        <div style={{ padding: '15px' }}>
-                            {topProducts.length === 0 ? (
-                                <p style={{ textAlign: 'center', padding: '20px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>No sales recorded yet.</p>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    {topProducts.map(([name, qty], index) => (
-                                        <div key={name} style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                                            <span style={{ width: '20px', fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-muted)' }}>#{index + 1}</span>
-                                            <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                    <span style={{ fontSize: '0.85rem', fontWeight: 700 }}>{name}</span>
-                                                    <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>{qty} Units</span>
-                                                </div>
-                                                <div style={{ height: '6px', background: '#f1f5f9', borderRadius: '3px' }}>
-                                                    <div style={{ height: '100%', background: 'var(--primary)', borderRadius: '3px', width: `${(qty / topProducts[0][1]) * 100}%` }}></div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
+                {/* ALERTS & INVENTORY PULSE */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                    <div style={{ background: '#fff1f1', borderRadius: '24px', padding: '25px', border: '1px solid #fee2e2' }}>
+                        <h5 style={{ color: '#991b1b', fontWeight: 950, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                            <AlertCircle size={20} /> DEPLETION ALERTS
+                        </h5>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {items.filter(i => i.stock <= 10).slice(0, 4).map((item, i) => (
+                                <div key={i} style={{ background: 'white', padding: '12px 15px', borderRadius: '14px', border: '1px solid #fee2e2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 800, fontSize: '0.8rem', color: '#1e293b' }}>{item.name}</span>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: 950, color: '#ef4444' }}>{item.stock}</span>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Right Side: Alerts & Stock Watch */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-
-                    {/* Reorder Alerts */}
-                    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
-                        <div style={{ padding: '12px 15px', borderBottom: '1px solid var(--border)', fontWeight: 700, fontSize: '0.85rem', background: '#fff1f1', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <AlertCircle size={16} />
-                            Critical Stock Watchlist
-                        </div>
-                        <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {lowStockItems.length === 0 ? (
-                                <p style={{ textAlign: 'center', padding: '30px', color: 'var(--text-muted)', fontSize: '0.8rem' }}>All products are sufficiently stocked.</p>
-                            ) : (
-                                lowStockItems.map(item => (
-                                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', border: '1px solid #fee2e2', background: '#fffcfc', borderRadius: '4px' }}>
-                                        <div style={{ maxWidth: '140px' }}>
-                                            <p style={{ fontSize: '0.8rem', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</p>
-                                            <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{item.category}</p>
-                                        </div>
-                                        <div style={{ textAlign: 'right' }}>
-                                            <span style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--accent-red)' }}>{item.stock}</span>
-                                            <p style={{ fontSize: '0.5rem', fontWeight: 700, color: 'var(--text-muted)' }}>LEFT</p>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
+                            ))}
                         </div>
                     </div>
 
-                    {/* System Info */}
-                    <div style={{ background: 'white', border: '1px solid var(--border)', borderRadius: '4px', padding: '15px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-                            <div style={{ width: '35px', height: '35px', background: 'var(--primary)', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
-                                <Box size={20} />
-                            </div>
+                    <div style={{ background: '#1e293b', borderRadius: '24px', padding: '25px', color: 'white', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px' }}>
+                            <div style={{ background: 'rgba(56, 189, 248, 0.2)', padding: '10px', borderRadius: '12px' }}><Package size={22} color="#38bdf8" /></div>
                             <div>
-                                <p style={{ fontSize: '0.85rem', fontWeight: 800 }}>VET SMART ERP</p>
-                                <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>Version 1.0.4 r2</p>
+                                <h6 style={{ fontWeight: 950, fontSize: '0.9rem', letterSpacing: '0.5px' }}>PLATFORM NODE</h6>
+                                <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 800 }}>BILAL VET MEDICAL RMS v2.4</p>
                             </div>
                         </div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                <span>Database Index:</span>
-                                <span style={{ color: '#0ea5e9', fontWeight: 900 }}>ENTERPRISE_CLOUD_V2</span>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-                                <span>Active Node:</span>
-                                <span style={{ color: 'var(--text-main)', fontWeight: 700 }}>BILAL-VET-HQ-01</span>
-                            </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                                <span style={{ opacity: 0.6 }}>Active SKUs</span>
+                                <span style={{ fontWeight: 800 }}>{items.length} Registered</span>
+                             </div>
+                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                                <span style={{ opacity: 0.6 }}>System Uptime</span>
+                                <span style={{ fontWeight: 800, color: '#10b981' }}>99.9% ONLINE</span>
+                             </div>
                         </div>
                     </div>
-
                 </div>
+
             </div>
         </div>
     );
 };
 
 export default Dashboard;
+

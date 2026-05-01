@@ -102,7 +102,7 @@ const ShiftManagement = () => {
                 )}
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: activeShift ? '1fr' : '1fr', gap: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
                 {/* 1. Terminal Lock/Unlock UI */}
                 {!activeShift ? (
@@ -231,9 +231,9 @@ const ShiftManagement = () => {
 
                 {/* 2. Shift History (Logs) - ADMIN ONLY */}
                 {isAdmin && (
-                    <div className="pos-section" style={{ minHeight: '300px' }}>
+                    <div className="pos-section" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '200px' }}>
                         <div className="section-header">Shift Logs & Daily Sales Reports (DSR)</div>
-                        <div style={{ overflowY: 'auto', flex: 1 }}>
+                        <div style={{ overflowY: 'scroll', flex: 1, background: '#fff' }}>
                             <table className="erp-table">
                                 <thead>
                                     <tr>

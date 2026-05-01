@@ -53,7 +53,8 @@ const Login = () => {
                 email: user.email,
                 role: userData.role,
                 status: userData.status,
-                name: userData.name || user.displayName
+                name: userData.name || user.displayName,
+                permissions: userData.permissions || ['pos', 'inventory', 'credit', 'reports']
             };
 
             dispatch(login(finalUser));
@@ -90,7 +91,8 @@ const Login = () => {
                 email: user.email,
                 role: userData.role,
                 status: userData.status,
-                name: userData.name || user.email.split('@')[0]
+                name: userData.name || user.email.split('@')[0],
+                permissions: userData.role === 'admin' ? ['pos', 'inventory', 'credit', 'reports', 'users', 'profit'] : (userData.permissions || ['pos', 'inventory', 'credit', 'reports'])
             };
 
             dispatch(login(finalUser));

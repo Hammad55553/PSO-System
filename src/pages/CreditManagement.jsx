@@ -18,8 +18,20 @@ const CreditManagement = () => {
     const [note, setNote] = useState('');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [newCust, setNewCust] = useState({ name: '', phone: '' });
-    const [editData, setEditData] = useState({ id: '', name: '', phone: '' });
+    const [khataType, setKhataType] = useState('Client'); 
+    const [newCust, setNewCust] = useState({ name: '', phone: '', email: '', address: '', type: 'Client' });
+    const [editData, setEditData] = useState({ id: '', name: '', phone: '', email: '', address: '', type: 'Client' });
+
+    // Financial Overviews
+    const totals = React.useMemo(() => {
+        if (!customers) return { receivable: 0, payable: 0 };
+        return customers.reduce((acc, c) => {
+            const type = c.type || 'Client';
+            if (type === 'Client') acc.receivable += (c.balance || 0);
+            else acc.payable += (c.balance || 0);
+            return acc;
+        }, { receivable: 0, payable: 0 });
+    }, [customers]);
 
     const handleDeleteCustomer = async (id) => {
         if (!isAdmin) return;
@@ -44,7 +56,12 @@ const CreditManagement = () => {
         if (navigator.onLine) {
             try {
                 // Merge with existing data to preserve balance/history
-                await setDoc(doc(db, "customers", editData.id), { name: editData.name, phone: editData.phone }, { merge: true });
+                await setDoc(doc(db, "customers", editData.id), { 
+                    name: editData.name, 
+                    phone: editData.phone,
+                    email: editData.email || '',
+                    address: editData.address || ''
+                }, { merge: true });
                 toast.success('Cloud record updated');
             } catch (err) {
                 console.error(err);
@@ -59,7 +76,8 @@ const CreditManagement = () => {
     };
 
     const filtered = customers.filter(c =>
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm)
+        (c.type === khataType || (!c.type && khataType === 'Client')) &&
+        (c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm))
     );
 
     const handleAction = async (type) => {
@@ -114,188 +132,196 @@ const CreditManagement = () => {
             }
         }
 
-        toast.success('New customer account registered');
+        toast.success('New account registered');
         setIsAddModalOpen(false);
-        setNewCust({ name: '', phone: '' });
+        setNewCust({ name: '', phone: '', email: '', address: '', type: 'Patient' });
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '15px', overflow: 'hidden', boxSizing: 'border-box' }}>
             {/* Toolbar */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', background: 'white', padding: '10px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', flexShrink: 0 }}>
                 <div>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Customer Credit (Khatta)</h2>
-                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Manage receivables, track payments, and register new credit accounts.</p>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ background: 'linear-gradient(45deg, #6366f1, #4f46e5)', padding: '5px', borderRadius: '8px', color: 'white' }}><CreditCard size={16} /></div>
+                        Executive Khata Hub
+                    </h2>
+                    <p style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>Receivables: <span style={{ color: '#ef4444' }}>Rs {totals.receivable.toLocaleString()}</span> | Payables: <span style={{ color: '#10b981' }}>Rs {totals.payable.toLocaleString()}</span></p>
                 </div>
                 {isAdmin && (
-                    <button className="btn-erp btn-erp-primary" onClick={() => setIsAddModalOpen(true)}>
-                        <UserPlus size={16} />
-                        Register New Account (Alt+A)
+                    <button 
+                        onClick={() => {
+                            setNewCust({ ...newCust, type: khataType });
+                            setIsAddModalOpen(true);
+                        }}
+                        style={{ background: '#6366f1', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.75rem' }}
+                    >
+                        <UserPlus size={16} /> REGISTER NEW {khataType.toUpperCase()}
                     </button>
                 )}
             </header>
 
-            <div className="pos-layout" style={{ gridTemplateColumns: '280px 1fr' }}>
+            {/* TAB SWITCHER */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexShrink: 0 }}>
+                {['Client', 'Company'].map(t => (
+                    <button 
+                        key={t}
+                        onClick={() => {
+                            setKhataType(t);
+                            setSelectedCust(null);
+                        }}
+                        style={{ 
+                            padding: '6px 18px', 
+                            borderRadius: '8px', 
+                            border: khataType === t ? 'none' : '1px solid #e2e8f0', 
+                            fontWeight: 900, 
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            backgroundColor: khataType === t ? '#1e293b' : 'white',
+                            color: khataType === t ? 'white' : '#64748b',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        {t} Accounts
+                    </button>
+                ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '15px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
                 {/* Left: Customer Selection Wall */}
-                <div className="pos-section">
-                    <div className="section-header">Credit Accounts</div>
-                    <div style={{ padding: '10px', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ width: '260px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
+                    <div className="section-header" style={{ background: '#f8fafc', padding: '10px 15px', fontWeight: 950, color: '#0f172a', borderBottom: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                        {khataType === 'Client' ? 'Client List' : 'Company List'}
+                    </div>
+                    <div style={{ padding: '10px', borderBottom: '1px solid #f1f5f9' }}>
                         <div style={{ position: 'relative' }}>
-                            <Search size={14} style={{ position: 'absolute', left: '10px', top: '10px', color: '#94a3b8' }} />
+                            <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                             <input
-                                className="erp-input"
-                                style={{ width: '100%', padding: '8px 10px 8px 32px', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.8rem' }}
-                                placeholder="Search account..."
+                                style={{ width: '100%', padding: '8px 10px 8px 35px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600 }}
+                                placeholder={`Find ${khataType.toLowerCase()}...`}
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
                     </div>
-                    <div style={{ overflowY: 'auto', flex: 1 }}>
+                    <div style={{ overflowY: 'scroll', flex: 1, background: '#fff' }}>
                         {filtered.map(c => (
                             <div
                                 key={c.id}
                                 onClick={() => setSelectedCust(c)}
                                 style={{
-                                    padding: '12px 15px',
-                                    borderBottom: '1px solid #f1f5f9',
+                                    padding: '10px 15px',
+                                    borderBottom: '1px solid #f8fafc',
                                     cursor: 'pointer',
-                                    background: selectedCust?.id === c.id ? '#eff6ff' : 'transparent',
-                                    borderLeft: selectedCust?.id === c.id ? '4px solid var(--primary)' : '4px solid transparent',
-                                    transition: 'all 0.2s'
+                                    background: selectedCust?.id === c.id ? '#f1f5f9' : 'transparent'
                                 }}
                             >
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2px' }}>
-                                    <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{c.name}</span>
-                                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: c.balance > 0 ? 'var(--accent-red)' : 'var(--accent-green)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 800, fontSize: '0.8rem', color: '#1e293b' }}>{c.name}</span>
+                                    <span style={{ fontWeight: 950, fontSize: '0.75rem', color: c.balance > 0 ? '#ef4444' : '#10b981' }}>
                                         Rs {c.balance.toLocaleString()}
                                     </span>
                                 </div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    <Phone size={10} /> {c.phone}
-                                </div>
+                                <p style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>{c.phone}</p>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Right: Account Ledger & Actions */}
-                <div style={{ display: 'grid', gridTemplateRows: '1fr 180px', gap: '10px' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', minHeight: 0 }}>
                     {selectedCust ? (
                         <>
-                            <div className="pos-section">
-                                <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span>Account Statement: {selectedCust.name}</span>
-                                        {isAdmin && (
-                                            <div style={{ display: 'flex', gap: '5px' }}>
-                                                <button
-                                                    onClick={() => {
-                                                        setEditData({ id: selectedCust.id, name: selectedCust.name, phone: selectedCust.phone });
-                                                        setIsEditModalOpen(true);
-                                                    }}
-                                                    style={{ background: '#f1f5f9', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', color: '#475569' }}
-                                                >
-                                                    <Edit3 size={14} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteCustomer(selectedCust.id)}
-                                                    style={{ background: '#fff1f1', border: 'none', borderRadius: '4px', padding: '4px', cursor: 'pointer', color: '#dc2626' }}
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
-                                            </div>
-                                        )}
+                             <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, flex: 1 }}>
+                                <div style={{ padding: '8px 15px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', flexShrink: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <span style={{ fontWeight: 950, fontSize: '0.95rem' }}>{selectedCust.name}</span>
+                                        <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 800 }}>#{selectedCust.id.toString().slice(-6).toUpperCase()}</span>
+                                        <div style={{ display: 'flex', gap: '4px', marginLeft: '5px' }}>
+                                            <button onClick={() => { setEditData({...selectedCust}); setIsEditModalOpen(true); }} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', padding: '2px' }}><Edit3 size={12} /></button>
+                                            <button onClick={() => handleDeleteCustomer(selectedCust.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }}><Trash2 size={12} /></button>
+                                        </div>
                                     </div>
-                                    <span style={{ fontSize: '0.7rem' }}>A/C ID: {selectedCust.id}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', fontSize: '0.7rem', fontWeight: 700, color: '#475569' }}>
+                                        <span>📞 {selectedCust.phone}</span>
+                                        {selectedCust.email && <span style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '10px' }}>📧 {selectedCust.email}</span>}
+                                        <span style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '10px', color: selectedCust.balance > 0 ? '#ef4444' : '#10b981', fontWeight: 950 }}>
+                                            BAL: Rs {selectedCust.balance.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    {selectedCust.address && (
+                                        <div style={{ width: '100%', borderTop: '1px dashed #e2e8f0', paddingTop: '4px', fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>
+                                            🏠 {selectedCust.address}
+                                        </div>
+                                    )}
                                 </div>
-                                <div style={{ flex: 1, overflowY: 'auto' }}>
+                                <div style={{ flex: 1, overflowY: 'scroll', background: '#fff' }}>
                                     <table className="erp-table">
-                                        <thead style={{ position: 'sticky', top: 0, zIndex: 1 }}>
-                                            <tr>
-                                                <th>Ref. Date</th>
-                                                <th>Description / Note</th>
-                                                <th>Debit (+)</th>
-                                                <th>Credit (-)</th>
-                                                <th style={{ textAlign: 'right' }}>Balance</th>
+                                        <thead style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: 'white' }}>
+                                            <tr style={{ background: '#f8fafc' }}>
+                                                <th style={{ padding: '6px 15px', fontWeight: 900, fontSize: '0.7rem' }}>Date & Time</th>
+                                                <th style={{ padding: '6px 15px', fontWeight: 900, fontSize: '0.7rem' }}>Note / Detail</th>
+                                                <th style={{ padding: '6px 15px', fontWeight: 900, fontSize: '0.7rem' }}>Debit (+)</th>
+                                                <th style={{ padding: '6px 15px', fontWeight: 900, fontSize: '0.7rem' }}>Credit (-)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {selectedCust.history.map((h, i) => (
-                                                <tr key={i}>
-                                                    <td style={{ fontSize: '0.75rem' }}>{new Date(h.date).toLocaleDateString()} {new Date(h.date).toLocaleTimeString()}</td>
-                                                    <td>{h.note}</td>
-                                                    <td style={{ color: 'var(--accent-red)', fontWeight: h.type === 'credit' ? 700 : 400 }}>
-                                                        {h.type === 'credit' ? `Rs ${h.amount.toLocaleString()}` : '-'}
-                                                    </td>
-                                                    <td style={{ color: 'var(--accent-green)', fontWeight: h.type === 'payment' ? 700 : 400 }}>
-                                                        {h.type === 'payment' ? `Rs ${h.amount.toLocaleString()}` : '-'}
-                                                    </td>
-                                                    <td style={{ textAlign: 'right', fontWeight: 800 }}>-</td>
+                                                <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                                    <td style={{ padding: '5px 15px', fontSize: '0.65rem', fontWeight: 600 }}>{new Date(h.date).toLocaleDateString()} {new Date(h.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
+                                                    <td style={{ padding: '5px 15px', fontSize: '0.7rem', fontWeight: 700 }}>{h.note}</td>
+                                                    <td style={{ padding: '5px 15px', color: '#ef4444', fontWeight: 900, fontSize: '0.7rem' }}>{h.type === 'credit' ? `Rs ${h.amount.toLocaleString()}` : '-'}</td>
+                                                    <td style={{ padding: '5px 15px', color: '#10b981', fontWeight: 900, fontSize: '0.7rem' }}>{h.type === 'payment' ? `Rs ${h.amount.toLocaleString()}` : '-'}</td>
                                                 </tr>
                                             ))}
-                                            {selectedCust.history.length === 0 && (
-                                                <tr>
-                                                    <td colSpan="5" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-                                                        No transaction history found for this account.
-                                                    </td>
-                                                </tr>
-                                            )}
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
 
                             {/* Action Panel */}
-                            <div className="pos-section" style={{ background: '#f8fafc', padding: '15px' }}>
+                             <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '12px', flexShrink: 0 }}>
                                 {isAdmin ? (
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '20px', height: '100%' }}>
-                                        <div style={{ display: 'flex', gap: '15px' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>ENTRY AMOUNT (Rs)</label>
-                                                <input
-                                                    type="number"
-                                                    className="erp-input"
-                                                    style={{ width: '100%', padding: '10px', fontSize: '1.2rem', fontWeight: 800, color: 'var(--primary)', border: '1px solid var(--border)', borderRadius: '4px' }}
-                                                    value={amount}
-                                                    onChange={e => setAmount(e.target.value)}
-                                                    placeholder="0.00"
-                                                />
-                                            </div>
-                                            <div style={{ flex: 1.5 }}>
-                                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>REMARKS / NOTE</label>
-                                                <input
-                                                    className="erp-input"
-                                                    style={{ width: '100%', padding: '10px', border: '1px solid var(--border)', borderRadius: '4px' }}
-                                                    value={note}
-                                                    onChange={e => setNote(e.target.value)}
-                                                    placeholder="Reason for adjustment..."
-                                                />
-                                            </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '15px', height: '100%' }}>
+                                        <div>
+                                            <label style={{ fontSize: '0.6rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '4px' }}>AMOUNT</label>
+                                            <input
+                                                type="number"
+                                                style={{ width: '100%', padding: '10px', fontSize: '1.1rem', fontWeight: 950, color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none' }}
+                                                value={amount}
+                                                onChange={e => setAmount(e.target.value)}
+                                                placeholder="0"
+                                            />
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                        <div>
+                                            <label style={{ fontSize: '0.6rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '4px' }}>NOTE / REMARK</label>
+                                            <input
+                                                style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, outline: 'none', fontSize: '0.8rem' }}
+                                                value={note}
+                                                onChange={e => setNote(e.target.value)}
+                                                placeholder="Transaction reason..."
+                                            />
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                             <button
                                                 onClick={() => handleAction('payment')}
-                                                style={{ background: 'var(--accent-green)', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 800, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                                                style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', fontSize: '0.65rem' }}
                                             >
-                                                <ArrowDownCircle size={24} />
-                                                <span>RECEIVE PAYMENT</span>
+                                                <ArrowDownCircle size={16} />
+                                                PAYMENT
                                             </button>
                                             <button
                                                 onClick={() => handleAction('credit')}
-                                                style={{ background: 'var(--accent-red)', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 800, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                                                style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', fontSize: '0.65rem' }}
                                             >
-                                                <ArrowUpCircle size={24} />
-                                                <span>ADD DEBT (KHATTA)</span>
+                                                <ArrowUpCircle size={16} />
+                                                DEBT/BILL
                                             </button>
                                         </div>
                                     </div>
                                 ) : (
-                                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', color: '#64748b' }}>
-                                        <div style={{ padding: '8px 15px', background: '#f1f5f9', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <CreditCard size={20} />
-                                            <span style={{ fontWeight: 800, fontSize: '0.8rem' }}>MANUAL ADJUSTMENT RESTRICTED TO ADMINISTRATORS ONLY</span>
-                                        </div>
+                                    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                                        <span style={{ fontWeight: 800, fontSize: '0.7rem' }}>ADMIN ONLY ACCESS</span>
                                     </div>
                                 )}
                             </div>
@@ -314,9 +340,9 @@ const CreditManagement = () => {
             {isAddModalOpen && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                     <div style={{ background: 'white', width: '400px', borderRadius: '4px', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', overflow: 'hidden' }}>
-                        <div style={{ background: 'var(--primary)', color: 'white', padding: '12px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: 800 }}>REGISTER NEW CREDIT ACCOUNT</h3>
-                            <button onClick={() => setIsAddModalOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.2rem' }}>×</button>
+                        <div style={{ background: '#6366f1', color: 'white', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 950 }}>REGISTER {khataType.toUpperCase()} KHATA</h3>
+                            <button onClick={() => setIsAddModalOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '1.5rem' }}>×</button>
                         </div>
                         <form onSubmit={handleAddCustomer} style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                             <div>
@@ -326,6 +352,14 @@ const CreditManagement = () => {
                             <div>
                                 <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>CONTACT NUMBER</label>
                                 <input required className="erp-input" style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }} value={newCust.phone} onChange={e => setNewCust({ ...newCust, phone: e.target.value })} />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>EMAIL ADDRESS</label>
+                                <input className="erp-input" style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }} value={newCust.email} onChange={e => setNewCust({ ...newCust, email: e.target.value })} />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>OFFICE / RESIDENTIAL ADDRESS</label>
+                                <textarea className="erp-input" style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px', minHeight: '60px' }} value={newCust.address} onChange={e => setNewCust({ ...newCust, address: e.target.value })} />
                             </div>
                             <button type="submit" className="btn-erp btn-erp-primary" style={{ width: '100%', padding: '12px', justifyContent: 'center', marginTop: '10px' }}>Register Account</button>
                         </form>
@@ -348,6 +382,14 @@ const CreditManagement = () => {
                             <div>
                                 <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>CONTACT NUMBER</label>
                                 <input required className="erp-input" style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }} value={editData.phone} onChange={e => setEditData({ ...editData, phone: e.target.value })} />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>EMAIL ADDRESS</label>
+                                <input className="erp-input" style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px' }} value={editData.email} onChange={e => setEditData({ ...editData, email: e.target.value })} />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>OFFICE / RESIDENTIAL ADDRESS</label>
+                                <textarea className="erp-input" style={{ width: '100%', padding: '8px', border: '1px solid var(--border)', borderRadius: '4px', minHeight: '60px' }} value={editData.address} onChange={e => setEditData({ ...editData, address: e.target.value })} />
                             </div>
                             <button type="submit" className="btn-erp btn-erp-primary" style={{ width: '100%', padding: '12px', justifyContent: 'center', marginTop: '10px' }}>Save Changes</button>
                         </form>

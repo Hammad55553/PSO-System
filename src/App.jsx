@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Link, Navigate } f
 import { Provider } from 'react-redux';
 import { store } from './store';
 import { Toaster } from 'react-hot-toast';
-import { LayoutDashboard, Menu, X, Wifi, WifiOff } from 'lucide-react';
+import { LayoutDashboard, Menu, X, Wifi, WifiOff, Box } from 'lucide-react';
 
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -14,9 +14,17 @@ import ShiftManagement from './pages/ShiftManagement';
 import CreditManagement from './pages/CreditManagement';
 import Settings from './pages/Settings';
 import Reports from './pages/Reports';
+import ProfitMastery from './pages/ProfitMastery';
+import ProductInsights from './pages/ProductInsights';
+import OrderManagement from './pages/OrderManagement';
+import BillManagement from './pages/BillManagement';
+import ExpiryManagement from './pages/ExpiryManagement';
+import ShortageBook from './pages/ShortageBook';
+import ExpenseTracker from './pages/ExpenseTracker';
+import SupplierManagement from './pages/SupplierManagement';
 
 import { db } from './firebase';
-import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { useDispatch, useSelector } from 'react-redux';
 import { RefreshCw, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -25,6 +33,9 @@ import { setCustomers } from './store/slices/customerSlice';
 import { setSales } from './store/slices/salesSlice';
 import { logout } from './store/slices/authSlice';
 import { setShifts } from './store/slices/shiftSlice';
+import { setShortageItems } from './store/slices/shortageSlice';
+import { setExpenses } from './store/slices/expensesSlice';
+import { setSuppliers } from './store/slices/suppliersSlice';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import UserManagement from './pages/UserManagement';
@@ -41,112 +52,139 @@ function AppContent() {
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    if (navigator.onLine) {
-      handleManualSync();
+    let unsubscribes = [];
+
+    if (navigator.onLine && isAuthenticated) {
+      // 1. Live Inventory
+      unsubscribes.push(onSnapshot(collection(db, "inventory"), (snap) => {
+        const cloudInv = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        if (cloudInv.length > 0) dispatch(setInventory(cloudInv));
+      }));
+
+      // 2. Live Customers (Clients/Companies)
+      unsubscribes.push(onSnapshot(collection(db, "customers"), (snap) => {
+        const cloudCust = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        if (cloudCust.length > 0) dispatch(setCustomers(cloudCust));
+      }));
+
+      // 3. Live Sales
+      unsubscribes.push(onSnapshot(collection(db, "sales"), (snap) => {
+        const cloudSales = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))
+          .sort((a,b) => new Date(b.date)-new Date(a.date));
+        if (cloudSales.length > 0) dispatch(setSales(cloudSales));
+      }));
+
+      // 4. Live Shifts
+      unsubscribes.push(onSnapshot(collection(db, "shifts"), (snap) => {
+        const allShifts = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        const activeShift = allShifts.find(s => s.status === 'active');
+        const shiftHistory = allShifts.filter(s => s.status !== 'active').sort((a,b) => new Date(b.startTime)-new Date(a.startTime));
+        if (allShifts.length > 0) dispatch(setShifts({ activeShift, history: shiftHistory }));
+      }));
+
+      // 5. Live Shortage
+      unsubscribes.push(onSnapshot(collection(db, "shortage"), (snap) => {
+        const cloudShort = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        if (cloudShort.length > 0) dispatch(setShortageItems(cloudShort));
+      }));
+
+      // 6. Live Expenses
+      unsubscribes.push(onSnapshot(collection(db, "expenses"), (snap) => {
+        const cloudExp = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        if (cloudExp.length > 0) dispatch(setExpenses(cloudExp));
+      }));
+
+      // 7. Live Suppliers
+      unsubscribes.push(onSnapshot(collection(db, "suppliers"), (snap) => {
+        const cloudSup = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        if (cloudSup.length > 0) dispatch(setSuppliers(cloudSup));
+      }));
     }
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      unsubscribes.forEach(unsub => unsub());
     };
-  }, []);
+  }, [isAuthenticated, dispatch]);
 
   const { items: localInv } = useSelector(state => state.inventory);
   const { list: localCust } = useSelector(state => state.customers);
   const { history: localSales } = useSelector(state => state.sales);
   const { history: localShifts, activeShift: localActiveShift } = useSelector(state => state.shift);
+  const { items: localShort } = useSelector(state => state.shortage);
+  const { list: localExp } = useSelector(state => state.expenses);
+  const { list: localSup } = useSelector(state => state.suppliers);
 
   const handlePushLocalToCloud = async () => {
-    if (!window.confirm("This will push all your LOCAL PSO data to Firebase. Continue?")) return;
+    if (!window.confirm("Push all your LOCAL data to Firebase?")) return;
     setIsSyncing(true);
     try {
-      // Push Inventory
-      for (const item of localInv) {
-        await setDoc(doc(db, "inventory", item.id), item);
-      }
-      // Push Customers
-      for (const cust of localCust) {
-        await setDoc(doc(db, "customers", cust.id), cust);
-      }
-      // Push Sales
-      for (const sale of localSales) {
-        await setDoc(doc(db, "sales", sale.id), sale);
-      }
-      // Push Shifts
-      for (const s of localShifts) {
-        await setDoc(doc(db, "shifts", s.id.toString()), { ...s, status: 'closed' });
-      }
-      if (localActiveShift) {
-        await setDoc(doc(db, "shifts", localActiveShift.id.toString()), { ...localActiveShift, status: 'active' });
-      }
-
-      toast.success("All local data migrated to Cloud!");
-    } catch (err) {
-      console.error(err);
-      toast.error("Migration failed.");
-    } finally {
-      setIsSyncing(false);
-    }
+      for (const item of localInv) await setDoc(doc(db, "inventory", item.id), item);
+      for (const cust of localCust) await setDoc(doc(db, "customers", cust.id), cust);
+      for (const sale of localSales) await setDoc(doc(db, "sales", sale.id), sale);
+      for (const s of localShifts) await setDoc(doc(db, "shifts", s.id.toString()), { ...s, status: 'closed' });
+      if (localActiveShift) await setDoc(doc(db, "shifts", localActiveShift.id.toString()), { ...localActiveShift, status: 'active' });
+      for (const sh of localShort) await setDoc(doc(db, "shortage", sh.id.toString()), sh);
+      for (const ex of localExp) await setDoc(doc(db, "expenses", ex.id.toString()), ex);
+      for (const su of localSup) await setDoc(doc(db, "suppliers", su.id.toString()), su);
+      toast.success("Migration Complete!");
+    } catch (err) { toast.error("Migration failed."); }
+    finally { setIsSyncing(false); }
   };
 
   const handleManualSync = async () => {
-    if (!navigator.onLine) {
-      toast.error("Offline mode active.");
-      return;
-    }
-
+    if (!navigator.onLine) return;
     setIsSyncing(true);
     try {
-      // 1. Pull Inventory
       const invSnap = await getDocs(collection(db, "inventory"));
-      const cloudInv = invSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-
-      // SPECIAL: If Cloud is empty but Local has data, maybe offer to push?
-      if (cloudInv.length === 0 && localInv.length > 0) {
-        const wantsPush = window.confirm("Cloud database is empty. Do you want to PUSH your local data to Cloud now?");
-        if (wantsPush) {
-          await handlePushLocalToCloud();
-          setIsSyncing(false);
-          return;
-        }
-      }
-
+      const cloudInv = invSnap.docs.map(doc => {
+        const data = doc.data();
+        return { ...data, id: data.id || doc.id };
+      });
       if (cloudInv.length > 0) dispatch(setInventory(cloudInv));
 
-      // 2. Pull Customers
       const custSnap = await getDocs(collection(db, "customers"));
-      const cloudCust = custSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      const cloudCust = custSnap.docs.map(doc => {
+        const data = doc.data();
+        return { ...data, id: data.id || doc.id };
+      });
       if (cloudCust.length > 0) dispatch(setCustomers(cloudCust));
 
-      // 3. Pull Recent Sales
       const salesSnap = await getDocs(collection(db, "sales"));
-      const cloudSales = salesSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }))
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      const cloudSales = salesSnap.docs.map(doc => {
+        const data = doc.data();
+        // If data has an internal id (INV-XXXXXX), use it exclusively. 
+        // Do NOT let doc.id (long random slug) overwrite it.
+        const actualId = data.id || doc.id;
+        return { ...data, id: actualId };
+      }).sort((a,b) => new Date(b.date)-new Date(a.date));
       if (cloudSales.length > 0) dispatch(setSales(cloudSales));
 
-      // 4. Pull Shifts
       const shiftSnap = await getDocs(collection(db, "shifts"));
       const allShifts = shiftSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-
       const activeShift = allShifts.find(s => s.status === 'active');
-      const shiftHistory = allShifts.filter(s => s.status !== 'active')
-        .sort((a, b) => new Date(b.startTime) - new Date(a.startTime));
+      const shiftHistory = allShifts.filter(s => s.status !== 'active').sort((a,b) => new Date(b.startTime)-new Date(a.startTime));
+      if (allShifts.length > 0) dispatch(setShifts({ activeShift, history: shiftHistory }));
 
-      if (allShifts.length > 0) {
-        dispatch(setShifts({ activeShift, history: shiftHistory }));
-      }
+      const shortSnap = await getDocs(collection(db, "shortage"));
+      const cloudShort = shortSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      if (cloudShort.length > 0) dispatch(setShortageItems(cloudShort));
 
-      toast.success("Cloud Synchronized Successfully");
-    } catch (err) {
-      console.error(err);
-      toast.error("Cloud sync failed.");
-    } finally {
-      setIsSyncing(false);
-    }
+      const expSnap = await getDocs(collection(db, "expenses"));
+      const cloudExp = expSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      if (cloudExp.length > 0) dispatch(setExpenses(cloudExp));
+
+      const supSnap = await getDocs(collection(db, "suppliers"));
+      const cloudSup = supSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      if (cloudSup.length > 0) dispatch(setSuppliers(cloudSup));
+      
+      toast.success("Hybrid Sync: Active");
+    } catch (err) { console.error(err); }
+    finally { setIsSyncing(false); }
   };
 
   if (!isAuthenticated) {
@@ -186,33 +224,18 @@ function AppContent() {
               </Link>
             )}
 
-            {/* CONNECTION STATUS */}
+            {/* HYBRID CONNECTION STATUS */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isOnline ? '#dcfce7' : '#fee2e2', padding: '6px 12px', borderRadius: '4px', border: `1px solid ${isOnline ? '#166534' : '#991b1b'}` }}>
               {isOnline ? <Wifi size={14} color="#166534" /> : <WifiOff size={14} color="#991b1b" />}
-              <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#166534' }}>{isOnline ? 'CLOUD SYNC: ONLINE' : 'LOCAL MODE: OFFLINE'}</span>
+              <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#166534' }}>{isOnline ? 'CLOUD SYNC: ACTIVE' : 'OFFLINE MODE: LOCAL SAVE'}</span>
             </div>
 
             {isOnline && (
-              <button
-                onClick={handleManualSync}
-                disabled={isSyncing}
-                style={{
-                  background: 'white',
-                  border: '1px solid var(--border)',
-                  borderRadius: '4px',
-                  padding: '6px 12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  cursor: isSyncing ? 'not-allowed' : 'pointer',
-                  opacity: isSyncing ? 0.7 : 1
-                }}
-              >
-                <RefreshCw size={14} className={isSyncing ? 'animate-spin' : ''} />
-                <span style={{ fontSize: '0.65rem', fontWeight: 800 }}>{isSyncing ? 'SYNCING...' : 'FORCE RE-SYNC'}</span>
-              </button>
+              <div style={{ background: '#0ea5e9', border: 'none', borderRadius: '4px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', color: 'white' }}>
+                <div style={{ width: '8px', height: '8px', background: '#fff', borderRadius: '50%', animation: 'pulse 1.5s infinite' }}></div>
+                <span style={{ fontSize: '0.65rem', fontWeight: 900 }}>LIVE CLOUD SYNC: ACTIVE</span>
+              </div>
             )}
-
           </div>
 
           <div className="flex items-center gap-6" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
@@ -251,9 +274,17 @@ function AppContent() {
             <Route path="/credit" element={<CreditManagement />} />
             <Route path="/history" element={<SalesHistory />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/orders" element={<OrderManagement />} />
+            <Route path="/bills" element={<BillManagement />} />
+            <Route path="/expiry" element={<ExpiryManagement />} />
+            <Route path="/shortage" element={<ShortageBook />} />
+            <Route path="/expenses" element={<ExpenseTracker />} />
+            <Route path="/suppliers" element={<SupplierManagement />} />
+            <Route path="/profit" element={isAdmin ? <ProfitMastery /> : <Navigate to="/" />} />
+            <Route path="/insights/:productName" element={<ProductInsights />} />
 
             {/* ADMIN ONLY ROUTES */}
-            <Route path="/returns" element={isAdmin ? <SalesHistory isReturnsPage={true} /> : <Navigate to="/" />} />
+            <Route path="/returns" element={<SalesHistory isReturnsPage={true} />} />
             <Route path="/users" element={isAdmin ? <UserManagement /> : <Navigate to="/" />} />
             <Route path="/settings" element={isAdmin ? <Settings /> : <Navigate to="/" />} />
           </Routes>
