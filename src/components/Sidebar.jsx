@@ -30,7 +30,10 @@ const Sidebar = () => {
         <aside className="desktop-sidebar no-print">
             <div className="brand-section">
                 <span className="brand-name">BILAL VETERINARY CLINIC</span>
-                <span style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 800 }}>PROFESSIONAL RMS v1.0</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 800 }}>PROFESSIONAL RMS v1.0.2</span>
+                    <span style={{ background: '#10b981', color: 'white', fontSize: '0.5rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 900 }}>LIVE</span>
+                </div>
             </div>
 
             <nav className="nav-group">
