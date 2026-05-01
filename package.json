@@ -18,6 +18,13 @@
     "directories": {
       "output": "dist_desktop"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Hammad55553",
+        "repo": "PSO-System"
+      }
+    ],
     "files": [
       "dist/**/*",
       "electron/**/*",
@@ -34,6 +41,7 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.11.2",
+    "electron-updater": "^6.8.3",
     "firebase": "^12.9.0",
     "framer-motion": "^12.33.0",
     "lucide-react": "^0.563.0",
