@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
+import UpdateChecker from '../components/UpdateChecker';
 import { auth } from '../firebase';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { Settings as SettingsIcon, Lock, ShieldCheck, Key, AlertCircle, Loader2 } from 'lucide-react';
@@ -75,6 +76,10 @@ const Settings = () => {
                         <ShieldCheck size={18} />
                         Role Permissions
                     </button>
+
+                    <div style={{ marginTop: '50px' }}>
+                        <UpdateChecker />
+                    </div>
                 </div>
 
                 {/* Main Content */}

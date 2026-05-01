@@ -1,6 +1,5 @@
 import { NavLink } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import UpdateChecker from './UpdateChecker';
 import {
     LayoutDashboard,
     Package,
@@ -137,10 +136,7 @@ const Sidebar = () => {
                         </NavLink>
                     </>
                 )}
-            </nav>
-
-            {/* AUTO-UPDATE NOTIFICATION */}
-            <UpdateChecker />
+             </nav>
 
             <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.1)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
