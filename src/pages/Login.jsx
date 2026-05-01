@@ -42,8 +42,8 @@ const Login = () => {
                 return;
             } else {
                 userData = userDoc.data();
-                if (userData.status === 'pending') {
-                    toast.error("Google account pending approval.");
+                if (userData.status !== 'active') {
+                    toast.error("Account pending approval or disabled. Contact Admin.");
                     return;
                 }
             }
@@ -80,8 +80,8 @@ const Login = () => {
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.exists() ? userDoc.data() : { role: 'user', status: 'active' };
 
-            if (userData.status === 'pending') {
-                toast.error("Your account is pending approval by Administrator.");
+            if (userData.status !== 'active') {
+                toast.error("Your account is pending approval or has been disabled.");
                 setIsLoading(false);
                 return;
             }
