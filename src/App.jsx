@@ -83,18 +83,6 @@ function AppContent() {
             if (exp.data) dispatch(setExpenses(exp.data));
             if (sup.data) dispatch(setSuppliers(sup.data));
 
-            // 2. Setup Realtime Subscriptions
-            const mainChannel = supabase.channel('db-changes')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, (payload) => {
-                    fetchData(); // Simplest way to stay in sync
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => fetchData())
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => fetchData())
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, () => fetchData())
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'shortage' }, () => fetchData())
-                .subscribe();
-            
-            channels.push(mainChannel);
         } catch (err) {
             console.error(err);
         } finally {
@@ -104,6 +92,16 @@ function AppContent() {
 
     if (isAuthenticated) {
         fetchData();
+
+        const mainChannel = supabase.channel('db-changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => fetchData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => fetchData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => fetchData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, () => fetchData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'shortage' }, () => fetchData())
+            .subscribe();
+        
+        channels.push(mainChannel);
     }
 
     return () => {
