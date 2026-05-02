@@ -60,6 +60,9 @@ const POS = () => {
     const [lastSale, setLastSale] = useState(null);
     const [isDoctorMode, setIsDoctorMode] = useState(false);
     const [walkingCustomerName, setWalkingCustomerName] = useState('');
+    const [customerPhone, setCustomerPhone] = useState('');
+    const [onlineProvider, setOnlineProvider] = useState('JazzCash');
+    const [onlineAccount, setOnlineAccount] = useState('');
     const [suggestion, setSuggestion] = useState('');
 
     // UI States
@@ -217,12 +220,21 @@ const POS = () => {
         setCheckoutStage('idle');
         setIsDoctorMode(false);
         setWalkingCustomerName('');
+        setCustomerPhone('');
+        setOnlineAccount('');
+        setOnlineProvider('JazzCash');
     };
 
     const handleCheckout = async (shouldPrint = true) => {
         if (!activeShift) return;
         if (cart.length === 0) { toast.error('Add items first!'); return; }
         if (paymentMethod === 'Credit' && !selectedCustomer) { toast.error('Select an Account!'); return; }
+        
+        // ONLINE VALIDATION
+        if (paymentMethod === 'Online' && !customerPhone) {
+            toast.error('CUSTOMER PHONE IS MANDATORY FOR ONLINE PAYMENT!');
+            return;
+        }
 
         const saleData = {
             customer_name: selectedCustomer ? selectedCustomer.name : (walkingCustomerName || 'WALK-IN CUSTOMER'),
@@ -232,6 +244,11 @@ const POS = () => {
             tax,
             discount: itemDiscounts + globalDiscount,
             payment_method: paymentMethod,
+            payment_details: paymentMethod === 'Online' ? {
+                provider: onlineProvider,
+                account: onlineAccount,
+                customer_phone: customerPhone
+            } : null,
             status: paymentMethod === 'Credit' ? 'Khatta' : 'Paid',
             seller_name: user?.name || activeShift?.staffName || 'Operator',
             is_doctor_mode: isDoctorMode
@@ -729,6 +746,7 @@ const POS = () => {
                                     {[
                                         { id: 'Cash', icon: <Banknote size={16} />, label: 'CASH' },
                                         { id: 'Card', icon: <CreditCard size={16} />, label: 'CARD' },
+                                        { id: 'Online', icon: <Zap size={16} />, label: 'ONLINE' },
                                         { id: 'Credit', icon: <UserPlus size={16} />, label: 'KHATTA' }
                                     ].map(method => (
                                         <button
@@ -845,15 +863,58 @@ const POS = () => {
                                                     <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#065f46' }}>{c.name?.toUpperCase()}</div>
                                                     <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>A/C ID: {c.id} | PH: {c.phone}</div>
                                                 </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>DUE BALANCE</div>
-                                                    <div style={{ fontWeight: 900, color: '#ef4444' }}>Rs {c.balance.toLocaleString()}</div>
+                                        <button key={c.id} onClick={() => { setSelectedCustomer(c); setShowCustomerSearch(false); }} style={{ width: '100%', textAlign: 'left', padding: '0', border: 'none', background: 'transparent', cursor: 'pointer' }}>
+                                            <div style={{ padding: '20px', border: '1px solid #f1f5f9', borderRadius: '8px', background: '#f8fafc' }} onMouseOver={e => e.currentTarget.style.borderColor = '#10b981'} onMouseOut={e => e.currentTarget.style.borderColor = '#f1f5f9'}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div>
+                                                        <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#065f46' }}>{c.name?.toUpperCase()}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>A/C ID: {c.id} | PH: {c.phone}</div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>DUE BALANCE</div>
+                                                        <div style={{ fontWeight: 900, color: '#ef4444' }}>Rs {c.balance.toLocaleString()}</div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </button>
                                     ))}
                                 </div>
                             </div>
+
+                            {/* ONLINE SUB-OPTIONS */}
+                            {paymentMethod === 'Online' && (
+                                <div style={{ background: '#f0f9ff', padding: '15px', borderRadius: '12px', border: '1px solid #bae6fd', margin: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        {['JazzCash', 'Easypaisa', 'Bank'].map(p => (
+                                            <button 
+                                                key={p}
+                                                onClick={() => setOnlineProvider(p)}
+                                                style={{ flex: 1, padding: '6px', borderRadius: '6px', border: '1px solid', borderColor: onlineProvider === p ? '#0369a1' : '#cbd5e1', background: onlineProvider === p ? '#0369a1' : 'white', color: onlineProvider === p ? 'white' : '#64748b', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer' }}
+                                            >
+                                                {p.toUpperCase()}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#0369a1', display: 'block', marginBottom: '4px' }}>RECEIVED ON (WHICH NUMBER?)</label>
+                                        <input 
+                                            placeholder="Enter recipient number/ID"
+                                            style={{ width: '100%', padding: '8px', border: '1px solid #bae6fd', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700 }}
+                                            value={onlineAccount}
+                                            onChange={e => setOnlineAccount(e.target.value)}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ef4444', display: 'block', marginBottom: '4px' }}>CUSTOMER NUMBER (MANDATORY*)</label>
+                                        <input 
+                                            placeholder="Customer phone for contact"
+                                            style={{ width: '100%', padding: '8px', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, background: '#fff5f5' }}
+                                            value={customerPhone}
+                                            onChange={e => setCustomerPhone(e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
