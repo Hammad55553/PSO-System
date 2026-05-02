@@ -414,7 +414,7 @@ const POS = () => {
                                                         <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', display: 'flex', gap: '8px' }}>
                                                             <span>{item.category}</span>
                                                             {item.batch_no && <span style={{ color: '#ef4444', fontWeight: 900 }}>• BATCH: {item.batch_no}</span>}
-                                                            {item.manufacturer && <span style={{ color: '#059669', fontWeight: 900 }}>• {item.manufacturer.toUpperCase()}</span>}
+                                                            {item.manufacturer && <span style={{ color: '#059669', fontWeight: 900 }}>• {item.manufacturer?.toUpperCase()}</span>}
                                                         </div>
                                                     </div>
                                                     <span style={{ fontWeight: 900, color: '#059669', fontSize: '1.2rem' }}>Rs {isDoctorMode ? (item.doctorPrice || item.price) : item.price}</span>

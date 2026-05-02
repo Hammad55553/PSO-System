@@ -273,7 +273,7 @@ const Inventory = () => {
                                             <div style={{ fontSize: '0.65rem', color: '#64748b', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                                 <span>Unit: {item.unit}</span>
                                                 {item.batch_no && <span style={{ color: '#ef4444', fontWeight: 900 }}>• BATCH: {item.batch_no}</span>}
-                                                {item.manufacturer && <span style={{ color: '#059669', fontWeight: 900 }}>• {item.manufacturer.toUpperCase()}</span>}
+                                                {item.manufacturer && <span style={{ color: '#059669', fontWeight: 900 }}>• {item.manufacturer?.toUpperCase()}</span>}
                                             </div>
                                         </td>
                                         <td style={{ padding: '15px 20px' }}>

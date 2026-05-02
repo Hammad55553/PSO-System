@@ -197,7 +197,7 @@ function AppContent() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center font-900 shadow-xl border border-white/20" style={{ width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: 'white' }}>
-                {user?.name?.charAt(0).toUpperCase()}
+                {user?.name?.charAt(0)?.toUpperCase()}
               </div>
               <button
                 onClick={() => dispatch(logout())}
