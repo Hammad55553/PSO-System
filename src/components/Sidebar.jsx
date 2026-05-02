@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
     LayoutDashboard,
     Package,
@@ -21,7 +21,6 @@ import {
     Lock
 } from 'lucide-react';
 import { logout } from '../store/slices/authSlice';
-import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
 
 const Sidebar = () => {
