@@ -14,6 +14,8 @@ const Inventory = () => {
     const inventory = useSelector(state => state.inventory.items);
     const isAdmin = user?.role === 'admin';
     const [searchTerm, setSearchTerm] = useState('');
+    const [nameSuggestion, setNameSuggestion] = useState('');
+    const [mfrSuggestion, setMfrSuggestion] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All Categories');
     const [selectedManufacturer, setSelectedManufacturer] = useState('All Companies');
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -45,6 +47,28 @@ const Inventory = () => {
         const matchesMan = selectedManufacturer === 'All Companies' || item.manufacturer === selectedManufacturer;
         return matchesSearch && matchesCat && matchesMan;
     });
+
+    // GHOST AUTOCOMPLETE FOR ENROLLMENT
+    React.useEffect(() => {
+        if (isModalOpen && formData.name && formData.name.length >= 2) {
+            const match = inventory.find(i => i.name.toLowerCase().startsWith(formData.name.toLowerCase()));
+            if (match) setNameSuggestion(match.name);
+            else setNameSuggestion('');
+        } else {
+            setNameSuggestion('');
+        }
+    }, [formData.name, inventory, isModalOpen]);
+
+    React.useEffect(() => {
+        if (isModalOpen && formData.manufacturer && formData.manufacturer.length >= 2) {
+            const mfrs = [...new Set(inventory.map(i => i.manufacturer).filter(Boolean))];
+            const match = mfrs.find(m => m.toLowerCase().startsWith(formData.manufacturer.toLowerCase()));
+            if (match) setMfrSuggestion(match);
+            else setMfrSuggestion('');
+        } else {
+            setMfrSuggestion('');
+        }
+    }, [formData.manufacturer, inventory, isModalOpen]);
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -369,7 +393,28 @@ const Inventory = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                 <div>
                                     <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>FULL MEDICINE NAME</label>
-                                    <input required placeholder="Example: Panadol 500mg" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '1rem', fontWeight: 700 }} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                    <div style={{ position: 'relative' }}>
+                                        {nameSuggestion && formData.name && (
+                                            <div style={{ position: 'absolute', left: '12px', top: '12px', fontSize: '1rem', fontWeight: 700, color: '#cbd5e1', pointerEvents: 'none', whiteSpace: 'pre' }}>
+                                                <span style={{ color: 'transparent' }}>{formData.name}</span>
+                                                {nameSuggestion.slice(formData.name.length)}
+                                            </div>
+                                        )}
+                                        <input 
+                                            required 
+                                            placeholder="Example: Panadol 500mg" 
+                                            style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '1rem', fontWeight: 700, background: 'transparent', position: 'relative', zIndex: 2 }} 
+                                            value={formData.name} 
+                                            onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                            onKeyDown={e => {
+                                                if ((e.key === 'Tab' || e.key === 'ArrowRight') && nameSuggestion) {
+                                                    e.preventDefault();
+                                                    setFormData({ ...formData, name: nameSuggestion });
+                                                    setNameSuggestion('');
+                                                }
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                                 <div>
                                     <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ef4444', display: 'block', marginBottom: '8px' }}>BATCH / LOT NUMBER</label>
@@ -409,7 +454,27 @@ const Inventory = () => {
                                 </div>
                                 <div>
                                     <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>COMPANY / MFR</label>
-                                    <input placeholder="GSK, Abbott..." style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700, color: '#059669' }} value={formData.manufacturer} onChange={e => setFormData({ ...formData, manufacturer: e.target.value })} />
+                                    <div style={{ position: 'relative' }}>
+                                        {mfrSuggestion && formData.manufacturer && (
+                                            <div style={{ position: 'absolute', left: '12px', top: '10px', fontSize: '0.9rem', fontWeight: 700, color: '#cbd5e1', pointerEvents: 'none', whiteSpace: 'pre' }}>
+                                                <span style={{ color: 'transparent' }}>{formData.manufacturer}</span>
+                                                {mfrSuggestion.slice(formData.manufacturer.length)}
+                                            </div>
+                                        )}
+                                        <input 
+                                            placeholder="GSK, Abbott..." 
+                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700, color: '#059669', background: 'transparent', position: 'relative', zIndex: 2 }} 
+                                            value={formData.manufacturer} 
+                                            onChange={e => setFormData({ ...formData, manufacturer: e.target.value })}
+                                            onKeyDown={e => {
+                                                if ((e.key === 'Tab' || e.key === 'ArrowRight') && mfrSuggestion) {
+                                                    e.preventDefault();
+                                                    setFormData({ ...formData, manufacturer: mfrSuggestion });
+                                                    setMfrSuggestion('');
+                                                }
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                                 <div>
                                     <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>EXPIRY DATE</label>
