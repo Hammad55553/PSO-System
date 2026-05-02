@@ -256,31 +256,46 @@ const ShiftManagement = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {history.map(s => (
-                                        <tr key={s.id}>
-                                            <td style={{ fontWeight: 700 }}>{new Date(s.start_time || s.startTime).toLocaleDateString()}</td>
-                                            <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                {new Date(s.start_time || s.startTime).toLocaleTimeString()} - {(s.end_time || s.endTime) ? new Date(s.end_time || s.endTime).toLocaleTimeString() : 'Active'}
-                                            </td>
-                                            <td>{s.staff_name || s.staffName}</td>
-                                            <td>Rs {s.opening_cash || s.openingCash}</td>
-                                            <td>Rs {s.closing_cash || s.closingCash || 0}</td>
-                                            <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--primary)' }}>
-                                                Rs {(s.sales || 0).toLocaleString()}
-                                            </td>
-                                            {isAdmin && (
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <button
-                                                        onClick={() => handleDeleteShift(s.id)}
-                                                        style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', padding: '5px' }}
-                                                        title="Delete Shift Record"
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
+                                    {history.map(s => {
+                                        const isClosed = s.status === 'closed' || s.status === 'Closed';
+                                        return (
+                                            <tr key={s.id}>
+                                                <td style={{ padding: '12px 15px' }}>
+                                                    <div style={{ fontWeight: 800, color: '#1e293b' }}>{new Date(s.start_time || s.startTime).toLocaleDateString()}</div>
+                                                    <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>Ref: #{s.id.toString().slice(-6)}</div>
                                                 </td>
-                                            )}
-                                        </tr>
-                                    ))}
+                                                <td style={{ padding: '12px 15px' }}>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#0f172a' }}>
+                                                        {new Date(s.start_time || s.startTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} 
+                                                        <span style={{ margin: '0 5px', color: '#94a3b8' }}>→</span>
+                                                        {(s.end_time || s.endTime) ? new Date(s.end_time || s.endTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '...'}
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '12px 15px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        <div style={{ width: '24px', height: '24px', background: '#f1f5f9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6rem', fontWeight: 900, color: '#64748b' }}>{s.staff_name?.charAt(0) || 'U'}</div>
+                                                        <span style={{ fontWeight: 700, fontSize: '0.85rem' }}>{s.staff_name || s.staffName}</span>
+                                                    </div>
+                                                </td>
+                                                <td style={{ padding: '12px 15px', fontWeight: 700, color: '#059669' }}>Rs {s.opening_cash || s.openingCash}</td>
+                                                <td style={{ padding: '12px 15px', fontWeight: 700, color: '#1e293b' }}>Rs {s.closing_cash || s.closingCash || 0}</td>
+                                                <td style={{ padding: '12px 15px', textAlign: 'right', fontWeight: 950, color: '#065f46', fontSize: '1rem' }}>
+                                                    Rs {(s.sales || 0).toLocaleString()}
+                                                </td>
+                                                {isAdmin && (
+                                                    <td style={{ padding: '12px 15px', textAlign: 'center' }}>
+                                                        <button
+                                                            onClick={() => handleDeleteShift(s.id)}
+                                                            style={{ background: '#fff1f1', border: '1px solid #fee2e2', color: '#dc2626', cursor: 'pointer', padding: '6px', borderRadius: '6px' }}
+                                                            title="Delete Shift Record"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        );
+                                    })}
                                     {history.length === 0 && (
                                         <tr>
                                             <td colSpan={isAdmin ? "7" : "6"} style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
