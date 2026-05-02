@@ -231,7 +231,7 @@ const POS = () => {
 
     const handleCheckout = async (shouldPrint = true) => {
         if (!activeShift || isCheckingOut) return;
-        setIsCheckingOut(true);
+        
         if (cart.length === 0) { toast.error('Add items first!'); return; }
         if (paymentMethod === 'Credit' && !selectedCustomer) { toast.error('Select an Account!'); return; }
         
@@ -241,25 +241,26 @@ const POS = () => {
             return;
         }
 
-        const saleData = {
-            customer_name: selectedCustomer ? selectedCustomer.name : (walkingCustomerName || 'WALK-IN CUSTOMER'),
-            customer_id: selectedCustomer?.id || null,
-            total: finalTotal,
-            subtotal,
-            tax,
-            discount: itemDiscounts + globalDiscount,
-            payment_method: paymentMethod,
-            payment_details: (paymentMethod === 'Online' || paymentMethod === 'Card') ? {
-                provider: paymentMethod === 'Online' ? onlineProvider : 'Card Machine',
-                account: paymentMethod === 'Online' ? onlineAccount : 'POS Terminal',
-                customer_phone: customerPhone
-            } : null,
-            status: paymentMethod === 'Credit' ? 'Khatta' : 'Paid',
-            seller_name: user?.name || activeShift?.staffName || 'Operator',
-            is_doctor_mode: isDoctorMode
-        };
-
+        setIsCheckingOut(true);
         try {
+            const saleData = {
+                customer_name: selectedCustomer ? selectedCustomer.name : (walkingCustomerName || 'WALK-IN CUSTOMER'),
+                customer_id: selectedCustomer?.id || null,
+                total: finalTotal,
+                subtotal,
+                tax,
+                discount: itemDiscounts + globalDiscount,
+                payment_method: paymentMethod,
+                payment_details: (paymentMethod === 'Online' || paymentMethod === 'Card') ? {
+                    provider: paymentMethod === 'Online' ? onlineProvider : 'Card Machine',
+                    account: paymentMethod === 'Online' ? onlineAccount : 'POS Terminal',
+                    customer_phone: customerPhone
+                } : null,
+                status: paymentMethod === 'Credit' ? 'Khatta' : 'Paid',
+                seller_name: user?.name || activeShift?.staffName || 'Operator',
+                is_doctor_mode: isDoctorMode
+            };
+
             // 1. Save main sale
             const { data: savedSale, error: saleError } = await supabase
                 .from('sales')
