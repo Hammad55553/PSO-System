@@ -727,10 +727,10 @@ const POS = () => {
                                     <Printer size={16} /> PRINT & FINISH (F10)
                                 </button>
                             </div>
-                    </div>
                 </div>
+            </div>
 
-                {/* PARKED BILLS MODAL */}
+            {/* PARKED BILLS MODAL */}
                 {showParkedList && (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ background: 'white', width: '650px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
