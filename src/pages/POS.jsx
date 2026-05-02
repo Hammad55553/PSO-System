@@ -65,6 +65,8 @@ const POS = () => {
     const [showParkedList, setShowParkedList] = useState(false);
     const [showBreakdown, setShowBreakdown] = useState(false);
     const [checkoutStage, setCheckoutStage] = useState('idle'); // idle, printed, reporting
+    const [showConfirm, setShowConfirm] = useState(false);
+    const [pendingPrint, setPendingPrint] = useState(true);
 
 
     const searchInputRef = useRef(null);
@@ -77,7 +79,8 @@ const POS = () => {
         const handleKeyDown = (e) => {
             if (e.key === 'F1') { e.preventDefault(); searchInputRef.current?.focus(); }
             if (e.key === 'F2') { e.preventDefault(); setShowCustomerSearch(true); }
-            if (e.key === 'F10') { e.preventDefault(); handleCheckout(); }
+            if (e.key === 'F10') { e.preventDefault(); { setPendingPrint(true); setShowConfirm(true); } }
+            if (e.key === 'F9') { e.preventDefault(); { setPendingPrint(false); setShowConfirm(true); } }
             if (e.key === 'F4') { e.preventDefault(); handleParkBill(); }
             if (e.key === 'Escape') {
                 setShowCustomerSearch(false);
@@ -197,7 +200,7 @@ const POS = () => {
         setIsDoctorMode(false);
     };
 
-    const handleCheckout = async () => {
+    const handleCheckout = async (shouldPrint = true) => {
         if (!activeShift) return;
         if (cart.length === 0) { toast.error('Add items first!'); return; }
         if (paymentMethod === 'Credit' && !selectedCustomer) { toast.error('Select an Account!'); return; }
@@ -232,7 +235,8 @@ const POS = () => {
                 name: item.name,
                 quantity: item.quantity,
                 price: isDoctorMode ? (item.doctor_price || item.price) : item.price,
-                buy_price: item.buy_price || 0
+                buy_price: item.buy_price || 0,
+                reason: item.reason || null
             }));
 
             const { error: itemsError } = await supabase
@@ -295,22 +299,23 @@ const POS = () => {
             }
 
             setLastSale({ ...saleData, id: savedSale.id, items: cart, cash_received: cashReceived, change_amount: changeAmount, date: new Date().toLocaleString() });
-            toast.success('Sale Processed via Supabase');
+            dispatch(updateShiftStats({ sale: finalTotal }));
+            
+            if (shouldPrint) {
+                setCheckoutStage('printing');
+                toast.success('Sale Processed. Ready for Print.');
+                setTimeout(() => {
+                    window.print();
+                }, 300);
+            } else {
+                setCheckoutStage('printed'); // Skip printing stage but show success
+                toast.success('Sale Processed Successfully!');
+            }
 
         } catch (err) {
             console.error("Supabase Save Failed:", err);
             toast.error("Cloud Save Failed: " + err.message);
         }
-
-        dispatch(updateShiftStats({ sale: finalTotal }));
-
-        // SET TO PRINTING MODE (MODAL HIDDEN)
-        setCheckoutStage('printing');
-        toast.success('Sale Processed. Ready for Print.');
-
-        setTimeout(() => {
-            window.print();
-        }, 300);
     };
 
     if (!activeShift) {
@@ -700,9 +705,18 @@ const POS = () => {
                         </div>
 
                         {/* FINAL ACTION */}
-                        <div style={{ padding: '20px', borderTop: '1px solid #f1f5f9', background: 'white' }}>
-                            <button onClick={handleCheckout} style={{ width: '100%', padding: '18px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.2rem', fontWeight: 950, cursor: 'pointer', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                                <Printer size={22} /> PRINT BILL & FINISH
+                        <div style={{ padding: '20px', borderTop: '1px solid #f1f5f9', background: 'white', display: 'flex', gap: '10px' }}>
+                            <button 
+                                onClick={() => { setPendingPrint(false); setShowConfirm(true); }} 
+                                style={{ flex: 1, padding: '18px', background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '1rem', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                                <CheckCircle size={20} /> FINISH ONLY (F9)
+                            </button>
+                            <button 
+                                onClick={() => { setPendingPrint(true); setShowConfirm(true); }} 
+                                style={{ flex: 2, padding: '18px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.2rem', fontWeight: 950, cursor: 'pointer', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                            >
+                                <Printer size={22} /> PRINT & FINISH (F10)
                             </button>
                         </div>
                     </div>
@@ -781,6 +795,46 @@ const POS = () => {
                     logo={logo}
                     resetPOS={resetPOS}
                 />
+
+                {/* ANIMATED CONFIRMATION MODAL */}
+                {showConfirm && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 11000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)' }}>
+                        <div style={{ 
+                            background: 'white', 
+                            width: '400px', 
+                            padding: '30px', 
+                            borderRadius: '20px', 
+                            textAlign: 'center',
+                            animation: 'bounceIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
+                        }}>
+                            <div style={{ width: '80px', height: '80px', background: pendingPrint ? '#ecfdf5' : '#f0f9ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                                {pendingPrint ? <Printer size={40} color="#10b981" /> : <CheckCircle size={40} color="#3b82f6" />}
+                            </div>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 950, color: '#1e293b', marginBottom: '10px' }}>ARE YOU SURE?</h2>
+                            <p style={{ color: '#64748b', fontWeight: 700, marginBottom: '30px' }}>
+                                Do you want to {pendingPrint ? 'Print and Save' : 'Save Only'} this transaction of <span style={{ color: '#059669' }}>Rs {finalTotal.toLocaleString()}</span>?
+                            </p>
+                            
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button 
+                                    onClick={() => setShowConfirm(false)}
+                                    style={{ flex: 1, padding: '15px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '12px', fontWeight: 900, cursor: 'pointer' }}
+                                >
+                                    NO, CANCEL
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setShowConfirm(false);
+                                        handleCheckout(pendingPrint);
+                                    }}
+                                    style={{ flex: 1, padding: '15px', background: pendingPrint ? '#10b981' : '#3b82f6', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                >
+                                    YES, PROCEED
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
 
             <ThermalReceipt
