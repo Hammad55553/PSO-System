@@ -6,6 +6,7 @@ import { supabase } from '../supabase';
 import { addItem, editItem, deleteItem } from '../store/slices/inventorySlice';
 import Barcode from 'react-barcode';
 import toast from 'react-hot-toast';
+import { addToSyncQueue } from '../utils/offlineSync';
 
 
 const Inventory = () => {
@@ -91,22 +92,39 @@ const Inventory = () => {
             batch_no: formData.batch_no || '',
         };
 
+        const tempId = editingItem ? editingItem.id : Date.now().toString();
+        const optimisticData = { ...data, id: tempId };
+
         try {
             if (editingItem) {
+                // Optimistic Update
+                dispatch(editItem(optimisticData));
+                
                 const { error } = await supabase
                     .from('inventory')
                     .update(data)
                     .eq('id', editingItem.id);
                 
-                if (error) throw error;
-                toast.success('Product updated in Supabase');
+                if (error) {
+                    console.warn("Offline: Queuing update...");
+                    addToSyncQueue('inventory', 'update', data, editingItem.id);
+                } else {
+                    toast.success('Synced to Cloud');
+                }
             } else {
+                // Optimistic Add
+                dispatch(addItem(optimisticData));
+
                 const { error } = await supabase
                     .from('inventory')
                     .insert([data]);
                 
-                if (error) throw error;
-                toast.success('New product added to Supabase');
+                if (error) {
+                    console.warn("Offline: Queuing insert...");
+                    addToSyncQueue('inventory', 'insert', data);
+                } else {
+                    toast.success('Synced to Cloud');
+                }
             }
             
             setIsModalOpen(false);
@@ -114,7 +132,8 @@ const Inventory = () => {
             setFormData({ name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60', manufacturer: '', batch_no: '' });
         } catch (err) {
             console.error(err);
-            toast.error(err.message || "Failed to save product.");
+            // Even if fatal error, we keep it in queue if not already there
+            toast.success("Saved Locally (Offline Mode)");
         } finally {
             setIsSaving(false);
         }

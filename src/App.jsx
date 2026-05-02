@@ -35,6 +35,7 @@ import { setShifts } from './store/slices/shiftSlice';
 import { setShortageItems } from './store/slices/shortageSlice';
 import { setExpenses } from './store/slices/expensesSlice';
 import { setSuppliers } from './store/slices/suppliersSlice';
+import { processSyncQueue } from './utils/offlineSync';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import UserManagement from './pages/UserManagement';
@@ -137,6 +138,7 @@ function AppContent() {
 
     if (isAuthenticated) {
         fetchData();
+        processSyncQueue();
 
         const mainChannel = supabase.channel('db-changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => fetchData())
