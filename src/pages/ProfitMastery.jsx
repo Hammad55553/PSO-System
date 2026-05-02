@@ -19,6 +19,16 @@ import {
 
 const ProfitMastery = () => {
     const navigate = useNavigate();
+    
+    // Pulse Animation Styles
+    const pulseKeyframes = `
+        @keyframes pulse-wave {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
+            70% { box-shadow: 0 0 0 15px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+    `;
+
     const { history } = useSelector(state => state.sales);
     const { user } = useSelector(state => state.auth);
     const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
@@ -92,6 +102,7 @@ const ProfitMastery = () => {
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '30px', background: '#f8fafc', padding: '20px', overflowY: 'auto' }}>
+            <style>{pulseKeyframes}</style>
             
             {/* PRODUCT DETAIL MODAL */}
             {selectedProduct && (
@@ -102,7 +113,34 @@ const ProfitMastery = () => {
                                 <h3 style={{ fontSize: '1.4rem', fontWeight: 900 }}>{selectedProduct.name}</h3>
                                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '5px' }}>
                                     <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Category: {selectedProduct.category}</span>
-                                    <button onClick={() => navigate(`/insights/${selectedProduct.name}`)} style={{ background: '#34d399', color: '#064e3b', border: 'none', padding: '2px 10px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer' }}>DEEP DIVE ➜</button>
+                                    <button 
+                                        onClick={() => navigate(`/insights/${selectedProduct.name}`)} 
+                                        style={{ 
+                                            background: '#10b981', 
+                                            color: 'white', 
+                                            border: 'none', 
+                                            padding: '4px 12px', 
+                                            borderRadius: '6px', 
+                                            fontSize: '0.7rem', 
+                                            fontWeight: 900, 
+                                            cursor: 'pointer',
+                                            animation: 'pulse-wave 0.8s infinite',
+                                            transition: 'all 0.1s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '5px'
+                                        }}
+                                        onMouseOver={e => {
+                                            e.currentTarget.style.background = '#059669';
+                                            e.currentTarget.style.transform = 'scale(1.05)';
+                                        }}
+                                        onMouseOut={e => {
+                                            e.currentTarget.style.background = '#10b981';
+                                            e.currentTarget.style.transform = 'scale(1)';
+                                        }}
+                                    >
+                                        DEEP DIVE <ChevronRight size={12} />
+                                    </button>
                                 </div>
                             </div>
                             <button onClick={() => setSelectedProduct(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '10px', borderRadius: '50%', cursor: 'pointer' }}>✕</button>

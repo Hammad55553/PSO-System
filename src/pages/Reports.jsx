@@ -38,18 +38,39 @@ const Reports = () => {
     const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
     const [selectedSale, setSelectedSale] = useState(null);
 
-    // Data Calculation Methods
-    const filteredSales = history.filter(s => {
-        if (!s.date) return false;
-        // Check if date is ISO or Locale string
-        const saleDate = s.date.includes(',') ? s.date.split(',')[0] : s.date;
-        try {
-            const dateObj = new Date(saleDate);
-            return dateObj.toISOString().split('T')[0] === dateFilter;
-        } catch (e) {
-            return false;
-        }
-    });
+    const [sales, setSales] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    // Fetch Sales for Selected Date
+    React.useEffect(() => {
+        const fetchSales = async () => {
+            setLoading(true);
+            try {
+                // Get start and end of the selected day
+                const startOfDay = `${dateFilter}T00:00:00.000Z`;
+                const endOfDay = `${dateFilter}T23:59:59.999Z`;
+
+                const { data, error } = await supabase
+                    .from('sales')
+                    .select('*, sale_items(*)')
+                    .gte('created_at', startOfDay)
+                    .lte('created_at', endOfDay)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                setSales(data || []);
+            } catch (err) {
+                console.error("Fetch Error:", err);
+                toast.error("Failed to load sales data");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSales();
+    }, [dateFilter]);
+
+    const filteredSales = sales;
 
     const totalRevenue = filteredSales.reduce((acc, s) => acc + (s.total || 0), 0);
     const totalTransactions = filteredSales.length;
@@ -57,7 +78,7 @@ const Reports = () => {
     // Profit Calculation (Admin Only)
     const isAdmin = user?.role === 'admin';
     const totalProfit = filteredSales.reduce((acc, sale) => {
-        const saleProfit = sale.items.reduce((sum, item) => {
+        const saleProfit = (sale.sale_items || []).reduce((sum, item) => {
             const buyPrice = item.buy_price || 0;
             return sum + (((item.price || 0) - buyPrice) * (item.quantity || 0));
         }, 0);
@@ -65,15 +86,16 @@ const Reports = () => {
     }, 0);
 
     // Payment Mode Breakdown
-    const paymentStats = { Cash: 0, Card: 0, Credit: 0 };
+    const paymentStats = { Cash: 0, Card: 0, Credit: 0, Online: 0 };
     filteredSales.forEach(s => {
-        paymentStats[s.paymentMethod] = (paymentStats[s.paymentMethod] || 0) + (s.total || 0);
+        const method = s.payment_method || 'Cash';
+        paymentStats[method] = (paymentStats[method] || 0) + (s.total || 0);
     });
 
     // Top Selling products & Category Insights
     const productStats = {};
     filteredSales.forEach(sale => {
-        sale.items.forEach(item => {
+        (sale.sale_items || []).forEach(item => {
             if (!productStats[item.name]) {
                 productStats[item.name] = { qty: 0, revenue: 0 };
             }
@@ -235,10 +257,10 @@ const Reports = () => {
                                     {isAdmin && <th style={{ padding: '15px 20px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 900, color: '#64748b' }}>PROFIT</th>}
                                 </tr>
                             </thead>
-                            <tbody>
+                             <tbody>
                                 {filteredSales.map(sale => {
-                                    const saleProfit = sale.items.reduce((sum, item) => {
-                                        const buyPrice = item.buyPrice || 0;
+                                    const saleProfit = (sale.sale_items || []).reduce((sum, item) => {
+                                        const buyPrice = item.buy_price || 0;
                                         return sum + (((item.price || 0) - buyPrice) * (item.quantity || 0));
                                     }, 0) - (sale.discount || 0);
 
@@ -255,32 +277,24 @@ const Reports = () => {
                                                     fontSize: '0.7rem',
                                                     transition: 'all 0.2s'
                                                 }}
-                                                onMouseOver={(e) => {
-                                                    e.currentTarget.style.color = '#059669';
-                                                    e.currentTarget.style.transform = 'translateX(5px)';
-                                                }}
-                                                onMouseOut={(e) => {
-                                                    e.currentTarget.style.color = '#10b981';
-                                                    e.currentTarget.style.transform = 'translateX(0)';
-                                                }}
                                             >
-                                                #{sale.id?.toString().toUpperCase()}
+                                                #{sale.invoice_no ? (100000 + parseInt(sale.invoice_no)).toString() : sale.id?.toString().slice(-6).toUpperCase()}
                                             </td>
-                                            <td style={{ fontWeight: 700, color: '#334155', fontSize: '0.75rem' }}>{sale.customerName || '—'}</td>
-                                            <td style={{ fontWeight: 800, color: '#64748b', fontSize: '0.75rem' }}>{sale.sellerName?.toUpperCase() || 'SYSTEM'}</td>
+                                            <td style={{ fontWeight: 700, color: '#334155', fontSize: '0.75rem' }}>{sale.customer_name || '—'}</td>
+                                            <td style={{ fontWeight: 800, color: '#64748b', fontSize: '0.75rem' }}>{sale.seller_name?.toUpperCase() || 'SYSTEM'}</td>
                                             <td style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
-                                                {sale.items.map(i => i.name).join(', ')}
+                                                {(sale.sale_items || []).map(i => i.name).join(', ')}
                                             </td>
                                             <td>
                                                 <span style={{ 
                                                     fontSize: '0.6rem', 
                                                     fontWeight: 900, 
                                                     padding: '4px 8px', 
-                                                    background: sale.paymentMethod === 'Cash' ? '#ecfdf5' : sale.paymentMethod === 'Credit' ? '#fff1f1' : '#f0f9ff', 
+                                                    background: sale.payment_method === 'Cash' ? '#ecfdf5' : sale.payment_method === 'Credit' ? '#fff1f1' : '#f0f9ff', 
                                                     borderRadius: '6px', 
-                                                    color: sale.paymentMethod === 'Cash' ? '#059669' : sale.paymentMethod === 'Credit' ? '#ef4444' : '#0ea5e9'
+                                                    color: sale.payment_method === 'Cash' ? '#059669' : sale.payment_method === 'Credit' ? '#ef4444' : '#0ea5e9'
                                                 }}>
-                                                    {sale.paymentMethod.toUpperCase()}
+                                                    {sale.payment_method?.toUpperCase()}
                                                 </span>
                                             </td>
                                             <td style={{ textAlign: 'right', fontWeight: 950, color: '#1e293b', fontSize: '0.8rem' }}>Rs {sale.total.toLocaleString()}</td>
@@ -492,19 +506,19 @@ const Reports = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px', fontSize: '0.8rem' }}>
                                 <div>
                                     <span style={{ color: '#64748b', fontWeight: 700, display: 'block' }}>CUSTOMER</span>
-                                    <span style={{ fontWeight: 900, color: '#1e293b' }}>{selectedSale.customerName?.toUpperCase() || '—'}</span>
+                                    <span style={{ fontWeight: 900, color: '#1e293b' }}>{selectedSale.customer_name?.toUpperCase() || '—'}</span>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <span style={{ color: '#64748b', fontWeight: 700, display: 'block' }}>DATE & TIME</span>
-                                    <span style={{ fontWeight: 900, color: '#1e293b' }}>{new Date(selectedSale.date).toLocaleString()}</span>
+                                    <span style={{ fontWeight: 900, color: '#1e293b' }}>{new Date(selectedSale.created_at).toLocaleString()}</span>
                                 </div>
                                 <div>
                                     <span style={{ color: '#64748b', fontWeight: 700, display: 'block' }}>OPERATOR</span>
-                                    <span style={{ fontWeight: 900, color: '#1e293b' }}>{selectedSale.sellerName?.toUpperCase() || 'SYSTEM'}</span>
+                                    <span style={{ fontWeight: 900, color: '#1e293b' }}>{selectedSale.seller_name?.toUpperCase() || 'SYSTEM'}</span>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <span style={{ color: '#64748b', fontWeight: 700, display: 'block' }}>PAYMENT MODE</span>
-                                    <span style={{ fontWeight: 900, color: '#10b981' }}>{selectedSale.paymentMethod?.toUpperCase()}</span>
+                                    <span style={{ fontWeight: 900, color: '#10b981' }}>{selectedSale.payment_method?.toUpperCase()}</span>
                                 </div>
                             </div>
 
@@ -517,7 +531,7 @@ const Reports = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {selectedSale.items.map((item, idx) => (
+                                    {(selectedSale.sale_items || []).map((item, idx) => (
                                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                             <td style={{ padding: '12px 10px', fontSize: '0.8rem', fontWeight: 700 }}>{item.name}</td>
                                             <td style={{ padding: '12px 10px', textAlign: 'center', fontSize: '0.8rem', fontWeight: 800 }}>{item.quantity}</td>

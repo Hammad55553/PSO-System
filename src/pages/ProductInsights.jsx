@@ -23,6 +23,8 @@ const ProductInsights = () => {
     const [previewSale, setPreviewSale] = useState(null);
     const { history } = useSelector(state => state.sales);
     const { items: inventory } = useSelector(state => state.inventory);
+    const { user } = useSelector(state => state.auth);
+    const isAdmin = user?.role === 'admin';
 
     // 1. Data Aggregation for this specific product
     const productStats = useMemo(() => {
@@ -185,7 +187,7 @@ const ProductInsights = () => {
                                                 transition: 'color 0.2s'
                                             }}
                                         >
-                                            #{t.id.toString().toUpperCase()}
+                                            #{history.find(s => s.id === t.id)?.invoice_no ? (100000 + parseInt(history.find(s => s.id === t.id).invoice_no)).toString() : t.id.toString().slice(-6).toUpperCase()}
                                         </td>
                                         <td style={{ fontSize: '0.75rem', fontWeight: 800 }}>{t.customer || '—'}</td>
                                         <td style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>{t.operator}</td>
