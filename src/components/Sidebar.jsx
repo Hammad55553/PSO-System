@@ -35,8 +35,8 @@ const Sidebar = () => {
     const hasAccess = (perm) => isAdmin || permissions.includes(perm);
 
     const handleProtectedNavigation = (e, path) => {
-        // If we are in POS, ask for PIN
-        if (location.pathname.startsWith('/pos') && path !== '/pos') {
+        // Always ask for PIN when going to Dashboard OR when leaving POS
+        if (path === '/' || (location.pathname.startsWith('/pos') && path !== '/pos')) {
             e.preventDefault();
             setTargetPath(path);
             setShowPinModal(true);
