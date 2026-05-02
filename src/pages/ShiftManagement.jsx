@@ -89,7 +89,7 @@ const ShiftManagement = () => {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxWidth: '1000px', margin: '0 auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxWidth: '1000px', margin: '0 auto', padding: '10px' }}>
             {/* Toolbar */}
             <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <div>
@@ -104,7 +104,7 @@ const ShiftManagement = () => {
                 )}
             </header>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '30px' }}>
 
                 {/* 1. Terminal Lock/Unlock UI */}
                 {!activeShift ? (
@@ -141,7 +141,7 @@ const ShiftManagement = () => {
                     <div className="pos-section" style={{ background: 'white' }}>
                         <div className="section-header" style={{ background: 'var(--primary)', color: 'white', borderColor: 'var(--primary)' }}>Live Shift Monitor</div>
                         <div style={{ padding: '25px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '30px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', marginBottom: '30px' }}>
                                 <div style={{ border: '1px solid var(--border)', padding: '15px', borderRadius: '4px' }}>
                                     <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>START TIME</span>
                                     <span style={{ fontSize: '1.1rem', fontWeight: 700 }}>{new Date(activeShift.start_time || activeShift.startTime).toLocaleTimeString()}</span>
