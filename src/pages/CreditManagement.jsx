@@ -36,6 +36,15 @@ const CreditManagement = () => {
         }, { receivable: 0, payable: 0 });
     }, [customers]);
 
+    const filtered = React.useMemo(() => {
+        if (!customers) return [];
+        return customers.filter(c => 
+            (c.type || 'Client') === khataType &&
+            (c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+             c.phone?.includes(searchTerm))
+        ).sort((a,b) => b.balance - a.balance);
+    }, [customers, khataType, searchTerm]);
+
     const handleDeleteCustomer = async (id) => {
         if (!isAdmin) return;
         if (window.confirm('Are you sure you want to PERMANENTLY delete this customer and all their history?')) {
