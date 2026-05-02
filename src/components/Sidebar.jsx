@@ -1,7 +1,6 @@
 import React from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Lock, X } from 'lucide-react';
 import {
     LayoutDashboard,
     Package,
@@ -9,23 +8,25 @@ import {
     History,
     RotateCcw,
     Settings,
-    Stethoscope,
-    Users,
-    Wallet,
-    Users2,
     Timer,
     FileText,
     TrendingUp,
     Truck,
     Camera,
     ShieldAlert,
-    BookOpen
+    BookOpen,
+    Users,
+    Users2,
+    Wallet,
+    Lock
 } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const Sidebar = () => {
     const { user } = useSelector(state => state.auth);
     const location = useLocation();
     const navigate = useNavigate();
+    
     const [showPinModal, setShowPinModal] = React.useState(false);
     const [pinInput, setPinInput] = React.useState('');
     const [targetPath, setTargetPath] = React.useState(null);
@@ -34,12 +35,13 @@ const Sidebar = () => {
     const permissions = user?.permissions || [];
     const hasAccess = (perm) => isAdmin || permissions.includes(perm);
 
-    const handleProtectedNavigation = (e, path) => {
+    const handleNavClick = (path) => {
         // Always ask for PIN when going to Dashboard OR when leaving POS
         if (path === '/' || (location.pathname.startsWith('/pos') && path !== '/pos')) {
-            e.preventDefault();
             setTargetPath(path);
             setShowPinModal(true);
+        } else {
+            navigate(path);
         }
     };
 
@@ -56,6 +58,23 @@ const Sidebar = () => {
         }
     };
 
+    const NavItem = ({ to, icon: Icon, label, access }) => {
+        if (access && !hasAccess(access)) return null;
+        
+        const isActive = location.pathname === to;
+        
+        return (
+            <div 
+                onClick={() => handleNavClick(to)}
+                className={`nav-link ${isActive ? 'active' : ''}`}
+                style={{ cursor: 'pointer' }}
+            >
+                <Icon size={18} />
+                <span>{label}</span>
+            </div>
+        );
+    };
+
     return (
         <aside className="desktop-sidebar no-print">
             <div className="brand-section">
@@ -68,112 +87,49 @@ const Sidebar = () => {
 
             <nav className="nav-group">
                 <div className="nav-label">Core Operations</div>
-                <NavLink 
-                    to="/" 
-                    className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
-                    onClick={(e) => handleProtectedNavigation(e, '/')}
-                >
-                    <LayoutDashboard size={18} />
-                    <span>Dashboard</span>
-                </NavLink>
-
+                <NavItem to="/" icon={LayoutDashboard} label="Dashboard" />
+                
                 {hasAccess('pos') && (
                     <>
-                        <NavLink to="/pos" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                            <ShoppingCart size={18} />
-                            <span>Sale Terminal</span>
-                        </NavLink>
-                        <NavLink to="/returns" onClick={(e) => handleProtectedNavigation(e, '/returns')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                            <RotateCcw size={18} />
-                            <span>Returns</span>
-                        </NavLink>
+                        <NavItem to="/pos" icon={ShoppingCart} label="Sale Terminal" />
+                        <NavItem to="/returns" icon={RotateCcw} label="Returns" />
                     </>
                 )}
 
                 {hasAccess('inventory') && (
                     <>
-                        <NavLink to="/inventory" onClick={(e) => handleProtectedNavigation(e, '/inventory')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                            <Package size={18} />
-                            <span>Medicine Store</span>
-                        </NavLink>
-                        <NavLink to="/expiry" onClick={(e) => handleProtectedNavigation(e, '/expiry')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                            <ShieldAlert size={18} />
-                            <span>Expiry Control</span>
-                        </NavLink>
-                        <NavLink to="/orders" onClick={(e) => handleProtectedNavigation(e, '/orders')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                            <Truck size={18} />
-                            <span>Supply Hub</span>
-                        </NavLink>
-                        <NavLink to="/suppliers" onClick={(e) => handleProtectedNavigation(e, '/suppliers')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                            <Users size={18} />
-                            <span>Suppliers (Vendors)</span>
-                        </NavLink>
-                        <NavLink to="/shortage" onClick={(e) => handleProtectedNavigation(e, '/shortage')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                            <BookOpen size={18} />
-                            <span>Shortage Book</span>
-                        </NavLink>
+                        <NavItem to="/inventory" icon={Package} label="Medicine Store" />
+                        <NavItem to="/expiry" icon={ShieldAlert} label="Expiry Control" />
+                        <NavItem to="/orders" icon={Truck} label="Supply Hub" />
+                        <NavItem to="/suppliers" icon={Users} label="Suppliers (Vendors)" />
+                        <NavItem to="/shortage" icon={BookOpen} label="Shortage Book" />
                     </>
                 )}
 
                 <div className="nav-label">Finances & Credit</div>
-                {hasAccess('credit') && (
-                    <NavLink to="/credit" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                        <Users size={18} />
-                        <span>Executive Khata</span>
-                    </NavLink>
-                )}
-
-                <NavLink to="/bills" onClick={(e) => handleProtectedNavigation(e, '/bills')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                    <Camera size={18} />
-                    <span>Paper Work</span>
-                </NavLink>
-
-                <NavLink to="/expenses" onClick={(e) => handleProtectedNavigation(e, '/expenses')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                    <Wallet size={18} />
-                    <span>Expense Tracker</span>
-                </NavLink>
-
-                <NavLink to="/shift" onClick={(e) => handleProtectedNavigation(e, '/shift')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                    <Timer size={18} />
-                    <span>Day Shift</span>
-                </NavLink>
+                <NavItem to="/credit" icon={Users} label="Executive Khata" access="credit" />
+                <NavItem to="/bills" icon={Camera} label="Paper Work" />
+                <NavItem to="/expenses" icon={Wallet} label="Expense Tracker" />
+                <NavItem to="/shift" icon={Timer} label="Day Shift" />
 
                 <div className="nav-label">Reports & Audit</div>
                 {hasAccess('reports') && (
                     <>
-                        <NavLink to="/reports" onClick={(e) => handleProtectedNavigation(e, '/reports')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                            <FileText size={18} />
-                            <span>Analytic Reports</span>
-                        </NavLink>
-                        <NavLink to="/history" onClick={(e) => handleProtectedNavigation(e, '/history')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                            <History size={18} />
-                            <span>Registry Log</span>
-                        </NavLink>
+                        <NavItem to="/reports" icon={FileText} label="Analytic Reports" />
+                        <NavItem to="/history" icon={History} label="Registry Log" />
                     </>
                 )}
 
-                {hasAccess('profit') && (
-                    <NavLink to="/profit" onClick={(e) => handleProtectedNavigation(e, '/profit')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                        <TrendingUp size={18} />
-                        <span>Profit Mastery</span>
-                    </NavLink>
-                )}
+                <NavItem to="/profit" icon={TrendingUp} label="Profit Mastery" access="profit" />
 
                 {isAdmin && (
                     <>
                         <div className="nav-label">Management</div>
-                        <NavLink to="/users" onClick={(e) => handleProtectedNavigation(e, '/users')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                            <Users2 size={18} />
-                            <span>Team Access</span>
-                        </NavLink>
-
-                        <NavLink to="/settings" onClick={(e) => handleProtectedNavigation(e, '/settings')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
-                            <Settings size={18} />
-                            <span>System Setup</span>
-                        </NavLink>
+                        <NavItem to="/users" icon={Users2} label="Team Access" />
+                        <NavItem to="/settings" icon={Settings} label="System Setup" />
                     </>
                 )}
-             </nav>
+            </nav>
 
             <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.1)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -201,7 +157,7 @@ const Sidebar = () => {
                             <input 
                                 type="password" 
                                 autoFocus
-                                placeholder="ENTER 4-DIGIT PIN"
+                                placeholder="PIN"
                                 style={{ width: '100%', padding: '15px', textAlign: 'center', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '8px', border: '2px solid #e2e8f0', borderRadius: '12px', marginBottom: '20px', outline: 'none' }}
                                 value={pinInput}
                                 onChange={(e) => setPinInput(e.target.value)}
