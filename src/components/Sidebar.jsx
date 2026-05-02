@@ -163,8 +163,8 @@ const Sidebar = () => {
                             {user?.name?.charAt(0).toUpperCase() || 'A'}
                         </div>
                         <div style={{ overflow: 'hidden' }}>
-                            <p style={{ fontSize: '0.75rem', fontWeight: 900, color: 'white', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{user?.name || 'Administrator'}</p>
-                            <p style={{ fontSize: '0.6rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>{user?.role || 'Admin'} Account</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 900, color: 'white', marginBottom: '2px', textTransform: 'capitalize' }}>{user?.name || 'Administrator'}</p>
+                            <p style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{user?.role || 'Admin'} Account</p>
                         </div>
                     </div>
                 </div>

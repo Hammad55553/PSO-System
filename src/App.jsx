@@ -248,8 +248,8 @@ function AppContent() {
 
           <div className="flex items-center gap-6" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <div className="text-right">
-              <p className="text-[10px] font-800 text-slate-500">OPERATOR: {user?.role?.toUpperCase()}</p>
-              <p className="text-sm font-900 tracking-tight">{user?.name}</p>
+              <p className="text-[10px] font-800 text-slate-500" style={{ marginBottom: '2px' }}>OPERATOR: {user?.role?.toUpperCase()}</p>
+              <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1e293b', textTransform: 'capitalize' }}>{user?.name}</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center font-900 shadow-xl border border-white/20" style={{ width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: 'white' }}>
