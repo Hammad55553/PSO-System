@@ -424,7 +424,7 @@ const POS = () => {
                                                             {item.manufacturer && <span style={{ color: '#059669', fontWeight: 900 }}>• {item.manufacturer?.toUpperCase()}</span>}
                                                         </div>
                                                     </div>
-                                                    <span style={{ fontWeight: 900, color: '#059669', fontSize: '1.2rem' }}>Rs {isDoctorMode ? (item.doctorPrice || item.price) : item.price}</span>
+                                                    <span style={{ fontWeight: 900, color: isDoctorMode ? '#6366f1' : '#059669', fontSize: '1.2rem' }}>Rs {isDoctorMode ? (item.doctor_price || item.price) : item.price}</span>
                                                 </div>
                                                 <button
                                                     onClick={(e) => {
@@ -517,7 +517,10 @@ const POS = () => {
                                                     </div>
                                                 )}
                                             </td>
-                                            <td style={{ padding: '15px 20px', fontWeight: 700 }}>{isDoctorMode ? (item.doctorPrice || item.price) : item.price}</td>
+                                            <td style={{ padding: '15px 20px', fontWeight: 900, color: isDoctorMode ? '#6366f1' : '#1e293b' }}>
+                                                {isDoctorMode ? (item.doctor_price || item.price) : item.price}
+                                                {isDoctorMode && <div style={{ fontSize: '0.5rem', fontWeight: 900 }}>DR. RATE</div>}
+                                            </td>
                                             <td style={{ padding: '15px 20px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                                     <button onClick={() => updateCartItem(item.id, 'quantity', Math.max(1, item.quantity - 1))} style={{ width: '30px', height: '30px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 900 }}>-</button>
@@ -540,7 +543,7 @@ const POS = () => {
                                                     style={{ width: '70px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center', fontWeight: 800 }}
                                                 />
                                             </td>
-                                            <td style={{ padding: '15px 20px', textAlign: 'right', fontWeight: 900, fontSize: '1.1rem', color: '#065f46' }}>Rs {((isDoctorMode ? (item.doctorPrice || item.price) : item.price) * item.quantity - (item.discount || 0)).toLocaleString()}</td>
+                                            <td style={{ padding: '15px 20px', textAlign: 'right', fontWeight: 950, fontSize: '1.1rem', color: isDoctorMode ? '#4338ca' : '#065f46' }}>Rs {((isDoctorMode ? (item.doctor_price || item.price) : item.price) * item.quantity - (item.discount || 0)).toLocaleString()}</td>
                                             <td style={{ padding: '15px 20px', textAlign: 'right' }}>
                                                 <button onClick={() => removeFromCart(item.id)} style={{ color: '#ecfdf5', border: 'none', background: '#fee2e2', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={14} color="#ef4444" /></button>
                                             </td>
