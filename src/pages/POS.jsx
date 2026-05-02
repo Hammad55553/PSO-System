@@ -102,9 +102,11 @@ const POS = () => {
     }, [searchTerm]);
 
     const filteredInventory = inventory.filter(item => {
-        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             (item.barcode && item.barcode.includes(searchTerm));
+        const matchesSearch = 
+            item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (item.barcode && item.barcode.includes(searchTerm)) ||
+            (item.manufacturer && item.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesCat = selectedCategory === 'All' || item.category === selectedCategory;
         return matchesSearch && matchesCat;
     });
@@ -407,8 +409,11 @@ const POS = () => {
                                             <div key={item.id} style={{ borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <div onClick={() => addToCart(item)} style={{ padding: '15px 20px', cursor: 'pointer', flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                        <span style={{ fontWeight: 800, color: '#1e293b' }}>{item.name}</span>
-                                                        <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Stock: {item.stock} | Exp: {item.expiry || 'N/A'}</span>
+                                                        <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#1e293b' }}>{item.name}</span>
+                                                        <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', display: 'flex', gap: '8px' }}>
+                                                            <span>{item.category}</span>
+                                                            {item.manufacturer && <span style={{ color: '#059669', fontWeight: 900 }}>• {item.manufacturer.toUpperCase()}</span>}
+                                                        </div>
                                                     </div>
                                                     <span style={{ fontWeight: 900, color: '#059669', fontSize: '1.2rem' }}>Rs {isDoctorMode ? (item.doctorPrice || item.price) : item.price}</span>
                                                 </div>

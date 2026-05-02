@@ -15,6 +15,7 @@ const Inventory = () => {
     const isAdmin = user?.role === 'admin';
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('All Categories');
+    const [selectedManufacturer, setSelectedManufacturer] = useState('All Companies');
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
@@ -23,15 +24,25 @@ const Inventory = () => {
     const [restockBuyPrice, setRestockBuyPrice] = useState('');
 
     const [formData, setFormData] = useState({
-        name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60'
+        name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60', manufacturer: ''
     });
 
     const categories = ['Medicine', 'Vaccine', 'Syrup', 'Tablet', 'Injection', 'Surgical', 'Pet Food', 'Accessories', 'Feed', 'Other'];
+    
+    const manufacturers = React.useMemo(() => {
+        const unique = [...new Set(inventory.map(i => i.manufacturer).filter(Boolean))];
+        return unique.sort();
+    }, [inventory]);
 
     const filteredItems = inventory.filter(item => {
-        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || (item.id && item.id.includes(searchTerm)) || (item.barcode && item.barcode.includes(searchTerm));
+        const matchesSearch = 
+            item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+            (item.id && item.id.includes(searchTerm)) || 
+            (item.barcode && item.barcode.includes(searchTerm)) ||
+            (item.manufacturer && item.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesCat = selectedCategory === 'All Categories' || item.category === selectedCategory;
-        return matchesSearch && matchesCat;
+        const matchesMan = selectedManufacturer === 'All Companies' || item.manufacturer === selectedManufacturer;
+        return matchesSearch && matchesCat && matchesMan;
     });
 
     const handleSave = async (e) => {
@@ -48,6 +59,7 @@ const Inventory = () => {
             min_stock: parseInt(formData.min_stock || 5),
             expiry: formData.expiry || null,
             critical_days: parseInt(formData.critical_days || 60),
+            manufacturer: formData.manufacturer || '',
         };
 
         try {
@@ -70,7 +82,7 @@ const Inventory = () => {
             
             setIsModalOpen(false);
             setEditingItem(null);
-            setFormData({ name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60' });
+            setFormData({ name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60', manufacturer: '' });
         } catch (err) {
             console.error(err);
             toast.error(err.message || "Failed to save product.");
@@ -108,7 +120,8 @@ const Inventory = () => {
             expiry: item.expiry || '',
             tax_percent: item.tax_percent || 0,
             barcode: item.barcode || '',
-            critical_days: item.critical_days || 60
+            critical_days: item.critical_days || 60,
+            manufacturer: item.manufacturer || ''
         });
         setIsModalOpen(true);
     };
@@ -206,6 +219,15 @@ const Inventory = () => {
                         <option>All Categories</option>
                         {categories.map(c => <option key={c}>{c}</option>)}
                     </select>
+
+                    <select
+                        style={{ padding: '12px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 700, background: '#f0f9ff', width: '200px', color: '#0369a1' }}
+                        value={selectedManufacturer}
+                        onChange={e => setSelectedManufacturer(e.target.value)}
+                    >
+                        <option>All Companies</option>
+                        {manufacturers.map(m => <option key={m}>{m}</option>)}
+                    </select>
                 </div>
             </div>
 
@@ -245,7 +267,10 @@ const Inventory = () => {
                                         </td>
                                         <td style={{ padding: '15px 20px' }}>
                                             <div style={{ fontWeight: 800, color: '#1e293b' }}>{item.name}</div>
-                                            <div style={{ fontSize: '0.65rem', color: '#64748b' }}>Unit: {item.unit}</div>
+                                            <div style={{ fontSize: '0.65rem', color: '#64748b', display: 'flex', gap: '8px' }}>
+                                                <span>Unit: {item.unit}</span>
+                                                {item.manufacturer && <span style={{ color: '#059669', fontWeight: 900 }}>• {item.manufacturer.toUpperCase()}</span>}
+                                            </div>
                                         </td>
                                         <td style={{ padding: '15px 20px' }}>
                                             <span style={{ fontSize: '0.7rem', fontWeight: 900, padding: '4px 8px', background: '#ecfdf5', borderRadius: '4px', color: '#047857' }}>{item.category.toUpperCase()}</span>
@@ -357,18 +382,21 @@ const Inventory = () => {
                                         <input type="number" placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800, color: '#059669' }} value={formData.tax_percent} onChange={e => setFormData({ ...formData, tax_percent: e.target.value })} />
                                     </div>
                                 )}
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            </div>                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>CURRENT STOCK (Qty)</label>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>STOCK QTY</label>
                                     <input type="number" required placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800 }} value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>EXPIRY DATE</label>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>COMPANY</label>
+                                    <input placeholder="GSK, Abbott..." style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '1rem', fontWeight: 700, color: '#059669' }} value={formData.manufacturer} onChange={e => setFormData({ ...formData, manufacturer: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>EXPIRY</label>
                                     <input type="date" required style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 700 }} value={formData.expiry} onChange={e => setFormData({ ...formData, expiry: e.target.value })} />
                                 </div>
                             </div>
+>
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                 <div>
