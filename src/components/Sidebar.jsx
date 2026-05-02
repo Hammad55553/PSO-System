@@ -36,7 +36,7 @@ const Sidebar = () => {
 
     const handleProtectedNavigation = (e, path) => {
         // If we are in POS, ask for PIN
-        if (location.pathname === '/pos' && path !== '/pos') {
+        if (location.pathname.startsWith('/pos') && path !== '/pos') {
             e.preventDefault();
             setTargetPath(path);
             setShowPinModal(true);
@@ -83,7 +83,7 @@ const Sidebar = () => {
                             <ShoppingCart size={18} />
                             <span>Sale Terminal</span>
                         </NavLink>
-                        <NavLink to="/returns" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        <NavLink to="/returns" onClick={(e) => handleProtectedNavigation(e, '/returns')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                             <RotateCcw size={18} />
                             <span>Returns</span>
                         </NavLink>
@@ -123,17 +123,17 @@ const Sidebar = () => {
                     </NavLink>
                 )}
 
-                <NavLink to="/bills" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                <NavLink to="/bills" onClick={(e) => handleProtectedNavigation(e, '/bills')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                     <Camera size={18} />
                     <span>Paper Work</span>
                 </NavLink>
 
-                <NavLink to="/expenses" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                <NavLink to="/expenses" onClick={(e) => handleProtectedNavigation(e, '/expenses')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                     <Wallet size={18} />
                     <span>Expense Tracker</span>
                 </NavLink>
 
-                <NavLink to="/shift" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                <NavLink to="/shift" onClick={(e) => handleProtectedNavigation(e, '/shift')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                     <Timer size={18} />
                     <span>Day Shift</span>
                 </NavLink>
@@ -141,11 +141,11 @@ const Sidebar = () => {
                 <div className="nav-label">Reports & Audit</div>
                 {hasAccess('reports') && (
                     <>
-                        <NavLink to="/reports" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        <NavLink to="/reports" onClick={(e) => handleProtectedNavigation(e, '/reports')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                             <FileText size={18} />
                             <span>Analytic Reports</span>
                         </NavLink>
-                        <NavLink to="/history" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        <NavLink to="/history" onClick={(e) => handleProtectedNavigation(e, '/history')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                             <History size={18} />
                             <span>Registry Log</span>
                         </NavLink>
@@ -153,7 +153,7 @@ const Sidebar = () => {
                 )}
 
                 {hasAccess('profit') && (
-                    <NavLink to="/profit" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                    <NavLink to="/profit" onClick={(e) => handleProtectedNavigation(e, '/profit')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                         <TrendingUp size={18} />
                         <span>Profit Mastery</span>
                     </NavLink>
@@ -162,12 +162,12 @@ const Sidebar = () => {
                 {isAdmin && (
                     <>
                         <div className="nav-label">Management</div>
-                        <NavLink to="/users" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        <NavLink to="/users" onClick={(e) => handleProtectedNavigation(e, '/users')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                             <Users2 size={18} />
                             <span>Team Access</span>
                         </NavLink>
 
-                        <NavLink to="/settings" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        <NavLink to="/settings" onClick={(e) => handleProtectedNavigation(e, '/settings')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                             <Settings size={18} />
                             <span>System Setup</span>
                         </NavLink>
