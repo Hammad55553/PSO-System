@@ -137,13 +137,21 @@ const Inventory = () => {
         };
 
         dispatch(editItem(updatedItem));
-        if (navigator.onLine) {
-            try {
-                await setDoc(doc(db, "inventory", restockItem.id), updatedItem);
-            } catch (err) { console.error(err); }
+        try {
+            const { error } = await supabase
+                .from('inventory')
+                .update({
+                    stock: totalStock,
+                    buy_price: parseFloat(averageBuyPrice.toFixed(2))
+                })
+                .eq('id', restockItem.id);
+            
+            if (error) throw error;
+            toast.success(`Restocked! New Avg Cost: Rs ${averageBuyPrice.toFixed(2)}`);
+        } catch (err) {
+            console.error(err);
+            toast.error("Restock Cloud Sync Failed");
         }
-
-        toast.success(`Restocked! New Avg Cost: Rs ${averageBuyPrice.toFixed(2)}`);
         setIsRestockModalOpen(false);
         setRestockQty('');
         setRestockBuyPrice('');
@@ -372,34 +380,34 @@ const Inventory = () => {
                                 </div>
                                 <div>
                                     <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>PACKING SIZE</label>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
                                         <select 
                                             style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 700 }} 
-                                            value={formData.unit === 'Tablet Strip' || formData.unit === 'Full Box' || formData.unit === 'Syrup Bottle' || formData.unit === 'Vial' || formData.unit === 'Injection' || formData.unit === 'KG' || formData.unit === 'Grams' || formData.unit === 'ML' || formData.unit === 'General Item' ? formData.unit : 'Other'} 
+                                            value={['Packet', 'Kilogram (Kg)', 'Gram (g)', 'Litre (L)', 'Millilitre (ml)', 'Bottle', 'Injection', 'Strip'].includes(formData.unit) ? formData.unit : 'Other'} 
                                             onChange={e => {
                                                 const val = e.target.value;
-                                                setFormData({ ...formData, unit: val === 'Other' ? '' : val });
+                                                if (val === 'Other') setFormData({...formData, unit: ''});
+                                                else setFormData({...formData, unit: val});
                                             }}
                                         >
-                                            <option value="Tablet Strip">Tablet Strip</option>
-                                            <option value="Full Box">Full Box</option>
-                                            <option value="Syrup Bottle">Syrup Bottle</option>
-                                            <option value="Vial">Vial</option>
+                                            <option value="Packet">Packet</option>
+                                            <option value="Kilogram (Kg)">Kilogram (Kg)</option>
+                                            <option value="Gram (g)">Gram (g)</option>
+                                            <option value="Litre (L)">Litre (L)</option>
+                                            <option value="Millilitre (ml)">Millilitre (ml)</option>
+                                            <option value="Bottle">Bottle</option>
                                             <option value="Injection">Injection</option>
-                                            <option value="KG">KG (Kilogram)</option>
-                                            <option value="Grams">Grams</option>
-                                            <option value="ML">ML (Milliliters)</option>
-                                            <option value="General Item">General Item</option>
+                                            <option value="Strip">Strip</option>
                                             <option value="Other">Other (Custom)</option>
                                         </select>
                                         
-                                        {(formData.unit === '' || !['Tablet Strip', 'Full Box', 'Syrup Bottle', 'Vial', 'Injection', 'KG', 'Grams', 'ML', 'General Item'].includes(formData.unit)) && (
+                                        {!['Packet', 'Kilogram (Kg)', 'Gram (g)', 'Litre (L)', 'Millilitre (ml)', 'Bottle', 'Injection', 'Strip'].includes(formData.unit) && (
                                             <motion.input 
-                                                initial={{ opacity: 0, y: -10 }}
-                                                animate={{ opacity: 1, y: 0 }}
+                                                initial={{ opacity: 0, x: 10 }}
+                                                animate={{ opacity: 1, x: 0 }}
                                                 type="text" 
-                                                placeholder="Write custom packing (e.g. Pack of 5)" 
-                                                style={{ width: '100%', padding: '10px', border: '2px solid #10b981', borderRadius: '6px', fontWeight: 700, fontSize: '0.85rem' }} 
+                                                placeholder="Specify size (e.g. 500g)" 
+                                                style={{ width: '100%', padding: '10px', border: '2px solid #10b981', borderRadius: '6px', fontWeight: 700 }} 
                                                 value={formData.unit} 
                                                 onChange={e => setFormData({ ...formData, unit: e.target.value })} 
                                             />
