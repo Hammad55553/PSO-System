@@ -15,35 +15,43 @@ import {
 const ExpiryManagement = () => {
     const { items } = useSelector(state => state.inventory);
     const [searchTerm, setSearchTerm] = React.useState('');
-    const [statusFilter, setStatusFilter] = React.useState('All');
+    const [activeTab, setActiveTab] = React.useState('All'); // All, Critical, Pre-Critical
 
-    const today = new Date();
-    
     const processedItems = useMemo(() => {
-        return items.map(item => {
-            if (!item.expiry) return { ...item, status: 'No Date', daysRemaining: 9999 };
+        return items.filter(item => {
+            if (!item.expiry) return activeTab === 'All';
             
             const expiryDate = new Date(item.expiry);
-            const diffTime = expiryDate - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            const today = new Date();
+            const days = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
             
-            let status = 'Safe';
-            if (diffDays <= 0) status = 'Expired';
-            else if (diffDays <= 30) status = 'Critical (30 Days)';
-            else if (diffDays <= 90) status = 'Warning (90 Days)';
-            
-            return { ...item, status, daysRemaining: diffDays };
-        }).filter(item => {
+            const criticalLimit = item.critical_days || 60;
+            const preCriticalLimit = 120;
+
             const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-            const matchesStatus = statusFilter === 'All' || item.status.includes(statusFilter);
-            return matchesSearch && matchesStatus;
-        }).sort((a, b) => a.daysRemaining - b.daysRemaining);
-    }, [items, searchTerm, statusFilter]);
+            
+            let matchesTab = true;
+            if (activeTab === 'Critical') {
+                matchesTab = days <= criticalLimit;
+            } else if (activeTab === 'Pre-Critical') {
+                matchesTab = days > criticalLimit && days <= preCriticalLimit;
+            }
+
+            return matchesSearch && matchesTab;
+        }).sort((a, b) => {
+            const daysA = Math.ceil((new Date(a.expiry) - new Date()) / (1000 * 60 * 60 * 24));
+            const daysB = Math.ceil((new Date(b.expiry) - new Date()) / (1000 * 60 * 60 * 24));
+            return daysA - daysB;
+        });
+    }, [items, searchTerm, activeTab]);
 
     const stats = {
-        expired: processedItems.filter(i => i.status === 'Expired').length,
-        critical: processedItems.filter(i => i.status.includes('30 Days')).length,
-        warning: processedItems.filter(i => i.status.includes('90 Days')).length
+        critical: items.filter(i => i.expiry && Math.ceil((new Date(i.expiry) - new Date()) / (1000 * 60 * 60 * 24)) <= (i.critical_days || 60)).length,
+        preCritical: items.filter(i => {
+            if (!i.expiry) return false;
+            const days = Math.ceil((new Date(i.expiry) - new Date()) / (1000 * 60 * 60 * 24));
+            return days > (i.critical_days || 60) && days <= 120;
+        }).length
     };
 
     return (
@@ -59,12 +67,12 @@ const ExpiryManagement = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '15px' }}>
                     <div style={{ textAlign: 'right', padding: '0 20px', borderRight: '1px solid #e2e8f0' }}>
-                        <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b' }}>EXPIRED ITEMS</p>
-                        <h4 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#ef4444' }}>{stats.expired}</h4>
+                        <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b' }}>CRITICAL (60D)</p>
+                        <h4 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#ef4444' }}>{stats.critical}</h4>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b' }}>CRITICAL (30D)</p>
-                        <h4 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#f59e0b' }}>{stats.critical}</h4>
+                        <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b' }}>PRE-CRITICAL (120D)</p>
+                        <h4 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#f59e0b' }}>{stats.preCritical}</h4>
                     </div>
                 </div>
             </header>
@@ -82,23 +90,23 @@ const ExpiryManagement = () => {
                     />
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    {['All', 'Expired', 'Critical', 'Warning'].map(filter => (
+                    {['All', 'Critical', 'Pre-Critical'].map(tab => (
                         <button
-                            key={filter}
-                            onClick={() => setStatusFilter(filter)}
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
                             style={{
                                 padding: '10px 20px',
                                 borderRadius: '8px',
                                 border: 'none',
-                                background: statusFilter === filter ? '#1e293b' : '#f1f5f9',
-                                color: statusFilter === filter ? 'white' : '#64748b',
+                                background: activeTab === tab ? '#1e293b' : '#f1f5f9',
+                                color: activeTab === tab ? 'white' : '#64748b',
                                 fontWeight: 800,
                                 fontSize: '0.8rem',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s'
                             }}
                         >
-                            {filter.toUpperCase()}
+                            {tab.toUpperCase()}
                         </button>
                     ))}
                 </div>
@@ -138,29 +146,43 @@ const ExpiryManagement = () => {
                                         </div>
                                     </td>
                                     <td style={{ padding: '15px 20px' }}>
-                                        <div style={{ 
-                                            fontWeight: 900, 
-                                            color: item.daysRemaining <= 0 ? '#ef4444' : item.daysRemaining <= 30 ? '#f59e0b' : '#059669',
-                                            fontSize: '0.85rem'
-                                        }}>
-                                            {item.daysRemaining <= 0 ? 'EXPIRED' : `${item.daysRemaining} Days Left`}
-                                        </div>
+                                        {(() => {
+                                            const days = Math.ceil((new Date(item.expiry) - new Date()) / (1000 * 60 * 60 * 24));
+                                            const isCritical = days <= (item.critical_days || 60);
+                                            const isPreCritical = days <= 120;
+                                            return (
+                                                <div style={{ 
+                                                    fontWeight: 900, 
+                                                    color: isCritical ? '#ef4444' : isPreCritical ? '#f59e0b' : '#059669',
+                                                    fontSize: '0.85rem'
+                                                }}>
+                                                    {days <= 0 ? 'EXPIRED' : `${days} Days Left`}
+                                                </div>
+                                            );
+                                        })()}
                                     </td>
                                     <td style={{ padding: '15px 20px' }}>
-                                        <span style={{ 
-                                            fontSize: '0.65rem', 
-                                            fontWeight: 900, 
-                                            padding: '4px 10px', 
-                                            borderRadius: '20px',
-                                            background: item.status === 'Expired' ? '#fee2e2' : item.status.includes('30') ? '#fef3c7' : '#ecfdf5',
-                                            color: item.status === 'Expired' ? '#991b1b' : item.status.includes('30') ? '#92400e' : '#065f46',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '5px'
-                                        }}>
-                                            {item.status === 'Expired' ? <AlertTriangle size={12} /> : item.status.includes('30') ? <Clock size={12} /> : <CheckCircle size={12} />}
-                                            {item.status.toUpperCase()}
-                                        </span>
+                                        {(() => {
+                                            const days = Math.ceil((new Date(item.expiry) - new Date()) / (1000 * 60 * 60 * 24));
+                                            const isCritical = days <= (item.critical_days || 60);
+                                            const isPreCritical = days <= 120;
+                                            return (
+                                                <span style={{ 
+                                                    fontSize: '0.65rem', 
+                                                    fontWeight: 900, 
+                                                    padding: '4px 10px', 
+                                                    borderRadius: '20px',
+                                                    background: isCritical ? '#fee2e2' : isPreCritical ? '#fef3c7' : '#ecfdf5',
+                                                    color: isCritical ? '#991b1b' : isPreCritical ? '#92400e' : '#065f46',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '5px'
+                                                }}>
+                                                    {isCritical ? <AlertTriangle size={12} /> : isPreCritical ? <Clock size={12} /> : <CheckCircle size={12} />}
+                                                    {isCritical ? 'CRITICAL' : isPreCritical ? 'PRE-CRITICAL' : 'SAFE'}
+                                                </span>
+                                            );
+                                        })()}
                                     </td>
                                     <td style={{ padding: '15px 20px', textAlign: 'right' }}>
                                         <button style={{ background: '#fff1f1', border: '1px solid #fee2e2', padding: '8px', borderRadius: '8px', color: '#ef4444', cursor: 'pointer' }} title="Remove from Stock">

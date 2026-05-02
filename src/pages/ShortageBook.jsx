@@ -14,8 +14,7 @@ import {
     X
 } from 'lucide-react';
 import { addToShortage, removeFromShortage, updateShortageStatus } from '../store/slices/shortageSlice';
-import { db } from '../firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
 
 const ShortageBook = () => {
@@ -27,43 +26,59 @@ const ShortageBook = () => {
 
     const filteredItems = items.filter(i => 
         i.name.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a, b) => b.demandCount - a.demandCount);
+    ).sort((a, b) => (b.demand_count || 0) - (a.demand_count || 0));
 
-    const handleAddManual = (e) => {
+    const handleAddManual = async (e) => {
         e.preventDefault();
         if (!newItemName) return;
         const item = {
-            id: Date.now(),
             name: newItemName,
-            demandCount: 1,
+            demand_count: 1,
             status: 'pending',
-            addedAt: new Date().toISOString(),
-            lastRequested: new Date().toISOString(),
             notes: ''
         };
-        dispatch(addToShortage(item));
-        if (navigator.onLine) {
-            setDoc(doc(db, "shortage", item.id.toString()), item);
+
+        try {
+            const { error } = await supabase
+                .from('shortage')
+                .insert([item]);
+            
+            if (error) throw error;
+            toast.success('Added to Shortage Book (Supabase)');
+            setNewItemName('');
+            setIsModalOpen(false);
+        } catch (err) {
+            toast.error('Failed to add demand');
         }
-        setNewItemName('');
-        setIsModalOpen(false);
-        toast.success('Added to Shortage Book');
     };
 
-    const handleStatusChange = (id, status) => {
-        dispatch(updateShortageStatus({ id, status }));
-        if (navigator.onLine) {
-            setDoc(doc(db, "shortage", id.toString()), { status }, { merge: true });
+    const handleStatusChange = async (id, status) => {
+        try {
+            const { error } = await supabase
+                .from('shortage')
+                .update({ status })
+                .eq('id', id);
+            
+            if (error) throw error;
+            toast.success(`Marked as ${status}`);
+        } catch (err) {
+            toast.error('Status update failed');
         }
-        toast.success(`Marked as ${status}`);
     };
 
-    const handleDelete = (id) => {
-        dispatch(removeFromShortage(id));
-        if (navigator.onLine) {
-            deleteDoc(doc(db, "shortage", id.toString()));
+    const handleDelete = async (id) => {
+        if (!window.confirm("Remove this entry?")) return;
+        try {
+            const { error } = await supabase
+                .from('shortage')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+            toast.success('Entry Removed from Supabase');
+        } catch (err) {
+            toast.error('Delete failed');
         }
-        toast.success('Entry Removed');
     };
 
     return (
@@ -138,11 +153,11 @@ const ShortageBook = () => {
                         <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
                             <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', flex: 1 }}>
                                 <p style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 800 }}>DEMAND COUNT</p>
-                                <p style={{ fontSize: '1.1rem', fontWeight: 950, color: '#6366f1' }}>{item.demandCount} Times</p>
+                                <p style={{ fontSize: '1.1rem', fontWeight: 950, color: '#6366f1' }}>{item.demand_count || 1} Times</p>
                             </div>
                             <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', flex: 1 }}>
                                 <p style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 800 }}>LAST REQUEST</p>
-                                <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569' }}>{new Date(item.lastRequested).toLocaleDateString()}</p>
+                                <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569' }}>{new Date(item.created_at).toLocaleDateString()}</p>
                             </div>
                         </div>
 

@@ -16,9 +16,7 @@ import {
     CheckCircle,
     UserPlus
 } from 'lucide-react';
-import { addSupplier, updateSupplierBalance, removeSupplier } from '../store/slices/suppliersSlice';
-import { db } from '../firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
 
 const SupplierManagement = () => {
@@ -41,11 +39,10 @@ const SupplierManagement = () => {
 
     const totalOutstanding = suppliers.reduce((acc, s) => acc + s.balance, 0);
 
-    const handleAddSupplier = (e) => {
+    const handleAddSupplier = async (e) => {
         e.preventDefault();
         if (!newSupplier.name || !newSupplier.company) return toast.error('Name and Company are required');
         const supplier = {
-            id: `SUP-${Date.now()}`,
             name: newSupplier.name,
             contact: newSupplier.contact,
             company: newSupplier.company,
@@ -57,53 +54,66 @@ const SupplierManagement = () => {
                 note: 'Account Created'
             }] : []
         };
-        dispatch(addSupplier(supplier));
-        if (navigator.onLine) {
-            setDoc(doc(db, "suppliers", supplier.id), supplier);
+
+        try {
+            const { error } = await supabase
+                .from('suppliers')
+                .insert([supplier]);
+            
+            if (error) throw error;
+            toast.success('Supplier Profile Created in Supabase');
+            setNewSupplier({ name: '', contact: '', company: '', balance: '' });
+            setIsAddModalOpen(false);
+        } catch (err) {
+            toast.error('Failed to create supplier');
         }
-        setNewSupplier({ name: '', contact: '', company: '', balance: '' });
-        setIsAddModalOpen(false);
-        toast.success('Supplier Profile Created');
     };
 
-    const handleAction = (e) => {
+    const handleAction = async (e) => {
         e.preventDefault();
         if (!actionData.amount) return toast.error('Enter amount');
-        dispatch(updateSupplierBalance({
-            id: selectedSupplier.id,
-            type: actionType,
-            amount: actionData.amount,
-            note: actionData.note
-        }));
         
-        if (navigator.onLine) {
-            const amount = parseFloat(actionData.amount);
-            const newBalance = actionType === 'purchase' ? selectedSupplier.balance + amount : selectedSupplier.balance - amount;
-            const newHistory = [
-                {
-                    date: new Date().toISOString(),
-                    type: actionType === 'purchase' ? 'Stock Purchase' : 'Payment Made',
-                    amount: amount,
-                    note: actionData.note || ''
-                },
-                ...(selectedSupplier.history || [])
-            ];
-            setDoc(doc(db, "suppliers", selectedSupplier.id), { balance: newBalance, history: newHistory }, { merge: true });
-        }
+        const amount = parseFloat(actionData.amount);
+        const newBalance = actionType === 'purchase' ? selectedSupplier.balance + amount : selectedSupplier.balance - amount;
+        const newHistory = [
+            {
+                date: new Date().toISOString(),
+                type: actionType === 'purchase' ? 'Stock Purchase' : 'Payment Made',
+                amount: amount,
+                note: actionData.note || ''
+            },
+            ...(selectedSupplier.history || [])
+        ];
 
-        setActionData({ amount: '', note: '' });
-        setIsActionModalOpen(false);
-        toast.success(actionType === 'purchase' ? 'Purchase Recorded' : 'Payment Recorded');
+        try {
+            const { error } = await supabase
+                .from('suppliers')
+                .update({ balance: newBalance, history: newHistory })
+                .eq('id', selectedSupplier.id);
+            
+            if (error) throw error;
+            toast.success(actionType === 'purchase' ? 'Purchase Recorded' : 'Payment Recorded');
+            setActionData({ amount: '', note: '' });
+            setIsActionModalOpen(false);
+        } catch (err) {
+            toast.error('Failed to update balance');
+        }
     };
 
-    const handleDeleteSupplier = (id) => {
+    const handleDeleteSupplier = async (id) => {
         if (!window.confirm('Delete this supplier?')) return;
-        dispatch(removeSupplier(id));
-        if (navigator.onLine) {
-            deleteDoc(doc(db, "suppliers", id));
+        try {
+            const { error } = await supabase
+                .from('suppliers')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+            setSelectedSupplier(null);
+            toast.success('Supplier Deleted from Supabase');
+        } catch (err) {
+            toast.error('Delete failed');
         }
-        setSelectedSupplier(null);
-        toast.success('Supplier Deleted');
     };
 
     return (

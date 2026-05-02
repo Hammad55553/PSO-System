@@ -16,8 +16,7 @@ import {
     FileText
 } from 'lucide-react';
 import { addExpense, removeExpense } from '../store/slices/expensesSlice';
-import { db } from '../firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
 
 const ExpenseTracker = () => {
@@ -44,40 +43,52 @@ const ExpenseTracker = () => {
 
     const stats = useMemo(() => {
         const total = list.reduce((acc, e) => acc + e.amount, 0);
-        const thisMonth = list.filter(e => new Date(e.date).getMonth() === new Date().getMonth()).reduce((acc, e) => acc + e.amount, 0);
-        const today = list.filter(e => new Date(e.date).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]).reduce((acc, e) => acc + e.amount, 0);
+        const thisMonth = list.filter(e => new Date(e.created_at).getMonth() === new Date().getMonth()).reduce((acc, e) => acc + e.amount, 0);
+        const today = list.filter(e => new Date(e.created_at).toISOString().split('T')[0] === new Date().toISOString().split('T')[0]).reduce((acc, e) => acc + e.amount, 0);
         return { total, thisMonth, today };
     }, [list]);
 
-    const handleAdd = (e) => {
+    const handleAdd = async (e) => {
         e.preventDefault();
         if (!formData.amount || !formData.description) {
             toast.error('Please fill all fields');
             return;
         }
         const expense = {
-            id: Date.now(),
-            date: new Date().toISOString(),
             category: formData.category,
             amount: parseFloat(formData.amount) || 0,
             description: formData.description,
-            addedBy: user.name || 'System'
+            added_by: user.name || 'System'
         };
-        dispatch(addExpense(expense));
-        if (navigator.onLine) {
-            setDoc(doc(db, "expenses", expense.id.toString()), expense);
+
+        try {
+            const { error } = await supabase
+                .from('expenses')
+                .insert([expense]);
+            
+            if (error) throw error;
+            toast.success('Expense recorded in Supabase');
+            setFormData({ category: 'Utilities', amount: '', description: '' });
+            setIsModalOpen(false);
+        } catch (err) {
+            toast.error('Failed to save expense');
+            console.error(err);
         }
-        setFormData({ category: 'Utilities', amount: '', description: '' });
-        setIsModalOpen(false);
-        toast.success('Expense recorded successfully');
     };
 
-    const handleDelete = (id) => {
-        dispatch(removeExpense(id));
-        if (navigator.onLine) {
-            deleteDoc(doc(db, "expenses", id.toString()));
+    const handleDelete = async (id) => {
+        if (!window.confirm("Delete this expense record?")) return;
+        try {
+            const { error } = await supabase
+                .from('expenses')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+            toast.success('Expense Deleted from Supabase');
+        } catch (err) {
+            toast.error('Delete failed');
         }
-        toast.success('Expense Deleted');
     };
 
     return (
@@ -153,7 +164,7 @@ const ExpenseTracker = () => {
                                     style={{ borderBottom: '1px solid #f1f5f9' }}
                                 >
                                     <td style={{ padding: '15px 20px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>
-                                        {new Date(expense.date).toLocaleDateString()}
+                                        {new Date(expense.created_at).toLocaleDateString()}
                                     </td>
                                     <td style={{ padding: '15px 20px' }}>
                                         <span style={{ 
@@ -172,7 +183,7 @@ const ExpenseTracker = () => {
                                         {expense.description}
                                     </td>
                                     <td style={{ padding: '15px 20px', fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>
-                                        {expense.addedBy.toUpperCase()}
+                                        {expense.added_by?.toUpperCase() || 'SYSTEM'}
                                     </td>
                                     <td style={{ padding: '15px 20px', textAlign: 'right', fontWeight: 950, color: '#ef4444', fontSize: '1rem' }}>
                                         - Rs {expense.amount.toLocaleString()}
