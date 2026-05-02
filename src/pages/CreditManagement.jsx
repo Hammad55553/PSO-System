@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Trash2, Edit3, UserPlus, Search, Phone, History, ArrowDownCircle, ArrowUpCircle, User, CreditCard } from 'lucide-react';
+import { Trash2, Edit3, UserPlus, Search, Phone, History, ArrowDownCircle, ArrowUpCircle, User, CreditCard, Share2, FileText, Image as ImageIcon, Download, Eye, X, MessageCircle } from 'lucide-react';
 import { addCustomer, updateBalance, deleteCustomer, editCustomer } from '../store/slices/customerSlice';
 import toast from 'react-hot-toast';
-
 import { supabase } from '../supabase';
-import { Share2, FileText, Image as ImageIcon, Download, Eye, X, MessageCircle } from 'lucide-react';
 import logo from '../assets/Bila_vet.png';
 
 const CreditManagement = () => {

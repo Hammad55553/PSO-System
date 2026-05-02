@@ -124,7 +124,7 @@ const Inventory = () => {
         }
 
         const currentStock = parseFloat(restockItem.stock || 0);
-        const currentBuyPrice = parseFloat(restockItem.buyPrice || 0);
+        const currentBuyPrice = parseFloat(restockItem.buy_price || 0);
 
         // Weighted Average Cost (WAC) Logic
         const totalStock = currentStock + incomingQty;
@@ -133,7 +133,7 @@ const Inventory = () => {
         const updatedItem = {
             ...restockItem,
             stock: totalStock,
-            buyPrice: parseFloat(averageBuyPrice.toFixed(2))
+            buy_price: parseFloat(averageBuyPrice.toFixed(2))
         };
 
         dispatch(editItem(updatedItem));
@@ -229,8 +229,8 @@ const Inventory = () => {
                         </thead>
                         <tbody>
                             {filteredItems.map(item => {
-                                const profit = item.price - (item.buyPrice || 0);
-                                const profitMargin = item.buyPrice ? ((profit / item.buyPrice) * 100).toFixed(0) : 0;
+                                const profit = item.price - (item.buy_price || 0);
+                                const profitMargin = item.buy_price ? ((profit / item.buy_price) * 100).toFixed(0) : 0;
                                 
                                 return (
                                     <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -253,14 +253,14 @@ const Inventory = () => {
                                         </td>
                                         <td style={{ padding: '15px 20px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <span style={{ fontSize: '1.1rem', fontWeight: 950, color: item.stock <= (item.minStock || 5) ? '#ef4444' : '#1e293b' }}>{item.stock}</span>
-                                                {item.stock <= (item.minStock || 5) && <AlertCircle size={14} color="#ef4444" />}
+                                                <span style={{ fontSize: '1.1rem', fontWeight: 950, color: item.stock <= (item.min_stock || 5) ? '#ef4444' : '#1e293b' }}>{item.stock}</span>
+                                                {item.stock <= (item.min_stock || 5) && <AlertCircle size={14} color="#ef4444" />}
                                             </div>
-                                            <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8' }}>MIN: {item.minStock || 5}</span>
+                                            <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8' }}>MIN: {item.min_stock || 5}</span>
                                         </td>
-                                         {isAdmin && <td style={{ padding: '15px 20px', fontWeight: 800, color: '#64748b' }}>Rs {item.buyPrice || 0}</td>}
+                                         {isAdmin && <td style={{ padding: '15px 20px', fontWeight: 800, color: '#64748b' }}>Rs {item.buy_price || 0}</td>}
                                         <td style={{ padding: '15px 20px', fontWeight: 900, color: '#059669', fontSize: '1.1rem' }}>Rs {item.price.toLocaleString()}</td>
-                                        {isAdmin && <td style={{ padding: '15px 20px', fontWeight: 800, color: '#6366f1', fontSize: '1.1rem' }}>Rs {(item.doctorPrice || item.price).toLocaleString()}</td>}
+                                        {isAdmin && <td style={{ padding: '15px 20px', fontWeight: 800, color: '#6366f1', fontSize: '1.1rem' }}>Rs {(item.doctor_price || item.price).toLocaleString()}</td>}
                                         {isAdmin && (
                                             <td style={{ padding: '15px 20px' }}>
                                                 <div style={{ fontWeight: 900, color: profit > 0 ? '#10b981' : '#ef4444' }}>Rs {profit.toLocaleString()}</div>
@@ -309,7 +309,7 @@ const Inventory = () => {
                     {isAdmin && (
                         <div style={{ textAlign: 'right' }}>
                             <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8' }}>ESTIMATED ASSET VALUE</p>
-                            <h4 style={{ fontSize: '1.3rem', fontWeight: 950, color: '#10b981' }}>Rs {filteredItems.reduce((acc, i) => acc + ((i.buyPrice || 0) * i.stock), 0).toLocaleString()}</h4>
+                            <h4 style={{ fontSize: '1.3rem', fontWeight: 950, color: '#10b981' }}>Rs {filteredItems.reduce((acc, i) => acc + ((i.buy_price || 0) * i.stock), 0).toLocaleString()}</h4>
                         </div>
                     )}
                     <div style={{ textAlign: 'right' }}>
@@ -336,10 +336,10 @@ const Inventory = () => {
                             </div>
 
                              <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr 1fr 1fr' : '1fr 1fr', gap: '15px' }}>
-                                {isAdmin && (
+                                 {isAdmin && (
                                     <div>
                                         <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>BUY PRICE (Rs)</label>
-                                        <input type="number" required placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800 }} value={formData.buyPrice} onChange={e => setFormData({ ...formData, buyPrice: e.target.value })} />
+                                        <input type="number" required placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800 }} value={formData.buy_price} onChange={e => setFormData({ ...formData, buy_price: e.target.value })} />
                                     </div>
                                 )}
                                 <div>
@@ -349,13 +349,13 @@ const Inventory = () => {
                                 {isAdmin && (
                                     <div>
                                         <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#6366f1', display: 'block', marginBottom: '8px' }}>DOCTOR PRICE (Rs)</label>
-                                        <input type="number" placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800, color: '#6366f1' }} value={formData.doctorPrice} onChange={e => setFormData({ ...formData, doctorPrice: e.target.value })} />
+                                        <input type="number" placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800, color: '#6366f1' }} value={formData.doctor_price} onChange={e => setFormData({ ...formData, doctor_price: e.target.value })} />
                                     </div>
                                 )}
                                 {isAdmin && (
                                     <div>
                                         <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>TAX / GST (%)</label>
-                                        <input type="number" placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800, color: '#059669' }} value={formData.taxPercent} onChange={e => setFormData({ ...formData, taxPercent: e.target.value })} />
+                                        <input type="number" placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800, color: '#059669' }} value={formData.tax_percent} onChange={e => setFormData({ ...formData, tax_percent: e.target.value })} />
                                     </div>
                                 )}
                             </div>
@@ -472,7 +472,7 @@ const Inventory = () => {
                                 </div>
                                 <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                                     <p style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 800 }}>CURRENT AVG COST</p>
-                                    <h4 style={{ fontSize: '1.2rem', fontWeight: 950 }}>Rs {restockItem.buyPrice}</h4>
+                                    <h4 style={{ fontSize: '1.2rem', fontWeight: 950 }}>Rs {restockItem.buy_price}</h4>
                                 </div>
                             </div>
 

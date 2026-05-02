@@ -60,7 +60,8 @@ const Dashboard = () => {
     const paymentStats = useMemo(() => {
         const stats = { Cash: 0, Credit: 0, Card: 0 };
         filteredHistory.forEach(s => {
-            if (stats[s.paymentMethod] !== undefined) stats[s.paymentMethod] += s.total;
+            const method = s.payment_method || s.paymentMethod || 'Cash';
+            if (stats[method] !== undefined) stats[method] += s.total;
             else stats['Cash'] += s.total; // Default/Fallback
         });
         const total = Object.values(stats).reduce((a, b) => a + b, 0) || 1;
@@ -302,17 +303,15 @@ const Dashboard = () => {
                                         style={{ background: '#fcfdfe' }}
                                     >
                                         <td style={{ padding: '15px', borderRadius: '12px 0 0 12px', fontWeight: 800, fontSize: '0.85rem', color: '#6366f1' }}>#{sale.id}</td>
+                                        <td style={{ padding: '12px 15px' }}>
+                                            <div style={{ fontWeight: 900, color: '#1e293b', fontSize: '0.9rem' }}>{sale.customer_name || 'Walking Patient'}</div>
+                                            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>{sale.payment_method || 'Cash'} Settlement</div>
+                                        </td>
                                         <td style={{ padding: '15px' }}>
-                                            <div style={{ fontWeight: 800, color: '#1e293b' }}>{sale.customer_name || 'Walking Patient'}</div>
                                             <div style={{ fontSize: '0.65rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                 <Calendar size={10} />
                                                 {new Date(sale.created_at).toLocaleDateString()} {new Date(sale.created_at).toLocaleTimeString()}
                                             </div>
-                                        </td>
-                                        <td style={{ padding: '15px' }}>
-                                            <span style={{ fontSize: '0.65rem', fontWeight: 900, padding: '4px 8px', background: '#f1f5f9', borderRadius: '4px', color: '#475569' }}>
-                                                {sale.payment_method.toUpperCase()}
-                                            </span>
                                         </td>
                                         <td style={{ padding: '15px', textAlign: 'right', borderRadius: '0 12px 12px 0', fontWeight: 950, fontSize: '1rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '15px' }}>

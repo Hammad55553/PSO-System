@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Play, Square, History, Timer, User, Wallet, Activity, ArrowRightCircle } from 'lucide-react';
+import { Play, Square, History, Timer, User, Wallet, Activity, ArrowRightCircle, Trash2 } from 'lucide-react';
 import { startShift, endShift, updateShiftStats, deleteShift } from '../store/slices/shiftSlice';
 import toast from 'react-hot-toast';
 import { supabase } from '../supabase';
