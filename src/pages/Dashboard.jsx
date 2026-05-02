@@ -364,9 +364,12 @@ const Dashboard = () => {
                             <AlertCircle size={20} /> DEPLETION ALERTS
                         </h5>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {items.filter(i => i.stock <= 10).slice(0, 4).map((item, i) => (
+                            {items.filter(i => i.stock <= (i.min_stock || 5)).slice(0, 6).map((item, i) => (
                                 <div key={i} style={{ background: 'white', padding: '12px 15px', borderRadius: '14px', border: '1px solid #fee2e2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontWeight: 800, fontSize: '0.8rem', color: '#1e293b' }}>{item.name}</span>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span style={{ fontWeight: 800, fontSize: '0.8rem', color: '#1e293b' }}>{item.name}</span>
+                                        <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 700 }}>Limit: {item.min_stock || 5} {item.unit}</span>
+                                    </div>
                                     <span style={{ fontSize: '0.9rem', fontWeight: 950, color: '#ef4444' }}>{item.stock}</span>
                                 </div>
                             ))}
