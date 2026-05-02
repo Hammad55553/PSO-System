@@ -105,7 +105,7 @@ const Dashboard = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '15px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'white', padding: '10px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                        <div style={{ width: '10px', height: '100%', background: activeShift ? '#10b981' : '#f59e0b', borderRadius: '5px', height: '10px' }}></div>
+                        <div style={{ width: '10px', background: activeShift ? '#10b981' : '#f59e0b', borderRadius: '5px', height: '10px' }}></div>
                         <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{activeShift ? 'LIVE OPERATIONS' : 'TERMINAL IDLE'}</span>
                     </div>
                 </div>
@@ -211,7 +211,7 @@ const Dashboard = () => {
                                                 }}
                                             >
                                                 Rs {data.revenue.toLocaleString()}
-                                                <div style={{ position: 'absolute', bottom: '-4px', left: '50%', transform: 'translateX(-50%)', width: '8px', height: '8px', background: '#1e293b', transform: 'translateX(-50%) rotate(45deg)' }}></div>
+                                                <div style={{ position: 'absolute', bottom: '-4px', left: '50%', width: '8px', height: '8px', background: '#1e293b', transform: 'translateX(-50%) rotate(45deg)' }}></div>
                                             </motion.div>
 
                                             {/* Glow effect for today */}

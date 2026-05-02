@@ -2,14 +2,11 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import { Plus, Search, Edit3, Trash2, Filter, Download, Box, AlertCircle, Calendar, Hash, X, RefreshCw, Layers } from 'lucide-react';
-import { addItem, editItem, deleteItem } from '../store/slices/inventorySlice';
-import Barcode from 'react-barcode';
-import toast from 'react-hot-toast';
-
 import { supabase } from '../supabase';
 import { addItem, editItem, deleteItem } from '../store/slices/inventorySlice';
 import Barcode from 'react-barcode';
 import toast from 'react-hot-toast';
+
 
 const Inventory = () => {
     const dispatch = useDispatch();
