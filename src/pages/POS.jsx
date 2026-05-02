@@ -726,7 +726,7 @@ const POS = () => {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                         {parkedBills.map(bill => (
                                             <div key={bill.id} onClick={() => restoreParked(bill)} style={{ border: '2px solid #e2e8f0', padding: '20px', borderRadius: '10px', cursor: 'pointer', background: '#f8fafc' }} onMouseOver={e => e.currentTarget.style.borderColor = '#10b981'} onMouseOut={e => e.currentTarget.style.borderColor = '#e2e8f0'}>
-                                                <div style={{ fontWeight: 900, color: '#065f46' }}>{bill.selectedCustomer ? bill.selectedCustomer.name.toUpperCase() : 'WALK-IN (CASH)'}</div>
+                                                <div style={{ fontWeight: 900, color: '#065f46' }}>{bill.selectedCustomer ? bill.selectedCustomer.name?.toUpperCase() : 'WALK-IN (CASH)'}</div>
                                                 <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 700, marginTop: '8px' }}>{bill.cart.length} Medicines | Held: {bill.time}</div>
                                                 <div style={{ marginTop: '15px', color: '#059669', fontWeight: 900, fontSize: '1rem', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>RECALL NOW →</div>
                                             </div>
@@ -756,7 +756,7 @@ const POS = () => {
                                         <div key={c.id} onClick={() => { setSelectedCustomer(c); setShowCustomerSearch(false); }} style={{ padding: '20px', border: '1px solid #f1f5f9', borderRadius: '8px', cursor: 'pointer', background: '#f8fafc' }} onMouseOver={e => e.currentTarget.style.borderColor = '#10b981'} onMouseOut={e => e.currentTarget.style.borderColor = '#f1f5f9'}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <div>
-                                                    <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#065f46' }}>{c.name.toUpperCase()}</div>
+                                                    <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#065f46' }}>{c.name?.toUpperCase()}</div>
                                                     <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>A/C ID: {c.id} | PH: {c.phone}</div>
                                                 </div>
                                                 <div style={{ textAlign: 'right' }}>
