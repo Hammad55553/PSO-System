@@ -23,8 +23,7 @@ import ShortageBook from './pages/ShortageBook';
 import ExpenseTracker from './pages/ExpenseTracker';
 import SupplierManagement from './pages/SupplierManagement';
 
-import { db } from './firebase';
-import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
+import { supabase } from './supabase';
 import { useDispatch, useSelector } from 'react-redux';
 import { RefreshCw, LogOut } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -55,59 +54,62 @@ function AppContent() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    let unsubscribes = [];
+    let channels = [];
 
-    if (navigator.onLine && isAuthenticated) {
-      // 1. Live Inventory
-      unsubscribes.push(onSnapshot(collection(db, "inventory"), (snap) => {
-        const cloudInv = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-        if (cloudInv.length > 0) dispatch(setInventory(cloudInv));
-      }));
+    const fetchData = async () => {
+        if (!isAuthenticated) return;
+        setIsSyncing(true);
+        try {
+            // 1. Initial Fetch
+            const [inv, cust, sales, shifts, short, exp, sup] = await Promise.all([
+                supabase.from('inventory').select('*'),
+                supabase.from('customers').select('*'),
+                supabase.from('sales').select('*, sale_items(*)'),
+                supabase.from('shifts').select('*'),
+                supabase.from('shortage').select('*'),
+                supabase.from('expenses').select('*'),
+                supabase.from('suppliers').select('*')
+            ]);
 
-      // 2. Live Customers (Clients/Companies)
-      unsubscribes.push(onSnapshot(collection(db, "customers"), (snap) => {
-        const cloudCust = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-        if (cloudCust.length > 0) dispatch(setCustomers(cloudCust));
-      }));
+            if (inv.data) dispatch(setInventory(inv.data));
+            if (cust.data) dispatch(setCustomers(cust.data));
+            if (sales.data) dispatch(setSales(sales.data.sort((a,b) => new Date(b.created_at)-new Date(a.created_at))));
+            if (shifts.data) {
+                const activeShift = shifts.data.find(s => s.status === 'active');
+                const history = shifts.data.filter(s => s.status !== 'active').sort((a,b) => new Date(b.start_time)-new Date(a.start_time));
+                dispatch(setShifts({ activeShift, history }));
+            }
+            if (short.data) dispatch(setShortageItems(short.data));
+            if (exp.data) dispatch(setExpenses(exp.data));
+            if (sup.data) dispatch(setSuppliers(sup.data));
 
-      // 3. Live Sales
-      unsubscribes.push(onSnapshot(collection(db, "sales"), (snap) => {
-        const cloudSales = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }))
-          .sort((a,b) => new Date(b.date)-new Date(a.date));
-        if (cloudSales.length > 0) dispatch(setSales(cloudSales));
-      }));
+            // 2. Setup Realtime Subscriptions
+            const mainChannel = supabase.channel('db-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, (payload) => {
+                    fetchData(); // Simplest way to stay in sync
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => fetchData())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => fetchData())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, () => fetchData())
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'shortage' }, () => fetchData())
+                .subscribe();
+            
+            channels.push(mainChannel);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setIsSyncing(false);
+        }
+    };
 
-      // 4. Live Shifts
-      unsubscribes.push(onSnapshot(collection(db, "shifts"), (snap) => {
-        const allShifts = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-        const activeShift = allShifts.find(s => s.status === 'active');
-        const shiftHistory = allShifts.filter(s => s.status !== 'active').sort((a,b) => new Date(b.startTime)-new Date(a.startTime));
-        if (allShifts.length > 0) dispatch(setShifts({ activeShift, history: shiftHistory }));
-      }));
-
-      // 5. Live Shortage
-      unsubscribes.push(onSnapshot(collection(db, "shortage"), (snap) => {
-        const cloudShort = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-        if (cloudShort.length > 0) dispatch(setShortageItems(cloudShort));
-      }));
-
-      // 6. Live Expenses
-      unsubscribes.push(onSnapshot(collection(db, "expenses"), (snap) => {
-        const cloudExp = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-        if (cloudExp.length > 0) dispatch(setExpenses(cloudExp));
-      }));
-
-      // 7. Live Suppliers
-      unsubscribes.push(onSnapshot(collection(db, "suppliers"), (snap) => {
-        const cloudSup = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-        if (cloudSup.length > 0) dispatch(setSuppliers(cloudSup));
-      }));
+    if (isAuthenticated) {
+        fetchData();
     }
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      unsubscribes.forEach(unsub => unsub());
+      channels.forEach(ch => supabase.removeChannel(ch));
     };
   }, [isAuthenticated, dispatch]);
 

@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db, auth } from '../firebase';
-import { collection, query, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import { supabase } from '../supabase';
 import { Users, CheckCircle, XCircle, Shield, Trash2, Loader2, Key } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -12,12 +10,14 @@ const UserManagement = () => {
     const fetchUsers = async () => {
         setIsLoading(true);
         try {
-            const q = query(collection(db, "users"));
-            const querySnapshot = await getDocs(q);
-            const userList = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            setUsers(userList);
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*');
+            
+            if (error) throw error;
+            setUsers(data);
         } catch (error) {
-            toast.error("Failed to load user list");
+            toast.error("Failed to load staff list");
         } finally {
             setIsLoading(false);
         }
@@ -34,7 +34,12 @@ const UserManagement = () => {
             : [...currentPerms, permission];
         
         try {
-            await updateDoc(doc(db, "users", user.id), { permissions: newPerms });
+            const { error } = await supabase
+                .from('profiles')
+                .update({ permissions: newPerms })
+                .eq('id', user.id);
+            
+            if (error) throw error;
             toast.success(`Updated ${permission} access for ${user.name}`);
             fetchUsers();
         } catch (error) {
@@ -51,29 +56,40 @@ const UserManagement = () => {
 
     const handleUpdateStatus = async (userId, newStatus) => {
         try {
-            await updateDoc(doc(db, "users", userId), { status: newStatus });
+            const { error } = await supabase
+                .from('profiles')
+                .update({ status: newStatus })
+                .eq('id', userId);
+            
+            if (error) throw error;
             toast.success(`User marked as ${newStatus}`);
             fetchUsers();
         } catch (error) {
-            toast.error("Failed to update user");
+            toast.error("Failed to update user status");
         }
     };
 
     const handleDeleteUser = async (userId) => {
-        if (!window.confirm("Delete this user account permanently?")) return;
+        if (!window.confirm("Delete this user profile? (Note: This doesn't delete their Auth account)")) return;
         try {
-            await deleteDoc(doc(db, "users", userId));
-            toast.success("User deleted");
+            const { error } = await supabase
+                .from('profiles')
+                .delete()
+                .eq('id', userId);
+            
+            if (error) throw error;
+            toast.success("User profile deleted");
             fetchUsers();
         } catch (error) {
-            toast.error("Failed to delete user");
+            toast.error("Failed to delete profile");
         }
     };
 
     const handleResetPassword = async (email) => {
-        if (!window.confirm(`Send password reset email to ${email}?`)) return;
+        if (!window.confirm(`Send password reset link to ${email}?`)) return;
         try {
-            await sendPasswordResetEmail(auth, email);
+            const { error } = await supabase.auth.resetPasswordForEmail(email);
+            if (error) throw error;
             toast.success(`Reset link sent to ${email}`);
         } catch (error) {
             toast.error("Failed to send reset link");

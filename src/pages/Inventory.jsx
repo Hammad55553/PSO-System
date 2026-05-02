@@ -6,8 +6,10 @@ import { addItem, editItem, deleteItem } from '../store/slices/inventorySlice';
 import Barcode from 'react-barcode';
 import toast from 'react-hot-toast';
 
-import { db } from '../firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { supabase } from '../supabase';
+import { addItem, editItem, deleteItem } from '../store/slices/inventorySlice';
+import Barcode from 'react-barcode';
+import toast from 'react-hot-toast';
 
 const Inventory = () => {
     const dispatch = useDispatch();
@@ -24,13 +26,13 @@ const Inventory = () => {
     const [restockBuyPrice, setRestockBuyPrice] = useState('');
 
     const [formData, setFormData] = useState({
-        name: '', price: '', doctorPrice: '', buyPrice: '', stock: '', unit: 'Units', category: 'Medicine', minStock: '5', expiry: '', taxPercent: '0', barcode: ''
+        name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: ''
     });
 
     const categories = ['Medicine', 'Vaccine', 'Syrup', 'Tablet', 'Injection', 'Surgical', 'Pet Food', 'Accessories', 'Feed', 'Other'];
 
     const filteredItems = inventory.filter(item => {
-        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || (item.id && item.id.includes(searchTerm));
+        const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || (item.id && item.id.includes(searchTerm)) || (item.barcode && item.barcode.includes(searchTerm));
         const matchesCat = selectedCategory === 'All Categories' || item.category === selectedCategory;
         return matchesSearch && matchesCat;
     });
@@ -38,52 +40,59 @@ const Inventory = () => {
     const handleSave = async (e) => {
         e.preventDefault();
         const data = { 
-            ...formData, 
+            name: formData.name,
+            category: formData.category,
+            unit: formData.unit,
+            barcode: formData.barcode || null,
             price: parseFloat(formData.price), 
-            doctorPrice: parseFloat(formData.doctorPrice || formData.price),
-            buyPrice: parseFloat(formData.buyPrice || 0),
-            stock: parseFloat(formData.stock), 
-            minStock: parseFloat(formData.minStock),
-            taxPercent: parseFloat(formData.taxPercent || 0)
+            doctor_price: parseFloat(formData.doctor_price || formData.price),
+            buy_price: parseFloat(formData.buy_price || 0),
+            stock: parseInt(formData.stock), 
+            min_stock: parseInt(formData.min_stock || 5),
+            expiry: formData.expiry || null,
         };
-        const finalId = editingItem ? editingItem.id : `SKU-${Math.floor(Math.random() * 10000)}`;
 
-        const finalData = { ...data, id: finalId };
-
-        if (editingItem) {
-            dispatch(editItem(finalData));
-            toast.success('Product definition updated');
-        } else {
-            dispatch(addItem(finalData));
-            toast.success('New product generated');
-        }
-
-        // HYBRID SYNC: CLOUD PUSH
-        if (navigator.onLine) {
-            try {
-                await setDoc(doc(db, "inventory", finalId), finalData);
-            } catch (err) {
-                console.error("Cloud Sync Failed:", err);
+        try {
+            if (editingItem) {
+                const { error } = await supabase
+                    .from('inventory')
+                    .update(data)
+                    .eq('id', editingItem.id);
+                
+                if (error) throw error;
+                toast.success('Product updated in Supabase');
+            } else {
+                const { error } = await supabase
+                    .from('inventory')
+                    .insert([data]);
+                
+                if (error) throw error;
+                toast.success('New product added to Supabase');
             }
+            
+            setIsModalOpen(false);
+            setEditingItem(null);
+            setFormData({ name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '' });
+        } catch (err) {
+            console.error(err);
+            toast.error(err.message || "Failed to save product.");
         }
-
-        setIsModalOpen(false);
-        setEditingItem(null);
-        setFormData({ name: '', price: '', doctorPrice: '', buyPrice: '', stock: '', unit: 'Units', category: 'Medicine', minStock: '5', expiry: '', taxPercent: '0', barcode: '' });
     };
 
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this product?')) {
-            dispatch(deleteItem(id));
-            if (navigator.onLine) {
-                try {
-                    await deleteDoc(doc(db, "inventory", id));
-                    toast.success('Product removed from Cloud');
-                } catch (err) {
-                    console.error("Cloud Delete Failed:", err);
-                }
+            try {
+                const { error } = await supabase
+                    .from('inventory')
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) throw error;
+                toast.success('Product removed from Supabase');
+            } catch (err) {
+                console.error(err);
+                toast.error("Cloud Delete Failed.");
             }
-            toast.success('Product removed locally');
         }
     };
 

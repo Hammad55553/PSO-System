@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     TrendingUp,
@@ -302,12 +303,15 @@ const Dashboard = () => {
                                     >
                                         <td style={{ padding: '15px', borderRadius: '12px 0 0 12px', fontWeight: 800, fontSize: '0.85rem', color: '#6366f1' }}>#{sale.id}</td>
                                         <td style={{ padding: '15px' }}>
-                                            <div style={{ fontWeight: 900, fontSize: '0.85rem' }}>{sale.customerName}</div>
-                                            <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>{new Date(sale.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                                            <div style={{ fontWeight: 800, color: '#1e293b' }}>{sale.customer_name || 'Walking Patient'}</div>
+                                            <div style={{ fontSize: '0.65rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                <Calendar size={10} />
+                                                {new Date(sale.created_at).toLocaleDateString()} {new Date(sale.created_at).toLocaleTimeString()}
+                                            </div>
                                         </td>
                                         <td style={{ padding: '15px' }}>
-                                            <span style={{ fontSize: '0.7rem', fontWeight: 900, background: sale.paymentMethod === 'Cash' ? '#ecfdf5' : '#fff7ed', color: sale.paymentMethod === 'Cash' ? '#059669' : '#c2410c', padding: '4px 10px', borderRadius: '8px' }}>
-                                                {sale.paymentMethod.toUpperCase()}
+                                            <span style={{ fontSize: '0.65rem', fontWeight: 900, padding: '4px 8px', background: '#f1f5f9', borderRadius: '4px', color: '#475569' }}>
+                                                {sale.payment_method.toUpperCase()}
                                             </span>
                                         </td>
                                         <td style={{ padding: '15px', textAlign: 'right', borderRadius: '0 12px 12px 0', fontWeight: 950, fontSize: '1rem' }}>
@@ -319,13 +323,11 @@ const Dashboard = () => {
                                                             e.stopPropagation();
                                                             if (window.confirm('Delete this transaction permanently?')) {
                                                                 const { deleteSale } = await import('../store/slices/salesSlice');
-                                                                const { db } = await import('../firebase');
-                                                                const { doc, deleteDoc } = await import('firebase/firestore');
                                                                 
                                                                 dispatch(deleteSale(sale.id));
                                                                 if (navigator.onLine) {
                                                                     try {
-                                                                        await deleteDoc(doc(db, "sales", sale.id));
+                                                                        await supabase.from('sales').delete().eq('id', sale.id);
                                                                         toast.success('Transaction Purged');
                                                                     } catch (err) { console.error(err); }
                                                                 }

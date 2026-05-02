@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import { auth, db } from '../firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { supabase } from '../supabase';
 import { login } from '../store/slices/authSlice';
 import { UserPlus, Lock, User, Mail, ShieldCheck, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,20 +20,29 @@ const Register = () => {
         setIsLoading(true);
 
         try {
-            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
+            const { data, error } = await supabase.auth.signUp({
+                email,
+                password,
+            });
 
-            const userData = {
-                uid: user.uid,
-                name: name,
-                email: email,
-                role: role,
-                status: 'pending', // Requires admin approval
-                createdAt: new Date().toISOString()
-            };
+            if (error) throw error;
 
-            // Save to Firestore
-            await setDoc(doc(db, "users", user.uid), userData);
+            const user = data.user;
+
+            // Save to profiles table
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .insert([
+                    {
+                        id: user.id,
+                        name: name,
+                        email: email,
+                        role: role,
+                        status: 'pending', // Requires admin approval
+                    }
+                ]);
+
+            if (profileError) throw profileError;
 
             toast.success(`Registration request sent! Please wait for Admin approval.`, { duration: 6000 });
             navigate('/login');

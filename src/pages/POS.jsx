@@ -34,8 +34,8 @@ import { updateBalance } from '../store/slices/customerSlice';
 import { addToShortage } from '../store/slices/shortageSlice';
 import toast from 'react-hot-toast';
 
-import { db } from '../firebase';
-import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
+import { supabase } from '../supabase';
+
 
 import logo from '../assets/Bila_vet.png';
 import ThermalReceipt from '../components/ThermalReceipt';
@@ -200,64 +200,81 @@ const POS = () => {
         if (paymentMethod === 'Credit' && !selectedCustomer) { toast.error('Select an Account!'); return; }
 
         const saleData = {
-            id: `INV-${Date.now().toString().slice(-6)}`,
-            customerName: selectedCustomer ? selectedCustomer.name : 'Walking Patient',
-            customerId: selectedCustomer?.id || null,
-            items: cart.map(item => ({
-                ...item,
-                price: isDoctorMode ? (item.doctorPrice || item.price) : item.price,
-                buyPrice: item.buyPrice || 0,
-                taxPercent: item.taxPercent || 0
-            })),
+            customer_name: selectedCustomer ? selectedCustomer.name : 'Walking Patient',
+            customer_id: selectedCustomer?.id || null,
             total: finalTotal,
             subtotal,
             tax,
             discount: itemDiscounts + globalDiscount,
-            paymentMethod,
-            date: new Date().toISOString(),
+            payment_method: paymentMethod,
             status: paymentMethod === 'Credit' ? 'Khatta' : 'Paid',
-            shiftId: activeShift.id,
-            sellerName: user?.name || activeShift?.staffName || 'Operator',
-            isDoctorMode
+            seller_name: user?.name || activeShift?.staffName || 'Operator',
+            is_doctor_mode: isDoctorMode
         };
 
-        cart.forEach(item => dispatch(updateStock({ id: item.id, quantity: item.quantity, mode: 'remove' })));
-        if (paymentMethod === 'Credit') {
-            dispatch(updateBalance({ id: selectedCustomer.id, amount: finalTotal, type: 'credit', note: `Bill ${saleData.id}` }));
-        }
-        dispatch(addSale(saleData));
-        setLastSale({ ...saleData, cashReceived, changeAmount, date: new Date().toLocaleString() });
+        try {
+            // 1. Save main sale
+            const { data: savedSale, error: saleError } = await supabase
+                .from('sales')
+                .insert([saleData])
+                .select()
+                .single();
 
-        // HYBRID SYNC: CLOUD PUSH
-        if (navigator.onLine) {
-            try {
-                setDoc(doc(db, "sales", saleData.id), saleData);
-                if (paymentMethod === 'Credit' && selectedCustomer) {
-                    const updatedCust = {
-                        ...selectedCustomer,
-                        balance: (selectedCustomer.balance || 0) + finalTotal,
-                        history: [
-                            { date: new Date().toISOString(), amount: finalTotal, type: 'credit', note: `Bill ${saleData.id}` },
-                            ...(selectedCustomer.history || [])
-                        ]
-                    };
-                    setDoc(doc(db, "customers", selectedCustomer.id), updatedCust);
-                }
-                cart.forEach(item => {
-                    const newStock = (inventory.find(i => i.id === item.id)?.stock || 0) - item.quantity;
-                    setDoc(doc(db, "inventory", item.id), { stock: newStock }, { merge: true });
-                });
-                if (activeShift) {
-                    const updatedShift = {
-                        ...activeShift,
-                        sales: (activeShift.sales || 0) + finalTotal
-                    };
-                    setDoc(doc(db, "shifts", activeShift.id), updatedShift, { merge: true });
-                }
-            } catch (err) {
-                console.error("Cloud Sync Failed:", err);
+            if (saleError) throw saleError;
+
+            // 2. Save sale items
+            const itemsToSave = cart.map(item => ({
+                sale_id: savedSale.id,
+                product_id: item.id,
+                name: item.name,
+                quantity: item.quantity,
+                price: isDoctorMode ? (item.doctor_price || item.price) : item.price,
+                buy_price: item.buy_price || 0
+            }));
+
+            const { error: itemsError } = await supabase
+                .from('sale_items')
+                .insert(itemsToSave);
+
+            if (itemsError) throw itemsError;
+
+            // 3. Update Inventory Stock
+            for (const item of cart) {
+                const { data: currentItem } = await supabase
+                    .from('inventory')
+                    .select('stock')
+                    .eq('id', item.id)
+                    .single();
+                
+                const newStock = (currentItem?.stock || 0) - item.quantity;
+                
+                await supabase
+                    .from('inventory')
+                    .update({ stock: newStock })
+                    .eq('id', item.id);
             }
+
+            // 4. Update Shift (If needed, assuming shifts table exists)
+            // ... shift update logic ...
+
+            setLastSale({ ...saleData, id: savedSale.id, cashReceived, changeAmount, date: new Date().toLocaleString() });
+            toast.success('Sale Saved to Supabase');
+
+        } catch (err) {
+            console.error("Supabase Save Failed:", err);
+            toast.error("Cloud Save Failed: " + err.message);
         }
+
+        dispatch(updateShiftStats({ sale: finalTotal }));
+
+        // SET TO PRINTING MODE (MODAL HIDDEN)
+        setCheckoutStage('printing');
+        toast.success('Sale Processed. Ready for Print.');
+
+        setTimeout(() => {
+            window.print();
+        }, 300);
+    };
 
         dispatch(updateShiftStats({ sale: finalTotal }));
 

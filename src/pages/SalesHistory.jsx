@@ -16,11 +16,10 @@ import {
     XCircle,
     CheckCircle2
 } from 'lucide-react';
+import { supabase } from '../supabase';
 import { returnSale, deleteSale } from '../store/slices/salesSlice';
 import { updateStock } from '../store/slices/inventorySlice';
 import toast from 'react-hot-toast';
-import { db } from '../firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { Trash2 } from 'lucide-react';
 
 const SalesHistory = ({ isReturnsPage = false }) => {
@@ -32,61 +31,64 @@ const SalesHistory = ({ isReturnsPage = false }) => {
     const [selectedSale, setSelectedSale] = useState(null);
 
     const filteredSales = sales.filter(s =>
-        s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.customerName?.toLowerCase().includes(searchTerm.toLowerCase())
+        s.id.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     const handleDelete = async (saleId) => {
         if (!isAdmin) return;
-        if (window.confirm('CRITICAL: Delete this invoice permanently from Cloud & Local? This action is IRREVERSIBLE.')) {
-            dispatch(deleteSale(saleId));
-
-            // CLOUD DELETE
-            if (navigator.onLine) {
-                try {
-                    await deleteDoc(doc(db, "sales", saleId));
-                    toast.success('Invoice Purged from Cloud');
-                } catch (err) {
-                    console.error("Delete Sync Failed:", err);
-                }
+        if (window.confirm('CRITICAL: Delete this invoice permanently?')) {
+            try {
+                const { error } = await supabase
+                    .from('sales')
+                    .delete()
+                    .eq('id', saleId);
+                
+                if (error) throw error;
+                toast.success('Invoice Purged from Supabase');
+                setSelectedSale(null);
+            } catch (err) {
+                console.error("Delete Failed:", err);
+                toast.error("Delete Failed: " + err.message);
             }
-            toast.success('Document Deleted');
-            setSelectedSale(null);
         }
     };
 
     const handleReturn = async (sale) => {
         if (sale.status === 'Returned') return;
         if (window.confirm('Authorize Full Return? Stock will be updated accordingly.')) {
-            dispatch(returnSale(sale.id));
+            try {
+                // 1. Update Sale Status
+                const { error: saleError } = await supabase
+                    .from('sales')
+                    .update({ status: 'Returned' })
+                    .eq('id', sale.id);
 
-            // Local Redux Inventory Update
-            sale.items.forEach(item => {
-                dispatch(updateStock({ id: item.id, quantity: item.quantity, mode: 'add' }));
-            });
+                if (saleError) throw saleError;
 
-            // CLOUD SYNC
-            if (navigator.onLine) {
-                try {
-                    // Update Sale Status in Cloud
-                    await setDoc(doc(db, "sales", sale.id), { ...sale, status: 'Returned' }, { merge: true });
-
-                    // Update Inventory Stocks in Cloud
-                    for (const item of sale.items) {
-                        // We need the current stock from DB or assume local is correct
-                        // For simplicity, we'll push the updated stock based on local calculation
-                        // In a real app, we'd use a transaction or increment()
-                        const newStock = item.stock + item.quantity;
-                        await setDoc(doc(db, "inventory", item.id), { stock: newStock }, { merge: true });
+                // 2. Revert Stocks
+                if (sale.sale_items) {
+                    for (const item of sale.sale_items) {
+                        const { data: invItem } = await supabase
+                            .from('inventory')
+                            .select('stock')
+                            .eq('id', item.product_id)
+                            .single();
+                        
+                        const newStock = (invItem?.stock || 0) + item.quantity;
+                        await supabase
+                            .from('inventory')
+                            .update({ stock: newStock })
+                            .eq('id', item.product_id);
                     }
-                    toast.success('Cloud Records Updated');
-                } catch (err) {
-                    console.error("Return Sync Failed:", err);
                 }
-            }
 
-            toast.success(`INV #${sale.id} Successfully Reversed`);
-            setSelectedSale(null);
+                toast.success(`INV #${sale.id} Successfully Reversed`);
+                setSelectedSale(null);
+            } catch (err) {
+                console.error("Return Failed:", err);
+                toast.error("Return Failed: " + err.message);
+            }
         }
     };
 
@@ -150,12 +152,12 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                                     <td style={{ padding: '15px 20px', fontWeight: 900, color: '#10b981', fontSize: '0.7rem' }}>
                                         #{sale.id.toString().toUpperCase()}
                                     </td>
-                                    <td style={{ padding: '15px 20px', fontWeight: 700 }}>{sale.customerName || '—'}</td>
+                                    <td style={{ padding: '15px 20px', fontWeight: 700 }}>{sale.customer_name || '—'}</td>
                                     <td style={{ padding: '15px 20px', fontSize: '0.8rem', color: '#64748b' }}>
-                                        {new Date(sale.date).toLocaleDateString()} {new Date(sale.date).toLocaleTimeString()}
+                                        {new Date(sale.created_at).toLocaleDateString()} {new Date(sale.created_at).toLocaleTimeString()}
                                     </td>
                                     <td style={{ padding: '15px 20px' }}>
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '4px 8px', background: '#f1f5f9', borderRadius: '4px' }}>{sale.paymentMethod.toUpperCase()}</span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '4px 8px', background: '#f1f5f9', borderRadius: '4px' }}>{sale.payment_method.toUpperCase()}</span>
                                     </td>
                                     <td style={{ padding: '15px 20px', fontWeight: 900 }}>Rs {sale.total.toLocaleString()}</td>
                                     <td style={{ padding: '15px 20px' }}>
@@ -200,17 +202,17 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                         <div style={{ marginBottom: '25px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                                 <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>CLIENT ACCOUNT:</span>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{selectedSale.customerName || 'WALK-IN'}</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{selectedSale.customer_name || 'WALK-IN'}</span>
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                                 <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>PAYMENT MODE:</span>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{selectedSale.paymentMethod.toUpperCase()}</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{selectedSale.payment_method.toUpperCase()}</span>
                             </div>
                         </div>
 
                         <div style={{ marginBottom: '30px' }}>
                             <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9', marginBottom: '10px' }}>LINE ITEMS</p>
-                            {selectedSale.items.map(item => (
+                            {selectedSale.sale_items?.map(item => (
                                 <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.8rem' }}>
                                     <span>{item.name} <strong style={{ color: '#94a3b8' }}>x{item.quantity}</strong></span>
                                     <span style={{ fontWeight: 800 }}>Rs {(item.price * item.quantity).toLocaleString()}</span>

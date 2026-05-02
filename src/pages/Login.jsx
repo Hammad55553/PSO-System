@@ -1,10 +1,7 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate, Link } from 'react-router-dom';
-import { auth, db } from '../firebase';
-import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { googleProvider } from '../firebase';
+import { supabase } from '../supabase';
 import { login } from '../store/slices/authSlice';
 import { Shield, Lock, User, AlertCircle, Loader2, Chrome } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -20,46 +17,18 @@ const Login = () => {
     const handleGoogleLogin = async () => {
         setIsGoogleLoading(true);
         try {
-            const result = await signInWithPopup(auth, googleProvider);
-            const user = result.user;
-
-            // Check if user exists in Firestore
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            let userData;
-
-            if (!userDoc.exists()) {
-                // If new user via Google, set as pending operator or ask Bilal to make admin
-                userData = {
-                    uid: user.uid,
-                    name: user.displayName,
-                    email: user.email,
-                    role: 'user', // Default to operator
-                    status: 'pending',
-                    createdAt: new Date().toISOString()
-                };
-                await setDoc(doc(db, "users", user.uid), userData);
-                toast.error("Google account registered. Waiting for Admin approval.");
-                return;
-            } else {
-                userData = userDoc.data();
-                if (userData.status !== 'active') {
-                    toast.error("Account pending approval or disabled. Contact Admin.");
-                    return;
-                }
-            }
-
-            const finalUser = {
-                uid: user.uid,
-                email: user.email,
-                role: userData.role,
-                status: userData.status,
-                name: userData.name || user.displayName,
-                permissions: userData.permissions || ['pos', 'inventory', 'credit', 'reports']
-            };
-
-            dispatch(login(finalUser));
-            toast.success(`Welcome, ${finalUser.name}!`);
-            navigate('/');
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    queryParams: {
+                        access_type: 'offline',
+                        prompt: 'select_account',
+                    },
+                },
+            });
+            if (error) throw error;
+            // Note: OAuth on web/desktop usually needs a redirect or separate handling
+            // For now, Supabase will handle the session.
         } catch (error) {
             console.error(error);
             toast.error("Google authentication failed.");
@@ -73,26 +42,41 @@ const Login = () => {
         setIsLoading(true);
 
         try {
-            const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            const user = userCredential.user;
+            const { data, error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
 
-            // Fetch extra user info from Firestore (e.g., role, status)
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            const userData = userDoc.exists() ? userDoc.data() : { role: 'user', status: 'active' };
+            if (error) throw error;
 
-            if (userData.status !== 'active') {
+            const user = data.user;
+
+            // Fetch extra user info from profiles table
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+
+            if (profileError || !profile) {
+                toast.error("Profile not found. Contact Admin.");
+                return;
+            }
+
+            if (profile.status !== 'active') {
                 toast.error("Your account is pending approval or has been disabled.");
-                setIsLoading(false);
                 return;
             }
 
             const finalUser = {
-                uid: user.uid,
+                uid: user.id,
                 email: user.email,
-                role: userData.role,
-                status: userData.status,
-                name: userData.name || user.email.split('@')[0],
-                permissions: userData.role === 'admin' ? ['pos', 'inventory', 'credit', 'reports', 'users', 'profit'] : (userData.permissions || ['pos', 'inventory', 'credit', 'reports'])
+                role: profile.role,
+                status: profile.status,
+                name: profile.name || user.email.split('@')[0],
+                permissions: profile.role === 'admin' 
+                    ? ['pos', 'inventory', 'credit', 'reports', 'users', 'profit'] 
+                    : (profile.permissions || ['pos', 'inventory', 'credit', 'reports'])
             };
 
             dispatch(login(finalUser));
@@ -100,7 +84,7 @@ const Login = () => {
             navigate('/');
         } catch (error) {
             console.error(error);
-            toast.error("Invalid credentials. Please try again.");
+            toast.error(error.message || "Invalid credentials.");
         } finally {
             setIsLoading(false);
         }
