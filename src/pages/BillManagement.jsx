@@ -48,16 +48,41 @@ const BillManagement = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Compression check
-        if (file.size > 800000) { // Approx 800KB
-            toast.error("Image too large. Please resize below 800KB.");
-            return;
-        }
-
         const reader = new FileReader();
-        reader.onloadend = () => {
-            setNewBill({ ...newBill, image: reader.result });
-            toast.success("Image attached successfully!");
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Max dimensions 1200px
+                const MAX_WIDTH = 1200;
+                const MAX_HEIGHT = 1200;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Compress to JPEG with 0.7 quality
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                setNewBill({ ...newBill, image: compressedDataUrl });
+                toast.success("Image optimized and attached!");
+            };
+            img.src = event.target.result;
         };
         reader.readAsDataURL(file);
     };
