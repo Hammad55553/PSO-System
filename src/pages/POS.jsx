@@ -194,7 +194,7 @@ const POS = () => {
         setIsDoctorMode(false);
     };
 
-    const handleCheckout = () => {
+    const handleCheckout = async () => {
         if (!activeShift) return;
         if (cart.length === 0) { toast.error('Add items first!'); return; }
         if (paymentMethod === 'Credit' && !selectedCustomer) { toast.error('Select an Account!'); return; }
@@ -270,17 +270,6 @@ const POS = () => {
         // SET TO PRINTING MODE (MODAL HIDDEN)
         setCheckoutStage('printing');
         toast.success('Sale Processed. Ready for Print.');
-
-        setTimeout(() => {
-            window.print();
-        }, 300);
-    };
-
-        dispatch(updateShiftStats({ sale: finalTotal }));
-
-        // SET TO PRINTING MODE (MODAL HIDDEN)
-        setCheckoutStage('printing');
-        toast.success('Sale Saved. Ready for Print.');
 
         setTimeout(() => {
             window.print();
