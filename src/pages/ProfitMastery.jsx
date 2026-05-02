@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -50,24 +50,22 @@ const ProfitMastery = () => {
     const [loading, setLoading] = useState(false);
 
     // Fetch Sales for Selected Date
-    React.useEffect(() => {
+    useEffect(() => {
         const fetchSales = async () => {
             setLoading(true);
             try {
-                const startOfDay = `${dateFilter}T00:00:00.000Z`;
-                const endOfDay = `${dateFilter}T23:59:59.999Z`;
-
+                // Fetch for the entire day using a more flexible range
                 const { data, error } = await supabase
                     .from('sales')
                     .select('*, sale_items(*)')
-                    .gte('created_at', startOfDay)
-                    .lte('created_at', endOfDay)
+                    .gte('created_at', `${dateFilter}T00:00:00`)
+                    .lte('created_at', `${dateFilter}T23:59:59`)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
                 setSales(data || []);
             } catch (err) {
-                console.error("Fetch Error:", err);
+                console.error("Profit Fetch Error:", err);
             } finally {
                 setLoading(false);
             }
@@ -78,7 +76,7 @@ const ProfitMastery = () => {
 
     const filteredSales = sales;
 
-    const totalRevenue = filteredSales.reduce((acc, s) => acc + (s.total || 0), 0);
+    const totalRevenue = filteredSales.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
     
     // Detailed Profit Calculation
     const productProfitStats = {};
@@ -271,12 +269,13 @@ const ProfitMastery = () => {
             {/* MAIN ANALYSIS CONTENT */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '30px' }}>
                 
-                {/* PRODUCT-WISE PROFIT TABLE */}
-                <div style={{ background: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                    <div style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
-                        <h4 style={{ fontSize: '1.1rem', fontWeight: 950 }}>Unit-Level Profitability</h4>
-                    </div>
-                    <table className="erp-table">
+                 {/* PRODUCT-WISE PROFIT TABLE */}
+                 <div style={{ background: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '400px' }}>
+                     <div style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
+                         <h4 style={{ fontSize: '1.1rem', fontWeight: 950 }}>Unit-Level Profitability</h4>
+                         {loading && <div style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 800 }}>SYNCING DATA...</div>}
+                     </div>
+                     <table className="erp-table">
                         <thead>
                             <tr style={{ background: '#f8fafc' }}>
                                 <th style={{ padding: '20px' }}>PRODUCT NAME</th>
