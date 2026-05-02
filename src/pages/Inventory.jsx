@@ -21,9 +21,10 @@ const Inventory = () => {
     const [restockItem, setRestockItem] = useState(null);
     const [restockQty, setRestockQty] = useState('');
     const [restockBuyPrice, setRestockBuyPrice] = useState('');
+    const [activeTab, setActiveTab] = useState('All'); // All, Critical, Pre-Critical
 
     const [formData, setFormData] = useState({
-        name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: ''
+        name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60'
     });
 
     const categories = ['Medicine', 'Vaccine', 'Syrup', 'Tablet', 'Injection', 'Surgical', 'Pet Food', 'Accessories', 'Feed', 'Other'];
@@ -31,7 +32,26 @@ const Inventory = () => {
     const filteredItems = inventory.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || (item.id && item.id.includes(searchTerm)) || (item.barcode && item.barcode.includes(searchTerm));
         const matchesCat = selectedCategory === 'All Categories' || item.category === selectedCategory;
-        return matchesSearch && matchesCat;
+        
+        // Expiry Filter Logic
+        let matchesTab = true;
+        if (item.expiry) {
+            const expiryDate = new Date(item.expiry);
+            const today = new Date();
+            const daysToExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+            const criticalLimit = item.critical_days || 60;
+            const preCriticalLimit = 120;
+
+            if (activeTab === 'Critical') {
+                matchesTab = daysToExpiry <= criticalLimit;
+            } else if (activeTab === 'Pre-Critical') {
+                matchesTab = daysToExpiry > criticalLimit && daysToExpiry <= preCriticalLimit;
+            }
+        } else if (activeTab !== 'All') {
+            matchesTab = false;
+        }
+
+        return matchesSearch && matchesCat && matchesTab;
     });
 
     const handleSave = async (e) => {
@@ -47,6 +67,7 @@ const Inventory = () => {
             stock: parseInt(formData.stock), 
             min_stock: parseInt(formData.min_stock || 5),
             expiry: formData.expiry || null,
+            critical_days: parseInt(formData.critical_days || 60),
         };
 
         try {
@@ -69,7 +90,7 @@ const Inventory = () => {
             
             setIsModalOpen(false);
             setEditingItem(null);
-            setFormData({ name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '' });
+            setFormData({ name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60' });
         } catch (err) {
             console.error(err);
             toast.error(err.message || "Failed to save product.");
@@ -98,15 +119,16 @@ const Inventory = () => {
         setFormData({
             name: item.name,
             price: item.price,
-            doctorPrice: item.doctorPrice || '',
-            buyPrice: item.buyPrice || '',
+            doctor_price: item.doctor_price || item.price || '',
+            buy_price: item.buy_price || '',
             stock: item.stock,
             unit: item.unit || 'Units',
             category: item.category || 'Medicine',
-            minStock: item.minStock || 5,
+            min_stock: item.min_stock || 5,
             expiry: item.expiry || '',
-            taxPercent: item.taxPercent || 0,
-            barcode: item.barcode || ''
+            tax_percent: item.tax_percent || 0,
+            barcode: item.barcode || '',
+            critical_days: item.critical_days || 60
         });
         setIsModalOpen(true);
     };
@@ -199,6 +221,35 @@ const Inventory = () => {
                 </div>
             </div>
 
+            {/* EXPIRY TABS */}
+            <div style={{ display: 'flex', gap: '5px', padding: '0 20px' }}>
+                {['All', 'Critical', 'Pre-Critical'].map(tab => (
+                    <button
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        style={{
+                            padding: '10px 20px',
+                            borderRadius: '8px 8px 0 0',
+                            border: '1px solid #e2e8f0',
+                            borderBottom: activeTab === tab ? 'none' : '1px solid #e2e8f0',
+                            background: activeTab === tab ? 'white' : '#f8fafc',
+                            color: activeTab === tab ? (tab === 'Critical' ? '#ef4444' : tab === 'Pre-Critical' ? '#f59e0b' : '#10b981') : '#64748b',
+                            fontWeight: 900,
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                        }}
+                    >
+                        {tab === 'Critical' && <AlertCircle size={14} />}
+                        {tab === 'Pre-Critical' && <Calendar size={14} />}
+                        {tab.toUpperCase()} {tab === 'All' ? 'INVENTORY' : 'EXPIRY'}
+                    </button>
+                ))}
+            </div>
+
             {/* 3. INVENTORY GRID */}
             <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
                 <div style={{ overflowY: 'auto', height: '100%' }}>
@@ -213,7 +264,7 @@ const Inventory = () => {
                                  <th style={{ padding: '15px 20px' }}>RETAIL</th>
                                 {isAdmin && <th style={{ padding: '15px 20px' }}>DOCTOR</th>}
                                 {isAdmin && <th style={{ padding: '15px 20px' }}>PROFIT</th>}
-                                <th style={{ padding: '15px 20px' }}>EXPIRY</th>
+                                <th style={{ padding: '15px 20px' }}>EXPIRY / REMAINING</th>
                                 <th style={{ padding: '15px 20px', textAlign: 'right' }}>ACTIONS</th>
                             </tr>
                         </thead>
@@ -257,8 +308,31 @@ const Inventory = () => {
                                                 <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>Margin: {profitMargin}%</div>
                                             </td>
                                         )}
-                                        <td style={{ padding: '15px 20px', fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>
-                                            {item.expiry ? <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><Calendar size={12} /> {item.expiry}</div> : '-'}
+                                        <td style={{ padding: '15px 20px' }}>
+                                            {item.expiry ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.8rem', fontWeight: 800 }}>
+                                                        <Calendar size={12} /> {item.expiry}
+                                                    </div>
+                                                    {(() => {
+                                                        const expiryDate = new Date(item.expiry);
+                                                        const today = new Date();
+                                                        const days = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+                                                        const isCritical = days <= (item.critical_days || 60);
+                                                        const isPreCritical = days <= 120;
+                                                        return (
+                                                            <span style={{ 
+                                                                fontSize: '0.65rem', 
+                                                                fontWeight: 950, 
+                                                                color: isCritical ? '#ef4444' : isPreCritical ? '#f59e0b' : '#10b981',
+                                                                marginTop: '2px'
+                                                            }}>
+                                                                {days < 0 ? 'EXPIRED!' : `${days} DAYS LEFT`}
+                                                            </span>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            ) : '—'}
                                         </td>
                                         <td style={{ padding: '15px 20px', textAlign: 'right' }}>
                                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -418,10 +492,14 @@ const Inventory = () => {
                                  >GENERATE</button>
                              </div>
 
-                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
+                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>LOW STOCK ALERT (Enter Qty to get warned)</label>
-                                    <input type="number" placeholder="5" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800 }} value={formData.minStock} onChange={e => setFormData({ ...formData, minStock: e.target.value })} />
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>LOW STOCK ALERT (Qty)</label>
+                                    <input type="number" placeholder="5" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800 }} value={formData.min_stock} onChange={e => setFormData({ ...formData, min_stock: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ef4444', display: 'block', marginBottom: '8px' }}>CRITICAL EXPIRY ALERT (Days)</label>
+                                    <input type="number" placeholder="60" style={{ width: '100%', padding: '12px', border: '2px solid #ef4444', borderRadius: '6px', fontWeight: 800, color: '#ef4444' }} value={formData.critical_days} onChange={e => setFormData({ ...formData, critical_days: e.target.value })} />
                                 </div>
                             </div>
 
