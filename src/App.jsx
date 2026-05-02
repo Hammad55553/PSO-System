@@ -121,70 +121,22 @@ function AppContent() {
   const { list: localExp } = useSelector(state => state.expenses);
   const { list: localSup } = useSelector(state => state.suppliers);
 
-  const handlePushLocalToCloud = async () => {
-    if (!window.confirm("Push all your LOCAL data to Firebase?")) return;
-    setIsSyncing(true);
-    try {
-      for (const item of localInv) await setDoc(doc(db, "inventory", item.id), item);
-      for (const cust of localCust) await setDoc(doc(db, "customers", cust.id), cust);
-      for (const sale of localSales) await setDoc(doc(db, "sales", sale.id), sale);
-      for (const s of localShifts) await setDoc(doc(db, "shifts", s.id.toString()), { ...s, status: 'closed' });
-      if (localActiveShift) await setDoc(doc(db, "shifts", localActiveShift.id.toString()), { ...localActiveShift, status: 'active' });
-      for (const sh of localShort) await setDoc(doc(db, "shortage", sh.id.toString()), sh);
-      for (const ex of localExp) await setDoc(doc(db, "expenses", ex.id.toString()), ex);
-      for (const su of localSup) await setDoc(doc(db, "suppliers", su.id.toString()), su);
-      toast.success("Migration Complete!");
-    } catch (err) { toast.error("Migration failed."); }
-    finally { setIsSyncing(false); }
-  };
-
   const handleManualSync = async () => {
     if (!navigator.onLine) return;
     setIsSyncing(true);
     try {
-      const invSnap = await getDocs(collection(db, "inventory"));
-      const cloudInv = invSnap.docs.map(doc => {
-        const data = doc.data();
-        return { ...data, id: data.id || doc.id };
-      });
-      if (cloudInv.length > 0) dispatch(setInventory(cloudInv));
+        // Force Refetch from Supabase
+        const [inv, cust, sales] = await Promise.all([
+            supabase.from('inventory').select('*'),
+            supabase.from('customers').select('*'),
+            supabase.from('sales').select('*, sale_items(*)')
+        ]);
 
-      const custSnap = await getDocs(collection(db, "customers"));
-      const cloudCust = custSnap.docs.map(doc => {
-        const data = doc.data();
-        return { ...data, id: data.id || doc.id };
-      });
-      if (cloudCust.length > 0) dispatch(setCustomers(cloudCust));
-
-      const salesSnap = await getDocs(collection(db, "sales"));
-      const cloudSales = salesSnap.docs.map(doc => {
-        const data = doc.data();
-        // If data has an internal id (INV-XXXXXX), use it exclusively. 
-        // Do NOT let doc.id (long random slug) overwrite it.
-        const actualId = data.id || doc.id;
-        return { ...data, id: actualId };
-      }).sort((a,b) => new Date(b.date)-new Date(a.date));
-      if (cloudSales.length > 0) dispatch(setSales(cloudSales));
-
-      const shiftSnap = await getDocs(collection(db, "shifts"));
-      const allShifts = shiftSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      const activeShift = allShifts.find(s => s.status === 'active');
-      const shiftHistory = allShifts.filter(s => s.status !== 'active').sort((a,b) => new Date(b.startTime)-new Date(a.startTime));
-      if (allShifts.length > 0) dispatch(setShifts({ activeShift, history: shiftHistory }));
-
-      const shortSnap = await getDocs(collection(db, "shortage"));
-      const cloudShort = shortSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      if (cloudShort.length > 0) dispatch(setShortageItems(cloudShort));
-
-      const expSnap = await getDocs(collection(db, "expenses"));
-      const cloudExp = expSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      if (cloudExp.length > 0) dispatch(setExpenses(cloudExp));
-
-      const supSnap = await getDocs(collection(db, "suppliers"));
-      const cloudSup = supSnap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-      if (cloudSup.length > 0) dispatch(setSuppliers(cloudSup));
+        if (inv.data) dispatch(setInventory(inv.data));
+        if (cust.data) dispatch(setCustomers(cust.data));
+        if (sales.data) dispatch(setSales(sales.data.sort((a,b) => new Date(b.created_at)-new Date(a.created_at))));
       
-      toast.success("Hybrid Sync: Active");
+      toast.success("Supabase Sync: Active");
     } catch (err) { console.error(err); }
     finally { setIsSyncing(false); }
   };
