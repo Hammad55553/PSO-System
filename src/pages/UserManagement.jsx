@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import { supabase } from '../supabase';
 import { Users, CheckCircle, XCircle, Shield, Trash2, Loader2, Key } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const UserManagement = () => {
+    const { user } = useSelector(state => state.auth);
+    const isAdmin = user?.role === 'admin';
     const [users, setUsers] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -28,6 +31,10 @@ const UserManagement = () => {
     }, []);
 
     const handleTogglePermission = async (user, permission) => {
+        if (!isAdmin) {
+            toast.error("Access Denied: Admin only.");
+            return;
+        }
         const currentPerms = user.permissions || ['pos', 'inventory', 'credit', 'reports'];
         const newPerms = currentPerms.includes(permission)
             ? currentPerms.filter(p => p !== permission)
@@ -56,6 +63,10 @@ const UserManagement = () => {
     ];
 
     const handleUpdateStatus = async (userId, newStatus) => {
+        if (!isAdmin) {
+            toast.error("Access Denied: Admin only.");
+            return;
+        }
         try {
             const { error } = await supabase
                 .from('profiles')
@@ -72,6 +83,10 @@ const UserManagement = () => {
     };
 
     const handleDeleteUser = async (userId) => {
+        if (!isAdmin) {
+            toast.error("Access Denied: Admin only.");
+            return;
+        }
         if (!window.confirm("Delete this user profile? (Note: This doesn't delete their Auth account)")) return;
         try {
             const { error } = await supabase
@@ -198,7 +213,7 @@ const UserManagement = () => {
                                             >
                                                 <Key size={18} />
                                             </button>
-                                            {u.role !== 'admin' && (
+                                            {isAdmin && u.role !== 'admin' && (
                                                 <button onClick={() => handleDeleteUser(u.id)} style={{ padding: '10px', color: '#ef4444', background: '#fff1f1', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
                                                     <Trash2 size={18} />
                                                 </button>

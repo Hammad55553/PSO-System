@@ -92,6 +92,10 @@ const Inventory = () => {
     };
 
     const handleDelete = async (id) => {
+        if (!isAdmin) {
+            toast.error("Only Admins can delete products.");
+            return;
+        }
         if (window.confirm('Are you sure you want to delete this product?')) {
             try {
                 const { error } = await supabase

@@ -36,7 +36,10 @@ const SalesHistory = ({ isReturnsPage = false }) => {
     );
 
     const handleDelete = async (saleId) => {
-        if (!isAdmin) return;
+        if (!isAdmin) {
+            toast.error("Only Admins can delete transactions.");
+            return;
+        }
         if (window.confirm('CRITICAL: Delete this invoice permanently?')) {
             try {
                 const { error } = await supabase
