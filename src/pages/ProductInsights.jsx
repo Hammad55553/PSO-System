@@ -41,15 +41,16 @@ const ProductInsights = () => {
         };
 
         history.forEach(sale => {
-            const item = sale.items.find(i => i.name === productName);
+            const items = sale.sale_items || sale.items || [];
+            const item = items.find(i => i.name === productName);
             if (item) {
-                const saleDate = sale.date?.includes(',') ? sale.date.split(',')[0] : sale.date;
-                const saleTime = sale.date?.includes(',') ? sale.date.split(',')[1]?.trim() : '';
+                const saleDate = (sale.created_at || sale.date || '').includes(',') ? (sale.created_at || sale.date).split(',')[0] : (sale.created_at || sale.date);
+                const saleTime = (sale.created_at || sale.date || '').includes(',') ? (sale.created_at || sale.date).split(',')[1]?.trim() : '';
 
                 const qty = item.quantity || 0;
-                const revenue = item.price * qty;
-                const profit = (item.price - (item.buyPrice || 0)) * qty;
-                const itemTax = ((item.price * (item.taxPercent || 0)) / 100) * qty;
+                const revenue = (item.price || 0) * qty;
+                const profit = ((item.price || 0) - (item.buy_price || item.buyPrice || 0)) * qty;
+                const itemTax = (((item.price || 0) * (item.taxPercent || 0)) / 100) * qty;
 
                 if (sale.status === 'Returned') {
                     stats.returnedUnits += qty;
@@ -59,7 +60,7 @@ const ProductInsights = () => {
                     stats.totalProfit += profit;
                     stats.totalTax += itemTax;
 
-                    const saleTotalItems = sale.items.reduce((a, b) => a + (b.quantity || 0), 0);
+                    const saleTotalItems = items.reduce((a, b) => a + (b.quantity || 0), 0);
                     const discountShare = (sale.discount || 0) * (qty / (saleTotalItems || 1));
                     stats.totalDiscount += discountShare;
 
@@ -67,7 +68,7 @@ const ProductInsights = () => {
                     try { dateKey = new Date(saleDate).toISOString().split('T')[0]; } catch (e) { }
                     stats.dailyDistribution[dateKey] = (stats.dailyDistribution[dateKey] || 0) + qty;
 
-                    const op = sale.sellerName || 'System';
+                    const op = sale.seller_name || sale.sellerName || 'System';
                     stats.operators[op] = (stats.operators[op] || 0) + qty;
 
                     const hour = parseInt(saleTime.split(':')[0]) || 0;
@@ -82,9 +83,9 @@ const ProductInsights = () => {
                     time: saleTime,
                     qty: qty,
                     status: sale.status,
-                    customer: sale.customerName || '—',
+                    customer: sale.customer_name || sale.customerName || '—',
                     price: item.price,
-                    operator: sale.sellerName || 'System',
+                    operator: sale.seller_name || sale.sellerName || 'System',
                     total: revenue + itemTax
                 });
             }
@@ -311,11 +312,11 @@ const ProductInsights = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px', fontSize: '0.75rem' }}>
                                 <div>
                                     <span style={{ color: '#64748b', fontWeight: 700, display: 'block' }}>CLIENT</span>
-                                    <span style={{ fontWeight: 900, color: '#1e293b' }}>{previewSale.customerName?.toUpperCase() || '—'}</span>
+                                    <span style={{ fontWeight: 900, color: '#1e293b' }}>{(previewSale.customer_name || previewSale.customerName || '—').toUpperCase()}</span>
                                 </div>
                                 <div style={{ textAlign: 'right' }}>
                                     <span style={{ color: '#64748b', fontWeight: 700, display: 'block' }}>COLLECTED BY</span>
-                                    <span style={{ fontWeight: 900, color: '#1e293b' }}>{previewSale.sellerName?.toUpperCase() || 'OPERATOR'}</span>
+                                    <span style={{ fontWeight: 900, color: '#1e293b' }}>{(previewSale.seller_name || previewSale.sellerName || 'OPERATOR').toUpperCase()}</span>
                                 </div>
                             </div>
 
@@ -328,7 +329,7 @@ const ProductInsights = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {previewSale.items.map((item, idx) => (
+                                    {(previewSale.sale_items || previewSale.items || []).map((item, idx) => (
                                         <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                             <td style={{ padding: '10px 8px', fontSize: '0.75rem', fontWeight: 700 }}>{item.name}</td>
                                             <td style={{ padding: '10px 8px', textAlign: 'center', fontSize: '0.75rem', fontWeight: 800 }}>{item.quantity}</td>
@@ -345,7 +346,7 @@ const ProductInsights = () => {
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '6px', color: '#94a3b8' }}>
                                     <span>TIMESTAMP</span>
-                                    <span>{new Date(previewSale.date).toLocaleString()}</span>
+                                    <span>{new Date(previewSale.created_at || previewSale.date).toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>

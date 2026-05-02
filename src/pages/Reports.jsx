@@ -22,8 +22,7 @@ import {
     DollarSign,
     Box
 } from 'lucide-react';
-import { db } from '../firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
 import ThermalReceipt from '../components/ThermalReceipt';
 import logo from '../assets/Bila_vet.png';
@@ -59,7 +58,7 @@ const Reports = () => {
     const isAdmin = user?.role === 'admin';
     const totalProfit = filteredSales.reduce((acc, sale) => {
         const saleProfit = sale.items.reduce((sum, item) => {
-            const buyPrice = item.buyPrice || 0;
+            const buyPrice = item.buy_price || 0;
             return sum + (((item.price || 0) - buyPrice) * (item.quantity || 0));
         }, 0);
         return acc + (saleProfit - (sale.discount || 0));
@@ -90,20 +89,23 @@ const Reports = () => {
         setIsSaving(true);
         try {
             const reportData = {
-                reportDate: dateFilter,
-                generatedBy: user.name,
-                generatedAt: new Date().toISOString(),
+                report_date: dateFilter,
+                generated_by: user.name,
                 metrics: {
                     revenue: totalRevenue,
                     transactions: totalTransactions,
-                    topProducts: topSelling,
-                    paymentStats,
-                    totalProfit: isAdmin ? totalProfit : 'HIDDEN'
+                    top_products: topSelling,
+                    payment_stats: paymentStats,
+                    total_profit: isAdmin ? totalProfit : 'HIDDEN'
                 },
                 type: 'Daily Summary'
             };
-            await addDoc(collection(db, "reports"), reportData);
-            toast.success(`DSR for ${dateFilter} archived successfully!`);
+            const { error } = await supabase
+                .from('reports')
+                .insert([reportData]);
+            
+            if (error) throw error;
+            toast.success(`DSR for ${dateFilter} archived in Supabase!`);
         } catch (error) {
             console.error(error);
             toast.error("Failed to archive report.");

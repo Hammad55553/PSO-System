@@ -20,11 +20,8 @@ import {
     ArrowUpCircle,
     ArrowDownCircle
 } from 'lucide-react';
-import { addOrder, updateOrderStatus, deleteOrder } from '../store/slices/ordersSlice';
-import { editItem } from '../store/slices/inventorySlice';
+import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
-import { db } from '../firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 
 const OrderManagement = () => {
     const dispatch = useDispatch();
@@ -64,26 +61,33 @@ const OrderManagement = () => {
         e.preventDefault();
         
         if (editingOrder) {
-            const updated = { ...formData, id: editingOrder.id, status: editingOrder.status, createdAt: editingOrder.createdAt };
-            dispatch(setOrders(orders.map(o => o.id === updated.id ? updated : o)));
-            if (navigator.onLine) {
-                await setDoc(doc(db, "orders", updated.id), updated);
+            const updated = { ...formData, id: editingOrder.id, status: editingOrder.status };
+            try {
+                const { error } = await supabase
+                    .from('orders')
+                    .update(updated)
+                    .eq('id', updated.id);
+                
+                if (error) throw error;
+                toast.success('Order Booking Updated in Supabase!');
+            } catch (err) {
+                toast.error('Update failed');
             }
-            toast.success('Order Booking Updated!');
         } else {
             const newOrder = {
                 ...formData,
-                id: `ORD-${Math.floor(Math.random() * 100000)}`,
-                status: 'Pending',
-                createdAt: new Date().toISOString()
+                status: 'Pending'
             };
-            dispatch(addOrder(newOrder));
-            if (navigator.onLine) {
-                try {
-                    await setDoc(doc(db, "orders", newOrder.id), newOrder);
-                } catch (err) { console.error(err); }
+            try {
+                const { error } = await supabase
+                    .from('orders')
+                    .insert([newOrder]);
+                
+                if (error) throw error;
+                toast.success('Order booked in Supabase successfully!');
+            } catch (err) {
+                toast.error('Booking failed');
             }
-            toast.success('Order booked successfully!');
         }
 
         setIsModalOpen(false);
@@ -93,9 +97,17 @@ const OrderManagement = () => {
 
     const handleDeleteOrder = async (id) => {
         if (!window.confirm('Delete this order record permanently?')) return;
-        dispatch(deleteOrder(id));
-        if (navigator.onLine) await deleteDoc(doc(db, "orders", id));
-        toast.success("Order record deleted");
+        try {
+            const { error } = await supabase
+                .from('orders')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+            toast.success("Order record deleted from Supabase");
+        } catch (err) {
+            toast.error('Delete failed');
+        }
     };
 
     const openEditOrder = (order) => {
@@ -120,8 +132,12 @@ const OrderManagement = () => {
         
         try {
             // 1. Update Order Status
-            const updatedOrder = { ...order, status: 'Received' };
-            dispatch(updateOrderStatus({ id: order.id, status: 'Received' }));
+            const { error: orderError } = await supabase
+                .from('orders')
+                .update({ status: 'Received' })
+                .eq('id', order.id);
+
+            if (orderError) throw orderError;
 
             // 2. Add/Deduct Inventory (Optional)
             if (pushToStock) {
@@ -133,35 +149,29 @@ const OrderManagement = () => {
                         
                         let updatedInv;
                         if (order.type === 'Outgoing') {
-                            // Deduct stock for Outgoing supplies
                             updatedInv = {
-                                ...existing,
                                 stock: currentStock - incomingQty
                             };
                         } else {
-                            // Incoming: Calculate WAC
-                            const currentBuyPrice = parseFloat(existing.buyPrice || 0);
-                            const incomingBuyPrice = parseFloat(item.price || existing.buyPrice);
+                            const currentBuyPrice = parseFloat(existing.buy_price || 0);
+                            const incomingBuyPrice = parseFloat(item.price || existing.buy_price);
                             const totalStock = currentStock + incomingQty;
                             const averageBuyPrice = ((currentStock * currentBuyPrice) + (incomingQty * incomingBuyPrice)) / totalStock;
 
                             updatedInv = {
-                                ...existing,
                                 stock: totalStock,
-                                buyPrice: parseFloat(averageBuyPrice.toFixed(2))
+                                buy_price: parseFloat(averageBuyPrice.toFixed(2))
                             };
                         }
 
-                        dispatch(editItem(updatedInv));
-                        if (navigator.onLine) {
-                            await setDoc(doc(db, "inventory", existing.id), updatedInv);
-                        }
+                        const { error: invError } = await supabase
+                            .from('inventory')
+                            .update(updatedInv)
+                            .eq('id', existing.id);
+                        
+                        if (invError) throw invError;
                     }
                 }
-            }
-
-            if (navigator.onLine) {
-                await setDoc(doc(db, "orders", order.id), updatedOrder);
             }
 
             const msg = order.type === 'Outgoing' ? 'Supply Delivered & Stock Deducted!' : 'Order Received & Stock Merged!';

@@ -3,9 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { Play, Square, History, Timer, User, Wallet, Activity, ArrowRightCircle } from 'lucide-react';
 import { startShift, endShift, updateShiftStats, deleteShift } from '../store/slices/shiftSlice';
 import toast from 'react-hot-toast';
-import { db } from '../firebase';
-import { collection, addDoc, doc, setDoc, deleteDoc } from 'firebase/firestore';
-import { Trash2 } from 'lucide-react';
+import { supabase } from '../supabase';
 
 const ShiftManagement = () => {
     const dispatch = useDispatch();
@@ -18,71 +16,74 @@ const ShiftManagement = () => {
     const handleStart = async (e) => {
         e.preventDefault();
         const staffName = user?.name || 'Authorized Operator';
-        const shiftData = { staffName, openingCash: parseFloat(openingCash) || 0 };
+        const shiftData = { 
+            staff_name: staffName, 
+            opening_cash: parseFloat(openingCash) || 0,
+            start_time: new Date().toISOString(),
+            sales: 0,
+            expenses: 0,
+            status: 'active'
+        };
 
-        dispatch(startShift(shiftData));
-
-        // CLOUD PUSH
-        if (navigator.onLine) {
-            try {
-                // We use a temporary ID or wait for Redux to generate one? 
-                // Local slice generates ID like Date.now().
-                const newId = Date.now().toString();
-                const cloudShift = {
-                    ...shiftData,
-                    id: newId,
-                    startTime: new Date().toISOString(),
-                    sales: 0,
-                    expenses: 0,
-                    status: 'active'
-                };
-                await setDoc(doc(db, "shifts", newId), cloudShift);
-            } catch (err) {
-                console.error("Shift Cloud Sync Failed:", err);
-            }
+        try {
+            const { data, error } = await supabase
+                .from('shifts')
+                .insert([shiftData])
+                .select();
+            
+            if (error) throw error;
+            
+            // Note: In a real app, you'd dispatch(startShift(data[0])) 
+            // but for now we follow the local pattern
+            dispatch(startShift({ ...shiftData, id: data[0].id }));
+            toast.success('Terminal Session Started in Supabase');
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to start shift");
         }
-
-        toast.success('Terminal Session Started');
     };
 
     const handleEnd = async (e) => {
         e.preventDefault();
         const finalClosingCash = parseFloat(closingCash) || 0;
-        dispatch(endShift({ closingCash: finalClosingCash }));
-
-        // CLOUD UPDATE
-        if (navigator.onLine && activeShift) {
-            try {
-                const updatedShift = {
-                    ...activeShift,
-                    closingCash: finalClosingCash,
-                    endTime: new Date().toISOString(),
+        
+        try {
+            const { error } = await supabase
+                .from('shifts')
+                .update({
+                    closing_cash: finalClosingCash,
+                    end_time: new Date().toISOString(),
                     status: 'closed'
-                };
-                await setDoc(doc(db, "shifts", activeShift.id), updatedShift);
-            } catch (err) {
-                console.error("Shift Close Sync Failed:", err);
-            }
+                })
+                .eq('id', activeShift.id);
+            
+            if (error) throw error;
+            
+            dispatch(endShift({ closingCash: finalClosingCash }));
+            toast.success('Shift closed in Supabase');
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to close shift");
         }
-
-        toast.success('Shift closed and logged to DSR');
     };
 
     const handleDeleteShift = async (id) => {
         if (!isAdmin) return;
         if (window.confirm('Are you sure you want to PERMANENTLY delete this shift record? This cannot be undone.')) {
-            dispatch(deleteShift(id));
-
-            // CLOUD DELETE
-            if (navigator.onLine) {
-                try {
-                    await deleteDoc(doc(db, "shifts", id.toString()));
-                    toast.success('Shift record removed from cloud');
-                } catch (err) {
-                    console.error("Shift Delete Sync Failed:", err);
-                }
+            try {
+                const { error } = await supabase
+                    .from('shifts')
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) throw error;
+                
+                dispatch(deleteShift(id));
+                toast.success('Shift record deleted from Supabase');
+            } catch (err) {
+                console.error(err);
+                toast.error("Delete failed");
             }
-            toast.success('Shift record deleted');
         }
     };
 
@@ -142,19 +143,19 @@ const ShiftManagement = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px', marginBottom: '30px' }}>
                                 <div style={{ border: '1px solid var(--border)', padding: '15px', borderRadius: '4px' }}>
                                     <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>START TIME</span>
-                                    <span style={{ fontSize: '1.1rem', fontWeight: 700 }}>{new Date(activeShift.startTime).toLocaleTimeString()}</span>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 700 }}>{new Date(activeShift.start_time || activeShift.startTime).toLocaleTimeString()}</span>
                                 </div>
                                 <div style={{ border: '1px solid var(--border)', padding: '15px', borderRadius: '4px' }}>
                                     <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>OPENING CASH</span>
-                                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary)' }}>Rs {activeShift.openingCash.toLocaleString()}</span>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--primary)' }}>Rs {(activeShift.opening_cash || activeShift.openingCash || 0).toLocaleString()}</span>
                                 </div>
                                 <div style={{ border: '1px solid var(--border)', padding: '15px', borderRadius: '4px' }}>
                                     <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>SHIFT SALES</span>
-                                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-green)' }}>Rs {activeShift.sales.toLocaleString()}</span>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-green)' }}>Rs {(activeShift.sales || 0).toLocaleString()}</span>
                                 </div>
                                 <div style={{ border: '1px solid var(--border)', padding: '15px', borderRadius: '4px' }}>
                                     <span style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: '5px' }}>EXPENSES</span>
-                                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-red)' }}>Rs {activeShift.expenses.toLocaleString()}</span>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-red)' }}>Rs {(activeShift.expenses || 0).toLocaleString()}</span>
                                 </div>
                             </div>
 
@@ -249,15 +250,15 @@ const ShiftManagement = () => {
                                 <tbody>
                                     {history.map(s => (
                                         <tr key={s.id}>
-                                            <td style={{ fontWeight: 700 }}>{new Date(s.startTime).toLocaleDateString()}</td>
+                                            <td style={{ fontWeight: 700 }}>{new Date(s.start_time || s.startTime).toLocaleDateString()}</td>
                                             <td style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                {new Date(s.startTime).toLocaleTimeString()} - {s.endTime ? new Date(s.endTime).toLocaleTimeString() : 'Active'}
+                                                {new Date(s.start_time || s.startTime).toLocaleTimeString()} - {(s.end_time || s.endTime) ? new Date(s.end_time || s.endTime).toLocaleTimeString() : 'Active'}
                                             </td>
-                                            <td>{s.staffName}</td>
-                                            <td>Rs {s.openingCash}</td>
-                                            <td>Rs {s.closingCash || 0}</td>
+                                            <td>{s.staff_name || s.staffName}</td>
+                                            <td>Rs {s.opening_cash || s.openingCash}</td>
+                                            <td>Rs {s.closing_cash || s.closingCash || 0}</td>
                                             <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--primary)' }}>
-                                                Rs {s.sales.toLocaleString()}
+                                                Rs {(s.sales || 0).toLocaleString()}
                                             </td>
                                             {isAdmin && (
                                                 <td style={{ textAlign: 'center' }}>

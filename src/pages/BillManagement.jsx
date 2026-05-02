@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Camera, Upload, Trash2, FileText, Search, Plus, X, Eye } from 'lucide-react';
-import { db } from '../firebase';
-import { collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from 'firebase/firestore';
+import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
 
 const BillManagement = () => {
@@ -24,13 +23,26 @@ const BillManagement = () => {
     });
 
     useEffect(() => {
-        const q = query(collection(db, "paper_bills"), orderBy("date", "desc"));
-        const unsub = onSnapshot(q, (snap) => {
-            const data = snap.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-            setBills(data);
-        });
-        return () => unsub();
+        fetchBills();
+        const subscription = supabase
+            .channel('paper_bills_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'paper_bills' }, fetchBills)
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(subscription);
+        };
     }, []);
+
+    const fetchBills = async () => {
+        const { data, error } = await supabase
+            .from('paper_bills')
+            .select('*')
+            .order('date', { ascending: false });
+        
+        if (data) setBills(data);
+        if (error) console.error(error);
+    };
 
     const handleImageUpload = (e) => {
         const file = e.target.files[0];
@@ -59,13 +71,16 @@ const BillManagement = () => {
 
         setLoading(true);
         try {
-            await addDoc(collection(db, "paper_bills"), {
-                ...newBill,
-                amount: parseFloat(newBill.amount),
-                createdAt: new Date().toISOString(),
-                createdBy: user?.name
-            });
-            toast.success("Bill saved successfully!");
+            const { error } = await supabase
+                .from('paper_bills')
+                .insert([{
+                    ...newBill,
+                    amount: parseFloat(newBill.amount),
+                    created_by: user?.name
+                }]);
+            
+            if (error) throw error;
+            toast.success("Bill saved in Supabase!");
             setIsModalOpen(false);
             setNewBill({ title: '', amount: '', date: new Date().toISOString().split('T')[0], category: 'Purchase', note: '', image: '' });
         } catch (err) {
@@ -80,8 +95,13 @@ const BillManagement = () => {
         if (!isAdmin) return;
         if (window.confirm("Delete this bill record permanently?")) {
             try {
-                await deleteDoc(doc(db, "paper_bills", id));
-                toast.success("Bill deleted");
+                const { error } = await supabase
+                    .from('paper_bills')
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) throw error;
+                toast.success("Bill deleted from Supabase");
             } catch (err) {
                 toast.error("Delete failed");
             }
@@ -278,7 +298,7 @@ const BillManagement = () => {
                             </div>
                             <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
                                 <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>Record ID: {viewBill.id}</p>
-                                <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>Creator: {viewBill.createdBy}</p>
+                                <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>Creator: {viewBill.created_by}</p>
                             </div>
                         </div>
                     </div>

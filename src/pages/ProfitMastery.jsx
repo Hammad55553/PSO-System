@@ -38,7 +38,7 @@ const ProfitMastery = () => {
 
     // Data Calculation
     const filteredSales = history.filter(s => {
-        const saleDate = s.date?.includes(',') ? s.date.split(',')[0] : s.date;
+        const saleDate = (s.created_at || s.date || '').includes(',') ? (s.created_at || s.date).split(',')[0] : (s.created_at || s.date);
         try {
             return new Date(saleDate).toISOString().split('T')[0] === dateFilter;
         } catch (e) { return false; }
@@ -53,8 +53,9 @@ const ProfitMastery = () => {
 
     filteredSales.forEach(sale => {
         let saleProfit = 0;
-        sale.items.forEach(item => {
-            const buyPrice = item.buyPrice || 0;
+        const items = sale.sale_items || sale.items || [];
+        items.forEach(item => {
+            const buyPrice = item.buy_price || item.buyPrice || 0;
             const profitPerUnit = (item.price || 0) - buyPrice;
             const itemTotalProfit = profitPerUnit * (item.quantity || 0);
             
@@ -77,7 +78,7 @@ const ProfitMastery = () => {
             productProfitStats[item.name].sales.push({
                 billId: sale.id,
                 qty: item.quantity,
-                customer: sale.customerName,
+                customer: sale.customer_name || sale.customerName,
                 total: (item.price * item.quantity)
             });
         });

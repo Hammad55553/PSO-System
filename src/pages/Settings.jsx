@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useSelector } from 'react-redux';
 import UpdateChecker from '../components/UpdateChecker';
-import { auth } from '../firebase';
-import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { supabase } from '../supabase';
 import { Settings as SettingsIcon, Lock, ShieldCheck, Key, AlertCircle, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -28,26 +27,17 @@ const Settings = () => {
 
         setIsLoading(true);
         try {
-            const currentUser = auth.currentUser;
-            if (!currentUser) throw new Error("No user found");
+            const { error } = await supabase.auth.updateUser({ password: newPassword });
+            
+            if (error) throw error;
 
-            // Firebase requires re-authentication for sensitive operations
-            const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
-            await reauthenticateWithCredential(currentUser, credential);
-
-            await updatePassword(currentUser, newPassword);
-
-            toast.success("Password updated successfully!");
+            toast.success("Password updated successfully in Supabase!");
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
         } catch (error) {
             console.error(error);
-            if (error.code === 'auth/wrong-password') {
-                toast.error("Current password is incorrect.");
-            } else {
-                toast.error(error.message || "Failed to update password.");
-            }
+            toast.error(error.message || "Failed to update password.");
         } finally {
             setIsLoading(false);
         }

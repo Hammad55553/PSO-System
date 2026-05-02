@@ -254,11 +254,45 @@ const POS = () => {
                     .eq('id', item.id);
             }
 
-            // 4. Update Shift (If needed, assuming shifts table exists)
-            // ... shift update logic ...
+            // 4. Update Shift Stats in Supabase
+            const { data: currentShift } = await supabase
+                .from('shifts')
+                .select('sales')
+                .eq('id', activeShift.id)
+                .single();
+            
+            await supabase
+                .from('shifts')
+                .update({ sales: (currentShift?.sales || 0) + finalTotal })
+                .eq('id', activeShift.id);
 
-            setLastSale({ ...saleData, id: savedSale.id, cashReceived, changeAmount, date: new Date().toLocaleString() });
-            toast.success('Sale Saved to Supabase');
+            // 5. Update Customer Balance if Credit
+            if (paymentMethod === 'Credit' && selectedCustomer) {
+                const { data: custData } = await supabase
+                    .from('customers')
+                    .select('balance, history')
+                    .eq('id', selectedCustomer.id)
+                    .single();
+                
+                const newBalance = (custData?.balance || 0) + finalTotal;
+                const newHistory = [
+                    { 
+                        date: new Date().toISOString(), 
+                        amount: finalTotal, 
+                        type: 'credit', 
+                        note: `POS Sale #${savedSale.id.toString().slice(-6)}` 
+                    },
+                    ...(custData?.history || [])
+                ];
+
+                await supabase
+                    .from('customers')
+                    .update({ balance: newBalance, history: newHistory })
+                    .eq('id', selectedCustomer.id);
+            }
+
+            setLastSale({ ...saleData, id: savedSale.id, cash_received: cashReceived, change_amount: changeAmount, date: new Date().toLocaleString() });
+            toast.success('Sale Processed via Supabase');
 
         } catch (err) {
             console.error("Supabase Save Failed:", err);
@@ -382,18 +416,15 @@ const POS = () => {
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         const shortageItem = {
-                                                            id: Date.now(),
                                                             name: item.name,
-                                                            demandCount: 1,
+                                                            demand_count: 1,
                                                             status: 'pending',
-                                                            addedAt: new Date().toISOString(),
-                                                            lastRequested: new Date().toISOString(),
                                                             notes: 'Added from POS'
                                                         };
                                                         dispatch(addToShortage(shortageItem));
-                                                        if (navigator.onLine) {
-                                                            setDoc(doc(db, "shortage", shortageItem.id.toString()), shortageItem);
-                                                        }
+                                                        supabase.from('shortage').insert([shortageItem]).then(({error}) => {
+                                                            if (!error) toast.success('Marked in Shortage Book (Supabase)');
+                                                        });
                                                         toast.success('Marked in Shortage Book');
                                                     }}
                                                     style={{ margin: '0 15px', background: '#fff7ed', border: '1px solid #fed7aa', color: '#c2410c', padding: '6px 12px', borderRadius: '6px', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer' }}
@@ -408,18 +439,15 @@ const POS = () => {
                                                 <button 
                                                     onClick={() => {
                                                         const newShortage = {
-                                                            id: Date.now(),
                                                             name: searchTerm,
-                                                            demandCount: 1,
+                                                            demand_count: 1,
                                                             status: 'pending',
-                                                            addedAt: new Date().toISOString(),
-                                                            lastRequested: new Date().toISOString(),
                                                             notes: 'Added from POS'
                                                         };
                                                         dispatch(addToShortage(newShortage));
-                                                        if (navigator.onLine) {
-                                                            setDoc(doc(db, "shortage", newShortage.id.toString()), newShortage);
-                                                        }
+                                                        supabase.from('shortage').insert([newShortage]).then(({error}) => {
+                                                            if (!error) toast.success(`"${searchTerm}" added to Shortage Book (Supabase)`);
+                                                        });
                                                         toast.success(`"${searchTerm}" added to Shortage Book`);
                                                         setSearchTerm('');
                                                     }}

@@ -30,13 +30,13 @@ const Dashboard = () => {
 
     // 1. DATA PROCESSING FOR CHARTS
     const filteredHistory = useMemo(() => 
-        isAdmin ? history : history.filter(s => s.sellerName === user?.name || s.uid === user?.uid)
+        isAdmin ? history : history.filter(s => (s.seller_name || s.sellerName) === user?.name || s.seller_id === user?.uid)
     , [history, isAdmin, user]);
 
     const totalSales = useMemo(() => filteredHistory.reduce((acc, s) => acc + s.total, 0), [filteredHistory]);
     const totalReceivables = useMemo(() => customers.reduce((acc, c) => acc + (c.balance || 0), 0), [customers]);
     const today = new Date().toISOString().split('T')[0];
-    const todaySales = useMemo(() => filteredHistory.filter(s => new Date(s.date).toISOString().split('T')[0] === today), [filteredHistory, today]);
+    const todaySales = useMemo(() => filteredHistory.filter(s => new Date(s.created_at || s.date).toISOString().split('T')[0] === today), [filteredHistory, today]);
     const todayRevenue = useMemo(() => todaySales.reduce((acc, s) => acc + s.total, 0), [todaySales]);
 
     // Revenue Trend (Last 7 Days)
@@ -48,7 +48,7 @@ const Dashboard = () => {
         }).reverse();
 
         return days.map(day => {
-            const daySales = filteredHistory.filter(s => new Date(s.date).toISOString().split('T')[0] === day);
+            const daySales = filteredHistory.filter(s => new Date(s.created_at || s.date).toISOString().split('T')[0] === day);
             return {
                 day: new Date(day).toLocaleDateString('en-US', { weekday: 'short' }),
                 revenue: daySales.reduce((sum, s) => sum + s.total, 0)
@@ -75,9 +75,9 @@ const Dashboard = () => {
     const calculateProfit = (salesList) => {
         if (!salesList) return 0;
         return salesList.reduce((acc, sale) => {
-            const saleProfit = (sale.items || []).reduce((sum, item) => {
-                const buyPrice = item.buyPrice || 0;
-                return sum + ((item.price - buyPrice) * item.quantity);
+            const saleProfit = (sale.items || sale.sale_items || []).reduce((sum, item) => {
+                const buyPrice = item.buy_price || item.buyPrice || 0;
+                return sum + (((item.price || 0) - buyPrice) * (item.quantity || 0));
             }, 0);
             return acc + (saleProfit - (sale.discount || 0));
         }, 0);

@@ -4,8 +4,8 @@ import { Trash2, Edit3, UserPlus, Search, Phone, History, ArrowDownCircle, Arrow
 import { addCustomer, updateBalance, deleteCustomer, editCustomer } from '../store/slices/customerSlice';
 import toast from 'react-hot-toast';
 
-import { db } from '../firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { supabase } from '../supabase';
+import toast from 'react-hot-toast';
 
 const CreditManagement = () => {
     const dispatch = useDispatch();
@@ -36,105 +36,91 @@ const CreditManagement = () => {
     const handleDeleteCustomer = async (id) => {
         if (!isAdmin) return;
         if (window.confirm('Are you sure you want to PERMANENTLY delete this customer and all their history?')) {
-            dispatch(deleteCustomer(id));
-            if (navigator.onLine) {
-                try {
-                    await deleteDoc(doc(db, "customers", id));
-                    toast.success('Account removed from cloud');
-                } catch (err) {
-                    console.error(err);
-                }
+            try {
+                const { error } = await supabase
+                    .from('customers')
+                    .delete()
+                    .eq('id', id);
+                
+                if (error) throw error;
+                setSelectedCust(null);
+                toast.success('Customer deleted from Supabase');
+            } catch (err) {
+                toast.error('Delete failed');
             }
-            setSelectedCust(null);
-            toast.success('Customer deleted');
         }
     };
 
     const handleUpdateCustomer = async (e) => {
         e.preventDefault();
-        dispatch(editCustomer(editData));
-        if (navigator.onLine) {
-            try {
-                // Merge with existing data to preserve balance/history
-                await setDoc(doc(db, "customers", editData.id), { 
+        try {
+            const { error } = await supabase
+                .from('customers')
+                .update({ 
                     name: editData.name, 
                     phone: editData.phone,
                     email: editData.email || '',
                     address: editData.address || ''
-                }, { merge: true });
-                toast.success('Cloud record updated');
-            } catch (err) {
-                console.error(err);
-            }
+                })
+                .eq('id', editData.id);
+            
+            if (error) throw error;
+            setIsEditModalOpen(false);
+            toast.success('Details updated in Supabase');
+        } catch (err) {
+            toast.error('Update failed');
         }
-        setIsEditModalOpen(false);
-        // Refresh selected object if it's the one edited
-        if (selectedCust?.id === editData.id) {
-            setSelectedCust({ ...selectedCust, ...editData });
-        }
-        toast.success('Details updated');
     };
-
-    const filtered = customers.filter(c =>
-        (c.type === khataType || (!c.type && khataType === 'Client')) &&
-        (c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.phone.includes(searchTerm))
-    );
 
     const handleAction = async (type) => {
         if (!amount || parseFloat(amount) <= 0) return;
         const finalAmount = parseFloat(amount);
 
-        // Update local Redux first
-        dispatch(updateBalance({
-            id: selectedCust.id,
-            amount: finalAmount,
-            type,
-            note: note || (type === 'credit' ? 'Manual credit entry' : 'Bill payment')
-        }));
+        const newBalance = type === 'credit' ? selectedCust.balance + finalAmount : selectedCust.balance - finalAmount;
+        const newHistory = [
+            { date: new Date().toISOString(), amount: finalAmount, type, note: note || (type === 'credit' ? 'Manual' : 'Payment') },
+            ...(selectedCust.history || [])
+        ];
 
-        // CLOUD PUSH
-        if (navigator.onLine) {
-            try {
-                // We need the updated customer object from state or recalculate
-                const updatedCust = { ...selectedCust };
-                if (type === 'credit') updatedCust.balance += finalAmount;
-                else if (type === 'payment') updatedCust.balance -= finalAmount;
-
-                updatedCust.history = [
-                    { date: new Date().toISOString(), amount: finalAmount, type, note: note || (type === 'credit' ? 'Manual' : 'Payment') },
-                    ...(updatedCust.history || [])
-                ];
-
-                await setDoc(doc(db, "customers", selectedCust.id), updatedCust);
-            } catch (err) {
-                console.error("Cloud Sync Failed:", err);
-            }
+        try {
+            const { error } = await supabase
+                .from('customers')
+                .update({ balance: newBalance, history: newHistory })
+                .eq('id', selectedCust.id);
+            
+            if (error) throw error;
+            toast.success(type === 'credit' ? 'Debt recorded' : 'Payment received');
+            setAmount('');
+            setNote('');
+        } catch (err) {
+            toast.error('Transaction failed');
         }
-
-        toast.success(type === 'credit' ? 'Debt recorded successfully' : 'Payment received and updated');
-        setAmount('');
-        setNote('');
     };
 
     const handleAddCustomer = async (e) => {
         e.preventDefault();
-        const id = Date.now().toString();
-        const customerData = { ...newCust, id, balance: 0, history: [] };
+        const customerData = { 
+            name: newCust.name, 
+            phone: newCust.phone, 
+            email: newCust.email || '', 
+            address: newCust.address || '', 
+            type: newCust.type,
+            balance: 0, 
+            history: [] 
+        };
 
-        dispatch(addCustomer(customerData));
-
-        // CLOUD PUSH
-        if (navigator.onLine) {
-            try {
-                await setDoc(doc(db, "customers", id), customerData);
-            } catch (err) {
-                console.error("Cloud Sync Failed:", err);
-            }
+        try {
+            const { error } = await supabase
+                .from('customers')
+                .insert([customerData]);
+            
+            if (error) throw error;
+            toast.success('New account registered in Supabase');
+            setIsAddModalOpen(false);
+            setNewCust({ name: '', phone: '', email: '', address: '', type: 'Client' });
+        } catch (err) {
+            toast.error('Registration failed');
         }
-
-        toast.success('New account registered');
-        setIsAddModalOpen(false);
-        setNewCust({ name: '', phone: '', email: '', address: '', type: 'Patient' });
     };
 
     return (
