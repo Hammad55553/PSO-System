@@ -46,13 +46,37 @@ const ProfitMastery = () => {
         );
     }
 
-    // Data Calculation
-    const filteredSales = history.filter(s => {
-        const saleDate = (s.created_at || s.date || '').includes(',') ? (s.created_at || s.date).split(',')[0] : (s.created_at || s.date);
-        try {
-            return new Date(saleDate).toISOString().split('T')[0] === dateFilter;
-        } catch (e) { return false; }
-    });
+    const [sales, setSales] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    // Fetch Sales for Selected Date
+    React.useEffect(() => {
+        const fetchSales = async () => {
+            setLoading(true);
+            try {
+                const startOfDay = `${dateFilter}T00:00:00.000Z`;
+                const endOfDay = `${dateFilter}T23:59:59.999Z`;
+
+                const { data, error } = await supabase
+                    .from('sales')
+                    .select('*, sale_items(*)')
+                    .gte('created_at', startOfDay)
+                    .lte('created_at', endOfDay)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                setSales(data || []);
+            } catch (err) {
+                console.error("Fetch Error:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchSales();
+    }, [dateFilter]);
+
+    const filteredSales = sales;
 
     const totalRevenue = filteredSales.reduce((acc, s) => acc + (s.total || 0), 0);
     
@@ -175,12 +199,12 @@ const ProfitMastery = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {selectedProduct.sales.map((s, i) => (
+                                        {(selectedProduct.sales || []).map((s, i) => (
                                             <tr key={i}>
-                                                <td style={{ fontWeight: 800, fontSize: '0.75rem' }}>{s.billId}</td>
+                                                <td style={{ fontWeight: 800, fontSize: '0.75rem' }}>#{s.billId}</td>
                                                 <td style={{ fontSize: '0.75rem' }}>{s.customer}</td>
                                                 <td style={{ textAlign: 'right', fontWeight: 700, fontSize: '0.75rem' }}>{s.qty}</td>
-                                                <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem' }}>Rs {s.total}</td>
+                                                <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '0.75rem' }}>Rs {s.total.toLocaleString()}</td>
                                             </tr>
                                         ))}
                                     </tbody>
