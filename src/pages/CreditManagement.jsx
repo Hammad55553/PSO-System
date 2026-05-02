@@ -5,6 +5,8 @@ import { addCustomer, updateBalance, deleteCustomer, editCustomer } from '../sto
 import toast from 'react-hot-toast';
 
 import { supabase } from '../supabase';
+import { Share2, FileText, Image as ImageIcon, Download, Eye, X, MessageCircle } from 'lucide-react';
+import logo from '../assets/Bila_vet.png';
 
 const CreditManagement = () => {
     const dispatch = useDispatch();
@@ -17,6 +19,8 @@ const CreditManagement = () => {
     const [note, setNote] = useState('');
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [exportPreviewMode, setExportPreviewMode] = useState(null); // 'image', 'pdf', 'excel'
     const [khataType, setKhataType] = useState('Client'); 
     const [newCust, setNewCust] = useState({ name: '', phone: '', email: '', address: '', type: 'Client' });
     const [editData, setEditData] = useState({ id: '', name: '', phone: '', email: '', address: '', type: 'Client' });
@@ -120,6 +124,30 @@ const CreditManagement = () => {
         } catch (err) {
             toast.error('Registration failed');
         }
+    };
+
+    const handleExportWhatsApp = (cust) => {
+        const text = `*Bilal Veterinary Clinic - Khata Summary*\n\n*Customer:* ${cust.name}\n*Total Balance:* Rs ${cust.balance.toLocaleString()}\n\n*Last Transactions:*\n${cust.history?.slice(0, 5).map(h => `- ${new Date(h.date).toLocaleDateString()}: Rs ${h.amount} (${h.type})`).join('\n')}\n\n_Please clear your dues at your earliest convenience._`;
+        const encodedText = encodeURIComponent(text);
+        window.open(`https://wa.me/${cust.phone?.replace(/[^0-9]/g, '')}?text=${encodedText}`, '_blank');
+    };
+
+    const handlePrintLedger = () => {
+        window.print();
+    };
+
+    const handleExportExcel = (cust) => {
+        const rows = [
+            ["Date", "Description", "Type", "Amount"],
+            ...(cust.history || []).map(h => [new Date(h.date).toLocaleDateString(), h.note || '—', h.type.toUpperCase(), h.amount])
+        ];
+        let csvContent = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `${cust.name}_Ledger.csv`);
+        document.body.appendChild(link);
+        link.click();
     };
 
     return (
@@ -267,7 +295,7 @@ const CreditManagement = () => {
                             {/* Action Panel */}
                              <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '12px', flexShrink: 0 }}>
                                 {isAdmin ? (
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr', gap: '15px', height: '100%' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr auto', gap: '15px', height: '100%' }}>
                                         <div>
                                             <label style={{ fontSize: '0.6rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '4px' }}>AMOUNT</label>
                                             <input
@@ -303,6 +331,18 @@ const CreditManagement = () => {
                                                 DEBT/BILL
                                             </button>
                                         </div>
+                                        <div style={{ display: 'flex', alignItems: 'center' }}>
+                                            <button 
+                                                onClick={() => {
+                                                    setIsExportModalOpen(true);
+                                                    setExportPreviewMode('pdf');
+                                                }}
+                                                style={{ background: '#f1f5f9', color: '#6366f1', border: '1px solid #e2e8f0', borderRadius: '10px', height: '100%', padding: '0 15px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                            >
+                                                <Share2 size={18} />
+                                                <span style={{ fontSize: '0.55rem', fontWeight: 900 }}>SHARE</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
                                     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
@@ -320,6 +360,92 @@ const CreditManagement = () => {
                     )}
                 </div>
             </div>
+
+            {/* LEDGER EXPORT MODAL */}
+            {isExportModalOpen && selectedCust && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ background: 'white', width: '100%', maxWidth: '900px', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', display: 'grid', gridTemplateColumns: '280px 1fr', height: '85vh' }}>
+                        {/* SIDEBAR OPTIONS */}
+                        <div style={{ background: '#f8fafc', padding: '30px', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ marginBottom: '30px' }}>
+                                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a' }}>Statement Export</h3>
+                                <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Export ledger for {selectedCust.name}.</p>
+                            </div>
+
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
+                                <button onClick={() => setExportPreviewMode('image')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '15px', background: exportPreviewMode === 'image' ? '#0f172a' : 'white', color: exportPreviewMode === 'image' ? 'white' : '#1e293b', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, textAlign: 'left' }}>
+                                    <MessageCircle size={20} color="#10b981" /> WhatsApp Summary
+                                </button>
+                                <button onClick={() => setExportPreviewMode('pdf')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '15px', background: exportPreviewMode === 'pdf' ? '#0f172a' : 'white', color: exportPreviewMode === 'pdf' ? 'white' : '#1e293b', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, textAlign: 'left' }}>
+                                    <FileText size={20} color="#ef4444" /> Print / PDF Ledger
+                                </button>
+                                <button onClick={() => handleExportExcel(selectedCust)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '15px', background: 'white', color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, textAlign: 'left' }}>
+                                    <Download size={20} color="#0ea5e9" /> Download Excel
+                                </button>
+                            </div>
+
+                            <button onClick={() => setIsExportModalOpen(false)} style={{ width: '100%', padding: '15px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: 900, color: '#64748b', cursor: 'pointer', marginTop: '20px' }}>Close Preview</button>
+                        </div>
+
+                        {/* PREVIEW AREA */}
+                        <div style={{ padding: '40px', overflowY: 'auto', background: '#94a3b8' }}>
+                            <div id="ledger-document" style={{ background: 'white', width: '100%', minHeight: '100%', padding: '50px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', position: 'relative', boxSizing: 'border-box' }}>
+                                {/* LOGO & HEADER */}
+                                <div style={{ textAlign: 'center', marginBottom: '40px', borderBottom: '2px solid #0f172a', paddingBottom: '20px' }}>
+                                    <img src={logo} alt="Clinic Logo" style={{ height: '70px', marginBottom: '10px' }} />
+                                    <h1 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#0f172a', letterSpacing: '-1px' }}>BILAL VETERINARY CLINIC</h1>
+                                    <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Mian Channu Road, Near Shell Pump | 0300-1234567</p>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px' }}>
+                                    <div>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block' }}>ACCOUNT STATEMENT</span>
+                                        <h2 style={{ fontSize: '1.4rem', fontWeight: 950, color: '#1e293b' }}>{selectedCust.name}</h2>
+                                        <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 700 }}>Phone: {selectedCust.phone}</p>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block' }}>NET BALANCE</span>
+                                        <h2 style={{ fontSize: '2rem', fontWeight: 950, color: selectedCust.balance > 0 ? '#ef4444' : '#10b981' }}>Rs {selectedCust.balance.toLocaleString()}</h2>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>Generated: {new Date().toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+
+                                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '50px' }}>
+                                    <thead>
+                                        <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #0f172a' }}>
+                                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 900 }}>DATE</th>
+                                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 900 }}>DESCRIPTION</th>
+                                            <th style={{ padding: '12px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 900 }}>DEBIT (+)</th>
+                                            <th style={{ padding: '12px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 900 }}>CREDIT (-)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {selectedCust.history.map((h, i) => (
+                                            <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                <td style={{ padding: '12px', fontSize: '0.8rem', fontWeight: 700 }}>{new Date(h.date).toLocaleDateString()}</td>
+                                                <td style={{ padding: '12px', fontSize: '0.8rem' }}>{h.note}</td>
+                                                <td style={{ padding: '12px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 900, color: '#ef4444' }}>{h.type === 'credit' ? `Rs ${h.amount.toLocaleString()}` : '—'}</td>
+                                                <td style={{ padding: '12px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 900, color: '#10b981' }}>{h.type === 'payment' ? `Rs ${h.amount.toLocaleString()}` : '—'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <p style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>Thank you for your business. Please clear outstanding dues.</p>
+                                    <button 
+                                        onClick={() => exportPreviewMode === 'image' ? handleExportWhatsApp(selectedCust) : handlePrintLedger()}
+                                        style={{ background: '#0f172a', color: 'white', border: 'none', padding: '15px 30px', borderRadius: '12px', fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                    >
+                                        {exportPreviewMode === 'image' ? <MessageCircle size={20} /> : <FileText size={20} />}
+                                        {exportPreviewMode === 'image' ? 'SEND VIA WHATSAPP' : 'PRINT / SAVE AS PDF'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Registration Modal */}
             {isAddModalOpen && (
