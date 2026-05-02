@@ -56,9 +56,14 @@ function AppContent() {
   const [attempts, setAttempts] = useState(10);
 
   const handleProtectedNavigation = (e, path) => {
-    e.preventDefault();
-    setTargetPath(path);
-    setShowPinModal(true);
+    // Only ask for PIN if we are currently in billing mode (POS/Returns)
+    if (isBillingMode) {
+      e.preventDefault();
+      setTargetPath(path);
+      setShowPinModal(true);
+    } else {
+      navigate(path);
+    }
   };
 
   const handlePinSubmit = (e) => {

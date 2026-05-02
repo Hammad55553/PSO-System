@@ -40,8 +40,9 @@ const Sidebar = () => {
     const hasAccess = (perm) => isAdmin || permissions.includes(perm);
 
     const handleNavClick = (path) => {
-        // Always ask for PIN when going to Dashboard OR when leaving POS
-        if (path === '/' || (location.pathname.startsWith('/pos') && path !== '/pos')) {
+        // ONLY ask for PIN when LEAVING the Sale Terminal or Returns screen
+        const isTerminal = location.pathname.startsWith('/pos') || location.pathname.startsWith('/returns');
+        if (isTerminal && path !== location.pathname) {
             setTargetPath(path);
             setShowPinModal(true);
         } else {
