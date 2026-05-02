@@ -65,14 +65,13 @@ const Sidebar = () => {
             setPinError(true);
             
             if (newAttempts <= 0) {
-                toast.error("TOO MANY FAILED ATTEMPTS - LOGGING OUT");
+                toast.error("TOO MANY FAILED ATTEMPTS - LOGGING OUT", { duration: 5000 });
                 dispatch(logout());
             } else {
-                toast.error(`WRONG PIN. ${newAttempts} attempts remaining.`);
+                toast.error(`SECURITY ALERT: WRONG PIN! ${newAttempts} attempts remaining.`, { duration: 4000 });
             }
             
             setPinInput('');
-            setTimeout(() => setPinError(false), 500);
         }
     };
 
@@ -200,7 +199,10 @@ const Sidebar = () => {
                                         background: pinError ? '#fef2f2' : 'white'
                                     }}
                                     value={pinInput}
-                                    onChange={(e) => setPinInput(e.target.value)}
+                                    onChange={(e) => {
+                                        setPinInput(e.target.value);
+                                        if (pinError) setPinError(false);
+                                    }}
                                     maxLength={4}
                                 />
                                 {pinError && (
