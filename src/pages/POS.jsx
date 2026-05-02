@@ -627,100 +627,108 @@ const POS = () => {
 
                         {/* FINANCIAL SUMMARY */}
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '15px 20px' }}>
-
-                            {/* DROPDOWN BREAKDOWN */}
-                            <div style={{ marginBottom: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                            <div style={{ marginBottom: '15px' }}>
                                 <button
                                     onClick={() => setShowBreakdown(!showBreakdown)}
-                                    style={{ width: '100%', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 900, color: '#475569', fontSize: '0.75rem' }}
+                                    style={{ width: '100%', padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', cursor: 'pointer', fontWeight: 900, color: '#475569', fontSize: '0.65rem' }}
                                 >
-                                    VIEW BILL BREAKDOWN {showBreakdown ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                    {showBreakdown ? 'HIDE' : 'VIEW'} BILL BREAKDOWN {showBreakdown ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                                 </button>
 
                                 {showBreakdown && (
-                                    <div style={{ padding: '0 15px 12px 15px', display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px dashed #e2e8f0', paddingTop: '10px' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                                    <div style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px', border: '1px solid #e2e8f0', borderTop: 'none', borderRadius: '0 0 8px 8px', background: 'white' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
                                             <span style={{ fontWeight: 700, color: '#64748b' }}>TOTAL BILL</span>
                                             <span style={{ fontWeight: 800, color: '#1e293b' }}>Rs {subtotal.toLocaleString()}</span>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
                                             <span style={{ fontWeight: 700, color: '#64748b' }}>TOTAL DISCOUNT</span>
                                             <span style={{ fontWeight: 800, color: '#ef4444' }}>- Rs {(itemDiscounts + globalDiscount).toLocaleString()}</span>
                                         </div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                                            <span style={{ fontWeight: 700, color: '#64748b' }}>TAX / GST Amount</span>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
+                                            <span style={{ fontWeight: 700, color: '#64748b' }}>TAX Amount</span>
                                             <span style={{ fontWeight: 800, color: tax > 0 ? '#059669' : '#94a3b8' }}>+ Rs {tax.toLocaleString()}</span>
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* BIG TOTAL BOX */}
-                            <div style={{ padding: '20px', background: '#064e3b', borderRadius: '12px', color: 'white', textAlign: 'center', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.2)' }}>
-                                <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#34d399', marginBottom: '5px', letterSpacing: '1px' }}>FINAL AMOUNT TO PAY</p>
-                                <h1 style={{ fontSize: '2.5rem', fontWeight: 950, margin: 0 }}>Rs {Math.round(finalTotal).toLocaleString()}</h1>
-                                <p style={{ fontSize: '0.7rem', fontWeight: 700, opacity: 0.8, marginTop: '5px' }}>{tax > 0 ? 'Tax included' : 'No Tax added'}</p>
+                            <div style={{ background: '#064e3b', padding: '15px', borderRadius: '12px', color: 'white', textAlign: 'center', marginBottom: '15px' }}>
+                                <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#34d399', display: 'block', marginBottom: '2px' }}>FINAL AMOUNT TO PAY</span>
+                                <div style={{ fontSize: '1.8rem', fontWeight: 950 }}>Rs {Math.round(finalTotal).toLocaleString()}</div>
+                                <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>{tax > 0 ? 'Tax included' : 'No Tax added'}</span>
                             </div>
 
                             {/* PAYMENT METHODS */}
-                            <div style={{ marginTop: '20px' }}>
-                                <p style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    <Banknote size={14} /> HOW IS PATIENT PAYING?
-                                </p>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '15px' }}>
-                                    <button onClick={() => setPaymentMethod('Cash')} style={{ padding: '12px 5px', border: paymentMethod === 'Cash' ? '2px solid #10b981' : '1px solid #e2e8f0', background: paymentMethod === 'Cash' ? '#ecfdf5' : 'white', borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', transition: 'all 0.2s' }}>
-                                        <Banknote size={20} color={paymentMethod === 'Cash' ? '#10b981' : '#94a3b8'} />
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 800 }}>CASH</span>
-                                    </button>
-                                    <button onClick={() => setPaymentMethod('Card')} style={{ padding: '12px 5px', border: paymentMethod === 'Card' ? '2px solid #10b981' : '1px solid #e2e8f0', background: paymentMethod === 'Card' ? '#ecfdf5' : 'white', borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', transition: 'all 0.2s' }}>
-                                        <CreditCard size={20} color={paymentMethod === 'Card' ? '#10b981' : '#94a3b8'} />
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 800 }}>CARD</span>
-                                    </button>
-                                    <button onClick={() => setPaymentMethod('Credit')} style={{ padding: '12px 5px', border: paymentMethod === 'Credit' ? '2px solid #10b981' : '1px solid #e2e8f0', background: paymentMethod === 'Credit' ? '#ecfdf5' : 'white', borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px', transition: 'all 0.2s' }}>
-                                        <UserPlus size={20} color={paymentMethod === 'Credit' ? '#10b981' : '#94a3b8'} />
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 800 }}>KHATTA</span>
-                                    </button>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ fontSize: '0.6rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>HOW IS PATIENT PAYING?</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                                    {[
+                                        { id: 'Cash', icon: <Banknote size={16} />, label: 'CASH' },
+                                        { id: 'Card', icon: <CreditCard size={16} />, label: 'CARD' },
+                                        { id: 'Credit', icon: <UserPlus size={16} />, label: 'KHATTA' }
+                                    ].map(method => (
+                                        <button
+                                            key={method.id}
+                                            onClick={() => setPaymentMethod(method.id)}
+                                            style={{
+                                                padding: '8px 5px',
+                                                borderRadius: '8px',
+                                                border: '2px solid',
+                                                borderColor: paymentMethod === method.id ? '#059669' : '#e2e8f0',
+                                                background: paymentMethod === method.id ? '#ecfdf5' : 'white',
+                                                color: paymentMethod === method.id ? '#065f46' : '#64748b',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                gap: '4px',
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {method.icon}
+                                            <span style={{ fontSize: '0.6rem', fontWeight: 900 }}>{method.label}</span>
+                                        </button>
+                                    ))}
                                 </div>
 
                                 {paymentMethod === 'Cash' && (
-                                    <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>CASH GIVEN BY PATIENT (Rs)</label>
+                                    <div style={{ marginTop: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                        <label style={{ fontSize: '0.6rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '5px' }}>CASH GIVEN (Rs)</label>
                                         <input
                                             ref={cashInputRef}
                                             type="number"
-                                            placeholder="Enter amount"
-                                            style={{ width: '100%', padding: '10px', fontSize: '1.5rem', fontWeight: 950, textAlign: 'center', background: 'white', border: '2px solid #10b981', borderRadius: '6px' }}
+                                            placeholder="Amount"
+                                            style={{ width: '100%', padding: '6px', fontSize: '1.1rem', fontWeight: 950, textAlign: 'center', background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px' }}
                                             value={cashReceived}
                                             onChange={(e) => setCashReceived(e.target.value)}
                                         />
                                         {cashReceived && (
-                                            <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: changeAmount >= 0 ? '#d1fae5' : '#fee2e2', borderRadius: '6px' }}>
-                                                <span style={{ fontWeight: 900, color: changeAmount >= 0 ? '#065f46' : '#991b1b', fontSize: '0.8rem' }}>{changeAmount >= 0 ? 'RETURN BACK:' : 'LACKING:'}</span>
-                                                <span style={{ fontSize: '1.2rem', fontWeight: 950, color: changeAmount >= 0 ? '#065f46' : '#991b1b' }}>Rs {Math.abs(Math.round(changeAmount)).toLocaleString()}</span>
+                                            <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <span style={{ fontWeight: 800, fontSize: '0.6rem', color: changeAmount >= 0 ? '#065f46' : '#991b1b' }}>{changeAmount >= 0 ? 'RETURN:' : 'LACK:'}</span>
+                                                <span style={{ fontSize: '0.9rem', fontWeight: 950, color: changeAmount >= 0 ? '#065f46' : '#991b1b' }}>Rs {Math.abs(Math.round(changeAmount)).toLocaleString()}</span>
                                             </div>
                                         )}
                                     </div>
                                 )}
                             </div>
-                        </div>
 
-                        {/* FINAL ACTION */}
-                        <div style={{ padding: '20px', borderTop: '1px solid #f1f5f9', background: 'white', display: 'flex', gap: '10px' }}>
-                            <button 
-                                onClick={() => { setPendingPrint(false); setShowConfirm(true); }} 
-                                style={{ flex: 1, padding: '18px', background: '#f1f5f9', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '1rem', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                            >
-                                <CheckCircle size={20} /> FINISH ONLY (F9)
-                            </button>
-                            <button 
-                                onClick={() => { setPendingPrint(true); setShowConfirm(true); }} 
-                                style={{ flex: 2, padding: '18px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.2rem', fontWeight: 950, cursor: 'pointer', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
-                            >
-                                <Printer size={22} /> PRINT & FINISH (F10)
-                            </button>
+                            {/* ACTIONS */}
+                            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                                <button 
+                                    onClick={() => { setPendingPrint(false); setShowConfirm(true); }} 
+                                    style={{ flex: 1, padding: '12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 950, cursor: 'pointer' }}
+                                >
+                                    FINISH (F9)
+                                </button>
+                                <button 
+                                    onClick={() => { setPendingPrint(true); setShowConfirm(true); }} 
+                                    style={{ flex: 2, padding: '12px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.95rem', fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                >
+                                    <Printer size={16} /> PRINT & FINISH (F10)
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
                 {/* PARKED BILLS MODAL */}
                 {showParkedList && (
