@@ -368,7 +368,9 @@ const POS = () => {
                             PHARMACIST ON DUTY
                         </div>
                         <div style={{ height: '20px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}></div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>SESSION: {new Date(activeShift.startTime).toLocaleTimeString()}</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>
+                            SESSION: {activeShift ? new Date(activeShift.start_time || activeShift.startTime).toLocaleTimeString() : 'NO ACTIVE SESSION'}
+                        </span>
                     </div>
                 </header>
 
