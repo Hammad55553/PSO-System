@@ -24,7 +24,8 @@ import {
     ChevronDown,
     ChevronUp,
     AlertCircle,
-    CheckCircle
+    CheckCircle,
+    Wallet
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { addSale } from '../store/slices/salesSlice';
@@ -38,6 +39,8 @@ import { supabase } from '../supabase';
 
 
 import logo from '../assets/Bila_vet.png';
+import jazzcashLogo from '../assets/jazzcash.webp';
+import easypaisaLogo from '../assets/Easypaisa.jpg';
 import ThermalReceipt from '../components/ThermalReceipt';
 import CheckoutSuccessModal from '../components/CheckoutSuccessModal';
 
@@ -772,6 +775,63 @@ const POS = () => {
                                     ))}
                                 </div>
 
+                                {paymentMethod === 'Online' && (
+                                    <div style={{ background: '#f0f9ff', padding: '15px', borderRadius: '12px', border: '1px solid #bae6fd', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            {[
+                                            { id: 'JazzCash', icon: <img src={jazzcashLogo} alt="JC" style={{ height: '18px', objectFit: 'contain' }} />, color: '#f59e0b' },
+                                                { id: 'Easypaisa', icon: <img src={easypaisaLogo} alt="EP" style={{ height: '18px', objectFit: 'contain' }} />, color: '#10b981' },
+                                                { id: 'Bank', icon: <Banknote size={18} />, color: '#0ea5e9' }
+                                            ].map(p => (
+                                                <button 
+                                                    key={p.id}
+                                                    type="button"
+                                                    onClick={() => setOnlineProvider(p.id)}
+                                                    style={{ 
+                                                        flex: 1, 
+                                                        padding: '10px 4px', 
+                                                        borderRadius: '8px', 
+                                                        border: '2px solid', 
+                                                        borderColor: onlineProvider === p.id ? p.color : '#e2e8f0', 
+                                                        background: 'white', 
+                                                        color: onlineProvider === p.id ? p.color : '#64748b', 
+                                                        fontSize: '0.6rem', 
+                                                        fontWeight: 900, 
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        transition: 'all 0.2s',
+                                                        boxShadow: onlineProvider === p.id ? `0 4px 10px ${p.color}20` : 'none'
+                                                    }}
+                                                >
+                                                    {p.icon}
+                                                    {p.id.toUpperCase()}
+                                                </button>
+                                            ))}
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#0369a1', display: 'block', marginBottom: '4px' }}>RECEIVED ON (WHICH NUMBER?)</label>
+                                            <input 
+                                                placeholder="Enter recipient number/ID"
+                                                style={{ width: '100%', padding: '8px', border: '1px solid #bae6fd', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700 }}
+                                                value={onlineAccount}
+                                                onChange={e => setOnlineAccount(e.target.value)}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ef4444', display: 'block', marginBottom: '4px' }}>CUSTOMER NUMBER (MANDATORY*)</label>
+                                            <input 
+                                                placeholder="Customer phone for contact"
+                                                style={{ width: '100%', padding: '8px', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, background: '#fff5f5' }}
+                                                value={customerPhone}
+                                                onChange={e => setCustomerPhone(e.target.value)}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
                                 {paymentMethod === 'Cash' && (
                                     <div style={{ marginTop: '10px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                                         <label style={{ fontSize: '0.6rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '5px' }}>CASH GIVEN (Rs)</label>
@@ -879,62 +939,6 @@ const POS = () => {
                                 </div>
                             </div>
 
-                            {/* ONLINE SUB-OPTIONS */}
-                            {paymentMethod === 'Online' && (
-                                <div style={{ background: '#f0f9ff', padding: '15px', borderRadius: '12px', border: '1px solid #bae6fd', margin: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        {[
-                                            { id: 'JazzCash', icon: <Zap size={14} />, color: '#f59e0b' },
-                                            { id: 'Easypaisa', icon: <Wallet size={14} />, color: '#10b981' },
-                                            { id: 'Bank', icon: <Banknote size={14} />, color: '#0ea5e9' }
-                                        ].map(p => (
-                                            <button 
-                                                key={p.id}
-                                                type="button"
-                                                onClick={() => setOnlineProvider(p.id)}
-                                                style={{ 
-                                                    flex: 1, 
-                                                    padding: '8px 4px', 
-                                                    borderRadius: '8px', 
-                                                    border: '1px solid', 
-                                                    borderColor: onlineProvider === p.id ? p.color : '#cbd5e1', 
-                                                    background: onlineProvider === p.id ? p.color : 'white', 
-                                                    color: onlineProvider === p.id ? 'white' : '#64748b', 
-                                                    fontSize: '0.6rem', 
-                                                    fontWeight: 900, 
-                                                    cursor: 'pointer',
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    gap: '4px',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                {p.icon}
-                                                {p.id.toUpperCase()}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#0369a1', display: 'block', marginBottom: '4px' }}>RECEIVED ON (WHICH NUMBER?)</label>
-                                        <input 
-                                            placeholder="Enter recipient number/ID"
-                                            style={{ width: '100%', padding: '8px', border: '1px solid #bae6fd', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700 }}
-                                            value={onlineAccount}
-                                            onChange={e => setOnlineAccount(e.target.value)}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ef4444', display: 'block', marginBottom: '4px' }}>CUSTOMER NUMBER (MANDATORY*)</label>
-                                        <input 
-                                            placeholder="Customer phone for contact"
-                                            style={{ width: '100%', padding: '8px', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, background: '#fff5f5' }}
-                                            value={customerPhone}
-                                            onChange={e => setCustomerPhone(e.target.value)}
-                                        />
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}
