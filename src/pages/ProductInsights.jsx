@@ -23,11 +23,11 @@ const ProductInsights = () => {
     const { productName } = useParams();
     const navigate = useNavigate();
     const [previewSale, setPreviewSale] = useState(null);
-    const { items: inventory } = useSelector(state => state.inventory);
     const { user } = useSelector(state => state.auth);
     const isAdmin = user?.role === 'admin';
 
     const [transactions, setTransactions] = useState([]);
+    const [inventoryItem, setInventoryItem] = useState(null);
     const [loading, setLoading] = useState(false);
 
     // Fetch All Transactions for this product
@@ -36,15 +36,23 @@ const ProductInsights = () => {
             if (!productName) return;
             setLoading(true);
             try {
-                // Simplified Query: Just get sale_items first
+                // 1. Fetch transactions
                 const { data, error } = await supabase
                     .from('sale_items')
                     .select('*, sales(*)')
                     .ilike('name', `%${productName}%`);
 
                 if (error) throw error;
-                console.log("Transactions Found:", data?.length);
                 setTransactions(data || []);
+
+                // 2. Fetch live inventory data for stock
+                const { data: invData, error: invError } = await supabase
+                    .from('inventory')
+                    .select('*')
+                    .ilike('name', `%${productName}%`)
+                    .single();
+
+                if (!invError) setInventoryItem(invData);
             } catch (err) {
                 console.error("Insight Fetch Error:", err);
             } finally {
@@ -54,6 +62,21 @@ const ProductInsights = () => {
 
         fetchProductData();
     }, [productName]);
+
+    const fetchFullSale = async (saleId) => {
+        try {
+            const { data, error } = await supabase
+                .from('sales')
+                .select('*, sale_items(*)')
+                .eq('id', saleId)
+                .single();
+            if (error) throw error;
+            setPreviewSale(data);
+        } catch (err) {
+            console.error("Fetch Sale Error:", err);
+            toast.error("Failed to load receipt");
+        }
+    };
 
     // 1. Data Aggregation for this specific product
     const productStats = useMemo(() => {
@@ -118,8 +141,7 @@ const ProductInsights = () => {
         return stats;
     }, [transactions, productName]);
 
-    const inventoryItem = inventory.find(i => i.name === productName);
-    const totalRestocked = inventoryItem?.restockHistory?.reduce((a, b) => a + b.quantity, 0) || 0;
+    const totalRestocked = (inventoryItem?.history || []).reduce((a, b) => a + Number(b.quantity), 0) || 0;
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '25px', background: '#f8fafc', padding: '20px', overflowY: 'auto' }}>
@@ -191,7 +213,7 @@ const ProductInsights = () => {
                                 {[...productStats.transactions].reverse().map((t, idx) => (
                                     <tr key={idx} style={{ opacity: t.status === 'Returned' ? 0.6 : 1 }}>
                                         <td 
-                                            onClick={() => setPreviewSale(t.sales)}
+                                            onClick={() => fetchFullSale(t.id)}
                                             onMouseOver={e => e.currentTarget.style.color = '#059669'}
                                             onMouseOut={e => e.currentTarget.style.color = '#10b981'}
                                             style={{ 
@@ -374,6 +396,20 @@ const ProductInsights = () => {
                                 CLOSE DETAILS
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+            {/* RECEIPT PREVIEW MODAL */}
+            {previewSale && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
+                    <div style={{ background: 'white', padding: '30px', borderRadius: '24px', maxWidth: '400px', width: '100%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
+                        <button 
+                            onClick={() => setPreviewSale(null)} 
+                            style={{ position: 'absolute', top: '20px', right: '20px', background: '#f1f5f9', border: 'none', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}
+                        >
+                            ✕
+                        </button>
+                        <ThermalReceipt sale={previewSale} items={previewSale.sale_items} />
                     </div>
                 </div>
             )}
