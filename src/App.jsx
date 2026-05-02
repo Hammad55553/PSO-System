@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HashRouter as Router, Routes, Route, useLocation, Link, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, useLocation, Link, Navigate, useNavigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from './store';
 import { Toaster } from 'react-hot-toast';
@@ -47,6 +47,30 @@ function AppContent() {
   const isBillingMode = location.pathname === '/pos' || location.pathname === '/returns';
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [isSyncing, setIsSyncing] = useState(false);
+  
+  const navigate = useNavigate();
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [targetPath, setTargetPath] = useState(null);
+
+  const handleProtectedNavigation = (e, path) => {
+    e.preventDefault();
+    setTargetPath(path);
+    setShowPinModal(true);
+  };
+
+  const handlePinSubmit = (e) => {
+    e.preventDefault();
+    const storedPin = localStorage.getItem('bilal_vet_terminal_pin') || '1234';
+    if (pinInput === storedPin) {
+      setShowPinModal(false);
+      setPinInput('');
+      navigate(targetPath);
+    } else {
+      toast.error("Invalid Security PIN");
+      setPinInput('');
+    }
+  };
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -173,9 +197,12 @@ function AppContent() {
         <header className="app-header no-print">
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             {isBillingMode && (
-              <Link to="/" style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', fontWeight: 800, fontSize: '0.8rem', background: '#eff6ff', padding: '6px 12px', borderRadius: '6px' }}>
+              <div 
+                onClick={(e) => handleProtectedNavigation(e, '/')}
+                style={{ cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', fontWeight: 800, fontSize: '0.8rem', background: '#eff6ff', padding: '6px 12px', borderRadius: '6px' }}
+              >
                 <LayoutDashboard size={18} /> DASHBOARD / MENU
-              </Link>
+              </div>
             )}
 
             {/* HYBRID CONNECTION STATUS */}
@@ -244,6 +271,35 @@ function AppContent() {
           </Routes>
         </div>
       </main>
+
+      {/* SAFETY LOCK MODAL */}
+      {showPinModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
+              <div style={{ background: 'white', padding: '40px', borderRadius: '20px', width: '100%', maxWidth: '350px', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)' }}>
+                  <div style={{ width: '60px', height: '60px', background: '#eef2ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                      <Box size={30} color="#6366f1" />
+                  </div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '10px' }}>Terminal Security Lock</h3>
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '25px' }}>Enter Terminal PIN to unlock the system dashboard.</p>
+                  
+                  <form onSubmit={handlePinSubmit}>
+                      <input 
+                          type="password" 
+                          autoFocus
+                          placeholder="PIN"
+                          style={{ width: '100%', padding: '15px', textAlign: 'center', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '8px', border: '2px solid #e2e8f0', borderRadius: '12px', marginBottom: '20px', outline: 'none' }}
+                          value={pinInput}
+                          onChange={(e) => setPinInput(e.target.value)}
+                          maxLength={4}
+                      />
+                      <div style={{ display: 'flex', gap: '10px' }}>
+                          <button type="button" onClick={() => setShowPinModal(false)} style={{ flex: 1, padding: '12px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>CANCEL</button>
+                          <button type="submit" style={{ flex: 1, padding: '12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>UNLOCK</button>
+                      </div>
+                  </form>
+              </div>
+          </div>
+      )}
     </div>
   );
 }
