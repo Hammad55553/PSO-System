@@ -370,14 +370,39 @@ const Inventory = () => {
                                 </div>
                                 <div>
                                     <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>PACKING SIZE</label>
-                                    <select style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 700 }} value={formData.unit} onChange={e => setFormData({ ...formData, unit: e.target.value })}>
-                                        <option>Tablet Strip</option>
-                                        <option>Full Box</option>
-                                        <option>Syrup Bottle</option>
-                                        <option>Vial</option>
-                                        <option>Injection</option>
-                                        <option>General Item</option>
-                                    </select>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        <select 
+                                            style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 700 }} 
+                                            value={formData.unit === 'Tablet Strip' || formData.unit === 'Full Box' || formData.unit === 'Syrup Bottle' || formData.unit === 'Vial' || formData.unit === 'Injection' || formData.unit === 'KG' || formData.unit === 'Grams' || formData.unit === 'ML' || formData.unit === 'General Item' ? formData.unit : 'Other'} 
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                setFormData({ ...formData, unit: val === 'Other' ? '' : val });
+                                            }}
+                                        >
+                                            <option value="Tablet Strip">Tablet Strip</option>
+                                            <option value="Full Box">Full Box</option>
+                                            <option value="Syrup Bottle">Syrup Bottle</option>
+                                            <option value="Vial">Vial</option>
+                                            <option value="Injection">Injection</option>
+                                            <option value="KG">KG (Kilogram)</option>
+                                            <option value="Grams">Grams</option>
+                                            <option value="ML">ML (Milliliters)</option>
+                                            <option value="General Item">General Item</option>
+                                            <option value="Other">Other (Custom)</option>
+                                        </select>
+                                        
+                                        {(formData.unit === '' || !['Tablet Strip', 'Full Box', 'Syrup Bottle', 'Vial', 'Injection', 'KG', 'Grams', 'ML', 'General Item'].includes(formData.unit)) && (
+                                            <motion.input 
+                                                initial={{ opacity: 0, y: -10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                type="text" 
+                                                placeholder="Write custom packing (e.g. Pack of 5)" 
+                                                style={{ width: '100%', padding: '10px', border: '2px solid #10b981', borderRadius: '6px', fontWeight: 700, fontSize: '0.85rem' }} 
+                                                value={formData.unit} 
+                                                onChange={e => setFormData({ ...formData, unit: e.target.value })} 
+                                            />
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
