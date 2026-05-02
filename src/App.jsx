@@ -52,6 +52,7 @@ function AppContent() {
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [targetPath, setTargetPath] = useState(null);
+  const [pinError, setPinError] = useState(false);
 
   const handleProtectedNavigation = (e, path) => {
     e.preventDefault();
@@ -65,10 +66,13 @@ function AppContent() {
     if (pinInput === storedPin) {
       setShowPinModal(false);
       setPinInput('');
+      setPinError(false);
       navigate(targetPath);
     } else {
-      toast.error("Invalid Security PIN");
+      setPinError(true);
+      toast.error("ACCESS DENIED: WRONG PIN");
       setPinInput('');
+      setTimeout(() => setPinError(false), 500);
     }
   };
 
@@ -179,6 +183,14 @@ function AppContent() {
 
   return (
     <div className="app-container">
+      <style>{`
+          @keyframes shake {
+              10%, 90% { transform: translate3d(-1px, 0, 0); }
+              20%, 80% { transform: translate3d(2px, 0, 0); }
+              30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+              40%, 60% { transform: translate3d(4px, 0, 0); }
+          }
+      `}</style>
       <Toaster
         position="top-right"
         toastOptions={{
@@ -287,11 +299,25 @@ function AppContent() {
                           type="password" 
                           autoFocus
                           placeholder="PIN"
-                          style={{ width: '100%', padding: '15px', textAlign: 'center', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '8px', border: '2px solid #e2e8f0', borderRadius: '12px', marginBottom: '20px', outline: 'none' }}
+                          style={{ 
+                              width: '100%', 
+                              padding: '15px', 
+                              textAlign: 'center', 
+                              fontSize: '1.5rem', 
+                              fontWeight: 900, 
+                              letterSpacing: '8px', 
+                              border: pinError ? '2px solid #ef4444' : '2px solid #e2e8f0', 
+                              borderRadius: '12px', 
+                              marginBottom: '10px', 
+                              outline: 'none',
+                              animation: pinError ? 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both' : 'none',
+                              background: pinError ? '#fef2f2' : 'white'
+                          }}
                           value={pinInput}
                           onChange={(e) => setPinInput(e.target.value)}
                           maxLength={4}
                       />
+                      {pinError && <p style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: 800, marginBottom: '15px' }}>WRONG SECURITY PIN - TRY AGAIN</p>}
                       <div style={{ display: 'flex', gap: '10px' }}>
                           <button type="button" onClick={() => setShowPinModal(false)} style={{ flex: 1, padding: '12px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>CANCEL</button>
                           <button type="submit" style={{ flex: 1, padding: '12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>UNLOCK</button>
