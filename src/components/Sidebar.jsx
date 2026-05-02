@@ -1,5 +1,6 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
+import { Lock, X } from 'lucide-react';
 import {
     LayoutDashboard,
     Package,
@@ -22,9 +23,37 @@ import {
 
 const Sidebar = () => {
     const { user } = useSelector(state => state.auth);
+    const location = useLocation();
+    const navigate = useNavigate();
+    const [showPinModal, setShowPinModal] = React.useState(false);
+    const [pinInput, setPinInput] = React.useState('');
+    const [targetPath, setTargetPath] = React.useState(null);
+
     const isAdmin = user?.role === 'admin';
     const permissions = user?.permissions || [];
     const hasAccess = (perm) => isAdmin || permissions.includes(perm);
+
+    const handleProtectedNavigation = (e, path) => {
+        // If we are in POS, ask for PIN
+        if (location.pathname === '/pos' && path !== '/pos') {
+            e.preventDefault();
+            setTargetPath(path);
+            setShowPinModal(true);
+        }
+    };
+
+    const handlePinSubmit = (e) => {
+        e.preventDefault();
+        // Master PIN is 1234 or user's custom one if we had it
+        if (pinInput === '1234') {
+            setShowPinModal(false);
+            setPinInput('');
+            navigate(targetPath);
+        } else {
+            toast.error("Invalid Security PIN");
+            setPinInput('');
+        }
+    };
 
     return (
         <aside className="desktop-sidebar no-print">
@@ -38,7 +67,11 @@ const Sidebar = () => {
 
             <nav className="nav-group">
                 <div className="nav-label">Core Operations</div>
-                <NavLink to="/" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                <NavLink 
+                    to="/" 
+                    className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}
+                    onClick={(e) => handleProtectedNavigation(e, '/')}
+                >
                     <LayoutDashboard size={18} />
                     <span>Dashboard</span>
                 </NavLink>
@@ -58,23 +91,23 @@ const Sidebar = () => {
 
                 {hasAccess('inventory') && (
                     <>
-                        <NavLink to="/inventory" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        <NavLink to="/inventory" onClick={(e) => handleProtectedNavigation(e, '/inventory')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                             <Package size={18} />
                             <span>Medicine Store</span>
                         </NavLink>
-                        <NavLink to="/expiry" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        <NavLink to="/expiry" onClick={(e) => handleProtectedNavigation(e, '/expiry')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                             <ShieldAlert size={18} />
                             <span>Expiry Control</span>
                         </NavLink>
-                        <NavLink to="/orders" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        <NavLink to="/orders" onClick={(e) => handleProtectedNavigation(e, '/orders')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                             <Truck size={18} />
                             <span>Supply Hub</span>
                         </NavLink>
-                        <NavLink to="/suppliers" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        <NavLink to="/suppliers" onClick={(e) => handleProtectedNavigation(e, '/suppliers')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                             <Users size={18} />
                             <span>Suppliers (Vendors)</span>
                         </NavLink>
-                        <NavLink to="/shortage" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+                        <NavLink to="/shortage" onClick={(e) => handleProtectedNavigation(e, '/shortage')} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
                             <BookOpen size={18} />
                             <span>Shortage Book</span>
                         </NavLink>
@@ -152,6 +185,35 @@ const Sidebar = () => {
                     </div>
                 </div>
             </div>
+
+            {/* SAFETY LOCK MODAL */}
+            {showPinModal && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(10px)' }}>
+                    <div style={{ background: 'white', padding: '40px', borderRadius: '20px', width: '100%', maxWidth: '350px', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5)' }}>
+                        <div style={{ width: '60px', height: '60px', background: '#eef2ff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                            <Lock size={30} color="#6366f1" />
+                        </div>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#1e293b', marginBottom: '10px' }}>Safety Lock Active</h3>
+                        <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '25px' }}>Enter Terminal PIN to unlock the system dashboard.</p>
+                        
+                        <form onSubmit={handlePinSubmit}>
+                            <input 
+                                type="password" 
+                                autoFocus
+                                placeholder="ENTER 4-DIGIT PIN"
+                                style={{ width: '100%', padding: '15px', textAlign: 'center', fontSize: '1.5rem', fontWeight: 900, letterSpacing: '8px', border: '2px solid #e2e8f0', borderRadius: '12px', marginBottom: '20px', outline: 'none' }}
+                                value={pinInput}
+                                onChange={(e) => setPinInput(e.target.value)}
+                                maxLength={4}
+                            />
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button type="button" onClick={() => setShowPinModal(false)} style={{ flex: 1, padding: '12px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>CANCEL</button>
+                                <button type="submit" style={{ flex: 1, padding: '12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>UNLOCK</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </aside>
     );
 };
