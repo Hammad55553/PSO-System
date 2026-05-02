@@ -56,10 +56,16 @@ const UserManagement = () => {
     };
 
     const PERMISSIONS = [
-        { id: 'pos', label: 'Billing' },
-        { id: 'inventory', label: 'Stock' },
-        { id: 'credit', label: 'Accounts' },
-        { id: 'reports', label: 'Reports' }
+        { id: 'pos', label: 'Sale Terminal' },
+        { id: 'inventory', label: 'Stock / Inventory' },
+        { id: 'credit', label: 'Customer Accounts' },
+        { id: 'reports', label: 'Registry Logs' },
+        { id: 'profit', label: 'Profit Mastery' },
+        { id: 'shortage', label: 'Shortage Book' },
+        { id: 'expenses', label: 'Expense Tracker' },
+        { id: 'suppliers', label: 'Suppliers' },
+        { id: 'users', label: 'Team Management' },
+        { id: 'settings', label: 'System Setup' }
     ];
 
     const handleUpdateStatus = async (userId, newStatus) => {
@@ -170,24 +176,29 @@ const UserManagement = () => {
                                     <td style={{ padding: '20px 25px' }}>
                                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                             {PERMISSIONS.map(p => {
-                                                const isActive = (u.permissions || ['pos', 'inventory', 'credit', 'reports']).includes(p.id);
+                                                const isActive = (u.permissions || []).includes(p.id);
                                                 return (
                                                     <button
                                                         key={p.id}
                                                         disabled={u.role === 'admin'}
                                                         onClick={() => handleTogglePermission(u, p.id)}
                                                         style={{ 
-                                                            padding: '6px 12px', 
-                                                            borderRadius: '8px', 
-                                                            fontSize: '0.7rem', 
+                                                            padding: '8px 14px', 
+                                                            borderRadius: '10px', 
+                                                            fontSize: '0.65rem', 
                                                             fontWeight: 900, 
                                                             cursor: u.role === 'admin' ? 'default' : 'pointer',
-                                                            background: isActive ? '#ecfdf5' : '#f1f5f9',
-                                                            color: isActive ? '#059669' : '#94a3b8',
-                                                            border: `1px solid ${isActive ? '#10b981' : '#e2e8f0'}`,
-                                                            transition: 'all 0.2s'
+                                                            background: isActive ? '#eef2ff' : '#f8fafc',
+                                                            color: isActive ? '#6366f1' : '#94a3b8',
+                                                            border: `1px solid ${isActive ? '#6366f1' : '#e2e8f0'}`,
+                                                            transition: 'all 0.2s',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            boxShadow: isActive ? '0 4px 6px -1px rgba(99, 102, 241, 0.1)' : 'none'
                                                         }}
                                                     >
+                                                        {isActive ? <CheckCircle size={12} /> : <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '1px solid #cbd5e1' }}></div>}
                                                         {p.label.toUpperCase()}
                                                     </button>
                                                 );
