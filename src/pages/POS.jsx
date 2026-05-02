@@ -159,16 +159,16 @@ const POS = () => {
 
     // CALCULATIONS
     const subtotal = cart.reduce((acc, c) => {
-        const itemPrice = isDoctorMode ? (c.doctorPrice || c.price) : c.price;
+        const itemPrice = isDoctorMode ? (c.doctor_price || c.price) : c.price;
         return acc + (itemPrice * c.quantity);
     }, 0);
     const itemDiscounts = cart.reduce((acc, c) => acc + (c.discount || 0), 0);
 
     // ITEM-BASED TAX CALCULATION (Default 0% unless set in Inventory)
     const tax = cart.reduce((acc, c) => {
-        const itemPrice = isDoctorMode ? (c.doctorPrice || c.price) : c.price;
+        const itemPrice = isDoctorMode ? (c.doctor_price || c.price) : c.price;
         const taxableAmount = (itemPrice * c.quantity) - (c.discount || 0);
-        const itemTax = taxableAmount * (c.taxPercent || 0) / 100;
+        const itemTax = taxableAmount * (c.tax_percent || 0) / 100;
         return acc + itemTax;
     }, 0);
 
