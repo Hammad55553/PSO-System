@@ -24,6 +24,7 @@ const Inventory = () => {
     const [restockItem, setRestockItem] = useState(null);
     const [restockQty, setRestockQty] = useState('');
     const [restockBuyPrice, setRestockBuyPrice] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
     const [formData, setFormData] = useState({
         name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60', manufacturer: '', batch_no: ''
@@ -72,6 +73,8 @@ const Inventory = () => {
 
     const handleSave = async (e) => {
         e.preventDefault();
+        if (isSaving) return;
+        setIsSaving(true);
         const data = { 
             name: formData.name,
             category: formData.category,
@@ -112,6 +115,8 @@ const Inventory = () => {
         } catch (err) {
             console.error(err);
             toast.error(err.message || "Failed to save product.");
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -159,6 +164,8 @@ const Inventory = () => {
 
     const handleRestock = async (e) => {
         e.preventDefault();
+        if (isSaving) return;
+        setIsSaving(true);
         const incomingQty = parseFloat(restockQty);
         const incomingBuyPrice = parseFloat(restockBuyPrice);
 
@@ -195,6 +202,8 @@ const Inventory = () => {
         } catch (err) {
             console.error(err);
             toast.error("Restock Cloud Sync Failed");
+        } finally {
+            setIsSaving(false);
         }
         setIsRestockModalOpen(false);
         setRestockQty('');
@@ -537,8 +546,33 @@ const Inventory = () => {
                             </div>
                             <div style={{ marginTop: '10px', paddingTop: '20px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '15px' }}>
                                 <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontWeight: 800, cursor: 'pointer' }}>CANCEL</button>
-                                <button type="submit" style={{ flex: 2, padding: '14px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: 'white', fontWeight: 900, cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.2)' }}>
-                                    {editingItem ? 'UPDATE PRODUCT' : 'ENROLL PRODUCT'}
+                                <button 
+                                    type="submit" 
+                                    disabled={isSaving}
+                                    style={{ 
+                                        flex: 2, 
+                                        padding: '14px', 
+                                        borderRadius: '12px', 
+                                        border: 'none', 
+                                        background: isSaving ? '#94a3b8' : 'linear-gradient(135deg, #059669 0%, #047857 100%)', 
+                                        color: 'white', 
+                                        fontWeight: 900, 
+                                        cursor: isSaving ? 'not-allowed' : 'pointer', 
+                                        boxShadow: isSaving ? 'none' : '0 10px 15px -3px rgba(16, 185, 129, 0.2)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '10px'
+                                    }}
+                                >
+                                    {isSaving ? (
+                                        <>
+                                            <RefreshCw size={18} className="animate-spin" />
+                                            SAVING TO CLOUD...
+                                        </>
+                                    ) : (
+                                        editingItem ? 'UPDATE PRODUCT' : 'ENROLL PRODUCT'
+                                    )}
                                 </button>
                             </div>
                         </form>
@@ -614,8 +648,34 @@ const Inventory = () => {
                                 <p style={{ fontSize: '0.6rem', color: '#166534', fontWeight: 600 }}>Algorithm will recalculate profit margins based on this value.</p>
                             </div>
 
-                            <button type="submit" style={{ width: '100%', padding: '18px', background: '#10b981', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: 950, cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)' }}>
-                                CONFIRM RESTOCK & MERGE COST
+                            <button 
+                                type="submit" 
+                                disabled={isSaving}
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '18px', 
+                                    background: isSaving ? '#94a3b8' : '#10b981', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    borderRadius: '12px', 
+                                    fontSize: '1rem', 
+                                    fontWeight: 950, 
+                                    cursor: isSaving ? 'not-allowed' : 'pointer', 
+                                    boxShadow: isSaving ? 'none' : '0 10px 15px -3px rgba(16, 185, 129, 0.3)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '10px'
+                                }}
+                            >
+                                {isSaving ? (
+                                    <>
+                                        <RefreshCw size={20} className="animate-spin" />
+                                        PROCESSING RESTOCK...
+                                    </>
+                                ) : (
+                                    'CONFIRM RESTOCK & MERGE COST'
+                                )}
                             </button>
                         </form>
                     </motion.div>

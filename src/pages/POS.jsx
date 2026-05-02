@@ -73,6 +73,7 @@ const POS = () => {
     const [showParkedList, setShowParkedList] = useState(false);
     const [showBreakdown, setShowBreakdown] = useState(false);
     const [checkoutStage, setCheckoutStage] = useState('idle'); // idle, printed, reporting
+    const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [pendingPrint, setPendingPrint] = useState(true);
 
@@ -229,7 +230,8 @@ const POS = () => {
     };
 
     const handleCheckout = async (shouldPrint = true) => {
-        if (!activeShift) return;
+        if (!activeShift || isCheckingOut) return;
+        setIsCheckingOut(true);
         if (cart.length === 0) { toast.error('Add items first!'); return; }
         if (paymentMethod === 'Credit' && !selectedCustomer) { toast.error('Select an Account!'); return; }
         
@@ -372,6 +374,8 @@ const POS = () => {
         } catch (err) {
             console.error("Supabase Save Failed:", err);
             toast.error("Cloud Save Failed: " + err.message);
+        } finally {
+            setIsCheckingOut(false);
         }
     };
 
@@ -907,16 +911,19 @@ const POS = () => {
                             {/* ACTIONS */}
                             <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
                                 <button
+                                    disabled={isCheckingOut}
                                     onClick={() => { setPendingPrint(false); setShowConfirm(true); }}
-                                    style={{ flex: 1, padding: '12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 950, cursor: 'pointer' }}
+                                    style={{ flex: 1, padding: '12px', background: isCheckingOut ? '#94a3b8' : '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 950, cursor: isCheckingOut ? 'not-allowed' : 'pointer' }}
                                 >
-                                    FINISH (F9)
+                                    {isCheckingOut ? '...' : 'FINISH (F9)'}
                                 </button>
                                 <button
+                                    disabled={isCheckingOut}
                                     onClick={() => { setPendingPrint(true); setShowConfirm(true); }}
-                                    style={{ flex: 2, padding: '12px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.95rem', fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                    style={{ flex: 2, padding: '12px', background: isCheckingOut ? '#94a3b8' : '#059669', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.95rem', fontWeight: 950, cursor: isCheckingOut ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                                 >
-                                    <Printer size={16} /> PRINT & FINISH (F10)
+                                    {isCheckingOut ? <RefreshCw size={16} className="animate-spin" /> : <Printer size={16} />}
+                                    {isCheckingOut ? 'SAVING...' : 'PRINT & FINISH (F10)'}
                                 </button>
                             </div>
                         </div>
@@ -1031,13 +1038,35 @@ const POS = () => {
                                     NO, CANCEL
                                 </button>
                                 <button
-                                    onClick={() => {
+                                    disabled={isCheckingOut}
+                                    onClick={async () => {
+                                        await handleCheckout(pendingPrint);
                                         setShowConfirm(false);
-                                        handleCheckout(pendingPrint);
                                     }}
-                                    style={{ flex: 1, padding: '15px', background: pendingPrint ? '#10b981' : '#3b82f6', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 900, cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                    style={{ 
+                                        flex: 1, 
+                                        padding: '15px', 
+                                        background: isCheckingOut ? '#94a3b8' : (pendingPrint ? '#10b981' : '#3b82f6'), 
+                                        color: 'white', 
+                                        border: 'none', 
+                                        borderRadius: '12px', 
+                                        fontWeight: 900, 
+                                        cursor: isCheckingOut ? 'not-allowed' : 'pointer', 
+                                        boxShadow: isCheckingOut ? 'none' : '0 10px 15px -3px rgba(0,0,0,0.1)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: '10px'
+                                    }}
                                 >
-                                    YES, PROCEED
+                                    {isCheckingOut ? (
+                                        <>
+                                            <RefreshCw size={20} className="animate-spin" />
+                                            SAVING...
+                                        </>
+                                    ) : (
+                                        'YES, PROCEED'
+                                    )}
                                 </button>
                             </div>
                         </div>
