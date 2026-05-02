@@ -30,14 +30,24 @@ const ThermalReceipt = ({ lastSale, activeShift, logo }) => {
             {/* TRANSACTION INFO */}
             <div style={{ marginBottom: '10px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontWeight: 'bold' }}>INV NO: #{lastSale?.id?.toString().toUpperCase()}</span>
+                    <span style={{ fontWeight: 'bold' }}>INV NO: #{lastSale?.invoice_no ? (100000 + parseInt(lastSale.invoice_no)).toString() : lastSale?.id?.toString().slice(-6).toUpperCase()}</span>
                     <span style={{ textAlign: 'right' }}>DATE: {lastSale?.date?.split(',')[0]}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>TYPE: {lastSale?.payment_method?.toUpperCase()}</span>
+                    <span>PAY MODE: {lastSale?.payment_method?.toUpperCase()}</span>
                     <span style={{ textAlign: 'right' }}>TIME: {lastSale?.date?.split(',')[1]}</span>
                 </div>
-                {lastSale?.customerId && (
+                
+                {/* PAYMENT DETAILS (ONLINE/CARD) */}
+                {lastSale?.payment_details && (
+                    <div style={{ marginTop: '5px', padding: '4px', border: '1px dotted #000', borderRadius: '2px', fontSize: '10px' }}>
+                        {lastSale.payment_details.provider && <div>PROVIDER: {lastSale.payment_details.provider.toUpperCase()}</div>}
+                        {lastSale.payment_details.account && <div>REC. A/C: {lastSale.payment_details.account}</div>}
+                        {lastSale.payment_details.customer_phone && <div style={{ fontWeight: 'bold' }}>CUST. PH: {lastSale.payment_details.customer_phone}</div>}
+                    </div>
+                )}
+
+                {lastSale?.customer_name && lastSale?.customer_name !== 'WALK-IN CUSTOMER' && (
                     <div style={{ marginTop: '5px', borderTop: '1px dotted #000', paddingTop: '5px' }}>
                         <span>CUSTOMER: {(lastSale?.customer_name || '').toUpperCase()}</span>
                     </div>

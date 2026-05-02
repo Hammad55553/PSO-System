@@ -60,7 +60,7 @@ const Dashboard = () => {
 
     // Payment Distribution
     const paymentStats = useMemo(() => {
-        const stats = { Cash: 0, Credit: 0, Card: 0 };
+        const stats = { Cash: 0, Credit: 0, Card: 0, Online: 0 };
         filteredHistory.forEach(s => {
             const method = s.payment_method || s.paymentMethod || 'Cash';
             if (stats[method] !== undefined) stats[method] += s.total;
@@ -249,7 +249,7 @@ const Dashboard = () => {
                                         key={i}
                                         cx="50" cy="50" r="40"
                                         fill="transparent"
-                                        stroke={stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : '#6366f1'}
+                                        stroke={stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : stat.label === 'Card' ? '#6366f1' : '#0ea5e9'}
                                         strokeWidth="10"
                                         strokeDasharray={`${stat.percent} 100`}
                                         strokeDashoffset={-offset}
@@ -270,10 +270,13 @@ const Dashboard = () => {
                         {paymentStats.map((stat, i) => (
                             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : '#6366f1' }}></div>
+                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : stat.label === 'Card' ? '#6366f1' : '#0ea5e9' }}></div>
                                     <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>{stat.label} Settlement</span>
                                 </div>
-                                <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#64748b' }}>{stat.percent.toFixed(0)}%</span>
+                                <div style={{ textAlign: 'right' }}>
+                                    <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#1e293b' }}>Rs {stat.value.toLocaleString()}</div>
+                                    <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>{stat.percent.toFixed(1)}%</div>
+                                </div>
                             </div>
                         ))}
                     </div>

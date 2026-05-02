@@ -21,6 +21,7 @@ import { returnSale, deleteSale } from '../store/slices/salesSlice';
 import { updateStock } from '../store/slices/inventorySlice';
 import toast from 'react-hot-toast';
 import { Trash2 } from 'lucide-react';
+import logo from '../assets/Bila_vet.png';
 
 const SalesHistory = ({ isReturnsPage = false }) => {
     const dispatch = useDispatch();
@@ -152,8 +153,8 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                                     onClick={() => setSelectedSale(sale)}
                                     style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: selectedSale?.id === sale.id ? '#f0f9ff' : 'white' }}
                                 >
-                                    <td style={{ padding: '15px 20px', fontWeight: 900, color: '#10b981', fontSize: '0.7rem' }}>
-                                        #{sale.id?.toString()?.toUpperCase()}
+                                    <td style={{ padding: '15px 20px', fontWeight: 900, color: '#10b981', fontSize: '0.8rem' }}>
+                                        #{sale.invoice_no ? (100000 + parseInt(sale.invoice_no)).toString() : sale.id?.toString().slice(-6).toUpperCase()}
                                     </td>
                                     <td style={{ padding: '15px 20px', fontWeight: 700 }}>{sale.customer_name || '—'}</td>
                                     <td style={{ padding: '15px 20px', fontSize: '0.8rem', color: '#64748b' }}>
@@ -197,10 +198,15 @@ const SalesHistory = ({ isReturnsPage = false }) => {
 
                     <div style={{ padding: '30px', flex: 1, overflowY: 'auto' }}>
                         <div style={{ textAlign: 'center', marginBottom: '30px', paddingBottom: '20px', borderBottom: '2px solid #f1f5f9' }}>
-                            <div style={{ width: '50px', height: '50px', background: '#1e293b', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px', fontSize: '1.2rem', fontWeight: 900 }}>V</div>
-                            <h2 style={{ fontSize: '1.1rem', fontWeight: 900 }}>BILAL VET CLINIC</h2>
-                            <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700 }}>INVOICE NUMBER: #{selectedSale.id}</p>
-                        </div>
+                             <img src={logo} alt="Bilal Vet" style={{ height: '50px', marginBottom: '10px', objectFit: 'contain' }} />
+                             <h2 style={{ fontSize: '1.1rem', fontWeight: 900 }}>BILAL VET CLINIC</h2>
+                             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <p style={{ fontSize: '0.8rem', color: '#1e293b', fontWeight: 900 }}>INVOICE: #{selectedSale.invoice_no ? (100000 + parseInt(selectedSale.invoice_no)).toString() : selectedSale.id.toString().slice(-6).toUpperCase()}</p>
+                                <p style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700 }}>
+                                    {new Date(selectedSale.created_at).toLocaleDateString()} | {new Date(selectedSale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </p>
+                             </div>
+                         </div>
 
                         <div style={{ marginBottom: '25px' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
@@ -209,8 +215,30 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                                 <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 700 }}>PAYMENT MODE:</span>
-                                <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{selectedSale.payment_method.toUpperCase()}</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{selectedSale.payment_method?.toUpperCase()}</span>
                             </div>
+                            {selectedSale.payment_details && (
+                                <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '10px' }}>
+                                    {selectedSale.payment_details.provider && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                                            <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 700 }}>PROVIDER/TYPE:</span>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#0369a1' }}>{selectedSale.payment_details.provider.toUpperCase()}</span>
+                                        </div>
+                                    )}
+                                    {selectedSale.payment_details.account && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                                            <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 700 }}>REC. ACCOUNT:</span>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#0369a1' }}>{selectedSale.payment_details.account}</span>
+                                        </div>
+                                    )}
+                                    {selectedSale.payment_details.customer_phone && (
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 700 }}>CUSTOMER PH:</span>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#ef4444' }}>{selectedSale.payment_details.customer_phone}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ marginBottom: '30px' }}>

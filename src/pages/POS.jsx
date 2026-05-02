@@ -233,9 +233,9 @@ const POS = () => {
         if (cart.length === 0) { toast.error('Add items first!'); return; }
         if (paymentMethod === 'Credit' && !selectedCustomer) { toast.error('Select an Account!'); return; }
         
-        // ONLINE VALIDATION
-        if (paymentMethod === 'Online' && !customerPhone) {
-            toast.error('CUSTOMER PHONE IS MANDATORY FOR ONLINE PAYMENT!');
+        // ONLINE & CARD VALIDATION
+        if ((paymentMethod === 'Online' || paymentMethod === 'Card') && !customerPhone) {
+            toast.error(`CUSTOMER PHONE IS MANDATORY FOR ${paymentMethod.toUpperCase()} PAYMENT!`);
             return;
         }
 
@@ -247,9 +247,9 @@ const POS = () => {
             tax,
             discount: itemDiscounts + globalDiscount,
             payment_method: paymentMethod,
-            payment_details: paymentMethod === 'Online' ? {
-                provider: onlineProvider,
-                account: onlineAccount,
+            payment_details: (paymentMethod === 'Online' || paymentMethod === 'Card') ? {
+                provider: paymentMethod === 'Online' ? onlineProvider : 'Card Machine',
+                account: paymentMethod === 'Online' ? onlineAccount : 'POS Terminal',
                 customer_phone: customerPhone
             } : null,
             status: paymentMethod === 'Credit' ? 'Khatta' : 'Paid',
@@ -337,7 +337,8 @@ const POS = () => {
                     .eq('id', selectedCustomer.id);
             }
 
-            setLastSale({ ...saleData, id: savedSale.id, items: cart, cash_received: cashReceived, change_amount: changeAmount, date: new Date().toLocaleString() });
+            // 5. Finalize UI States
+            setLastSale({ ...saleData, id: savedSale.id, invoice_no: savedSale.invoice_no, items: cart, cash_received: cashReceived, change_amount: changeAmount, date: new Date().toLocaleString() });
             dispatch(updateShiftStats({ sale: finalTotal }));
 
             if (shouldPrint) {
@@ -775,51 +776,55 @@ const POS = () => {
                                     ))}
                                 </div>
 
-                                {paymentMethod === 'Online' && (
-                                    <div style={{ background: '#f0f9ff', padding: '15px', borderRadius: '12px', border: '1px solid #bae6fd', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                        <div style={{ display: 'flex', gap: '8px' }}>
-                                            {[
-                                            { id: 'JazzCash', icon: <img src={jazzcashLogo} alt="JC" style={{ height: '18px', objectFit: 'contain' }} />, color: '#f59e0b' },
-                                                { id: 'Easypaisa', icon: <img src={easypaisaLogo} alt="EP" style={{ height: '18px', objectFit: 'contain' }} />, color: '#10b981' },
-                                                { id: 'Bank', icon: <Banknote size={18} />, color: '#0ea5e9' }
-                                            ].map(p => (
-                                                <button 
-                                                    key={p.id}
-                                                    type="button"
-                                                    onClick={() => setOnlineProvider(p.id)}
-                                                    style={{ 
-                                                        flex: 1, 
-                                                        padding: '10px 4px', 
-                                                        borderRadius: '8px', 
-                                                        border: '2px solid', 
-                                                        borderColor: onlineProvider === p.id ? p.color : '#e2e8f0', 
-                                                        background: 'white', 
-                                                        color: onlineProvider === p.id ? p.color : '#64748b', 
-                                                        fontSize: '0.6rem', 
-                                                        fontWeight: 900, 
-                                                        cursor: 'pointer',
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        alignItems: 'center',
-                                                        gap: '6px',
-                                                        transition: 'all 0.2s',
-                                                        boxShadow: onlineProvider === p.id ? `0 4px 10px ${p.color}20` : 'none'
-                                                    }}
-                                                >
-                                                    {p.icon}
-                                                    {p.id.toUpperCase()}
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <div>
-                                            <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#0369a1', display: 'block', marginBottom: '4px' }}>RECEIVED ON (WHICH NUMBER?)</label>
-                                            <input 
-                                                placeholder="Enter recipient number/ID"
-                                                style={{ width: '100%', padding: '8px', border: '1px solid #bae6fd', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700 }}
-                                                value={onlineAccount}
-                                                onChange={e => setOnlineAccount(e.target.value)}
-                                            />
-                                        </div>
+                                {(paymentMethod === 'Online' || paymentMethod === 'Card') && (
+                                    <div style={{ background: paymentMethod === 'Online' ? '#f0f9ff' : '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid', borderColor: paymentMethod === 'Online' ? '#bae6fd' : '#e2e8f0', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                        {paymentMethod === 'Online' && (
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                {[
+                                                    { id: 'JazzCash', icon: <img src={jazzcashLogo} alt="JC" style={{ height: '18px', objectFit: 'contain' }} />, color: '#f59e0b' },
+                                                    { id: 'Easypaisa', icon: <img src={easypaisaLogo} alt="EP" style={{ height: '18px', objectFit: 'contain' }} />, color: '#10b981' },
+                                                    { id: 'Bank', icon: <Banknote size={18} />, color: '#0ea5e9' }
+                                                ].map(p => (
+                                                    <button 
+                                                        key={p.id}
+                                                        type="button"
+                                                        onClick={() => setOnlineProvider(p.id)}
+                                                        style={{ 
+                                                            flex: 1, 
+                                                            padding: '10px 4px', 
+                                                            borderRadius: '8px', 
+                                                            border: '2px solid', 
+                                                            borderColor: onlineProvider === p.id ? p.color : '#e2e8f0', 
+                                                            background: 'white', 
+                                                            color: onlineProvider === p.id ? p.color : '#64748b', 
+                                                            fontSize: '0.6rem', 
+                                                            fontWeight: 900, 
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            alignItems: 'center',
+                                                            gap: '6px',
+                                                            transition: 'all 0.2s',
+                                                            boxShadow: onlineProvider === p.id ? `0 4px 10px ${p.color}20` : 'none'
+                                                        }}
+                                                    >
+                                                        {p.icon}
+                                                        {p.id.toUpperCase()}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {paymentMethod === 'Online' && (
+                                            <div>
+                                                <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#0369a1', display: 'block', marginBottom: '4px' }}>RECEIVED ON (WHICH NUMBER?)</label>
+                                                <input 
+                                                    placeholder="Enter recipient number/ID"
+                                                    style={{ width: '100%', padding: '8px', border: '1px solid #bae6fd', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700 }}
+                                                    value={onlineAccount}
+                                                    onChange={e => setOnlineAccount(e.target.value)}
+                                                />
+                                            </div>
+                                        )}
                                         <div>
                                             <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ef4444', display: 'block', marginBottom: '4px' }}>CUSTOMER NUMBER (MANDATORY*)</label>
                                             <input 
