@@ -13,7 +13,9 @@ import {
 } from 'lucide-react';
 
 const ExpiryManagement = () => {
+    const { user } = useSelector(state => state.auth);
     const { items } = useSelector(state => state.inventory);
+    const isAdmin = user?.role === 'admin';
     const [searchTerm, setSearchTerm] = React.useState('');
     const [activeTab, setActiveTab] = React.useState('All'); // All, Critical, Pre-Critical
 
@@ -185,9 +187,11 @@ const ExpiryManagement = () => {
                                         })()}
                                     </td>
                                     <td style={{ padding: '15px 20px', textAlign: 'right' }}>
-                                        <button style={{ background: '#fff1f1', border: '1px solid #fee2e2', padding: '8px', borderRadius: '8px', color: '#ef4444', cursor: 'pointer' }} title="Remove from Stock">
-                                            <Trash2 size={16} />
-                                        </button>
+                                        {isAdmin && (
+                                            <button style={{ background: '#fff1f1', border: '1px solid #fee2e2', padding: '8px', borderRadius: '8px', color: '#ef4444', cursor: 'pointer' }} title="Remove from Stock">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
                                     </td>
                                 </motion.tr>
                             ))}
