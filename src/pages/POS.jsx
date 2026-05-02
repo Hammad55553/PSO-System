@@ -885,13 +885,35 @@ const POS = () => {
                             {paymentMethod === 'Online' && (
                                 <div style={{ background: '#f0f9ff', padding: '15px', borderRadius: '12px', border: '1px solid #bae6fd', margin: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     <div style={{ display: 'flex', gap: '8px' }}>
-                                        {['JazzCash', 'Easypaisa', 'Bank'].map(p => (
+                                        {[
+                                            { id: 'JazzCash', icon: <Zap size={14} />, color: '#f59e0b' },
+                                            { id: 'Easypaisa', icon: <Wallet size={14} />, color: '#10b981' },
+                                            { id: 'Bank', icon: <Banknote size={14} />, color: '#0ea5e9' }
+                                        ].map(p => (
                                             <button 
-                                                key={p}
-                                                onClick={() => setOnlineProvider(p)}
-                                                style={{ flex: 1, padding: '6px', borderRadius: '6px', border: '1px solid', borderColor: onlineProvider === p ? '#0369a1' : '#cbd5e1', background: onlineProvider === p ? '#0369a1' : 'white', color: onlineProvider === p ? 'white' : '#64748b', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer' }}
+                                                key={p.id}
+                                                type="button"
+                                                onClick={() => setOnlineProvider(p.id)}
+                                                style={{ 
+                                                    flex: 1, 
+                                                    padding: '8px 4px', 
+                                                    borderRadius: '8px', 
+                                                    border: '1px solid', 
+                                                    borderColor: onlineProvider === p.id ? p.color : '#cbd5e1', 
+                                                    background: onlineProvider === p.id ? p.color : 'white', 
+                                                    color: onlineProvider === p.id ? 'white' : '#64748b', 
+                                                    fontSize: '0.6rem', 
+                                                    fontWeight: 900, 
+                                                    cursor: 'pointer',
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    transition: 'all 0.2s'
+                                                }}
                                             >
-                                                {p.toUpperCase()}
+                                                {p.icon}
+                                                {p.id.toUpperCase()}
                                             </button>
                                         ))}
                                     </div>
