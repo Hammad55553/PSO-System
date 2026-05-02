@@ -294,7 +294,7 @@ const POS = () => {
                     .eq('id', selectedCustomer.id);
             }
 
-            setLastSale({ ...saleData, id: savedSale.id, cash_received: cashReceived, change_amount: changeAmount, date: new Date().toLocaleString() });
+            setLastSale({ ...saleData, id: savedSale.id, items: cart, cash_received: cashReceived, change_amount: changeAmount, date: new Date().toLocaleString() });
             toast.success('Sale Processed via Supabase');
 
         } catch (err) {

@@ -56,7 +56,7 @@ const ThermalReceipt = ({ lastSale, activeShift, logo }) => {
                         </tr>
                     </thead>
                     <tbody>
-                        {lastSale.items.map((item, idx) => (
+                        {(lastSale?.items || []).map((item, idx) => (
                             <tr key={idx} style={{ verticalAlign: 'top' }}>
                                 <td style={{ padding: '4px 0' }}>
                                     <div style={{ fontWeight: 'bold' }}>{item.name?.toUpperCase()}</div>
