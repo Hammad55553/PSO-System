@@ -17,7 +17,8 @@ const ShiftManagement = () => {
         e.preventDefault();
         const staffName = user?.name || 'Authorized Operator';
         const shiftData = { 
-            staff_name: staffName, 
+            staff_name: staffName,
+            staff_id: user?.uid || user?.id,
             opening_cash: parseFloat(openingCash) || 0,
             start_time: new Date().toISOString(),
             sales: 0,
@@ -211,12 +212,19 @@ const ShiftManagement = () => {
 
                                             dispatch(updateShiftStats({ expense: amt }));
 
-                                            if (navigator.onLine && activeShift) {
-                                                const updated = { ...activeShift, expenses: (activeShift.expenses || 0) + amt };
-                                                await setDoc(doc(db, "shifts", activeShift.id), updated, { merge: true });
+                                            try {
+                                                const { error } = await supabase
+                                                    .from('shifts')
+                                                    .update({ expenses: (activeShift.expenses || 0) + amt })
+                                                    .eq('id', activeShift.id);
+                                                
+                                                if (error) throw error;
+                                                toast.success('Expense Recorded in Supabase');
+                                            } catch (err) {
+                                                console.error(err);
+                                                toast.error("Failed to sync expense to Supabase");
                                             }
 
-                                            toast.success('Expense Recorded');
                                             document.getElementById('expAmount').value = '';
                                             document.getElementById('expNote').value = '';
                                         }}

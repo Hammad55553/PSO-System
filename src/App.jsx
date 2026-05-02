@@ -75,8 +75,10 @@ function AppContent() {
             if (cust.data) dispatch(setCustomers(cust.data));
             if (sales.data) dispatch(setSales(sales.data.sort((a,b) => new Date(b.created_at)-new Date(a.created_at))));
             if (shifts.data) {
-                const activeShift = shifts.data.find(s => s.status === 'active');
-                const history = shifts.data.filter(s => s.status !== 'active').sort((a,b) => new Date(b.start_time)-new Date(a.start_time));
+                const activeShift = shifts.data.find(s => s.status === 'active' && s.staff_id === user.uid);
+                const history = shifts.data
+                    .filter(s => s.status !== 'active' && (isAdmin || s.staff_id === user.uid))
+                    .sort((a,b) => new Date(b.start_time)-new Date(a.start_time));
                 dispatch(setShifts({ activeShift, history }));
             }
             if (short.data) dispatch(setShortageItems(short.data));
