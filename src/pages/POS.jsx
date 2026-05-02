@@ -60,6 +60,7 @@ const POS = () => {
     const [lastSale, setLastSale] = useState(null);
     const [isDoctorMode, setIsDoctorMode] = useState(false);
     const [walkingCustomerName, setWalkingCustomerName] = useState('');
+    const [suggestion, setSuggestion] = useState('');
 
     // UI States
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
@@ -104,6 +105,22 @@ const POS = () => {
             }
         }
     }, [searchTerm]);
+ 
+    // GHOST AUTOCOMPLETE LOGIC
+    useEffect(() => {
+        if (searchTerm && searchTerm.length >= 2) {
+            const match = inventory.find(i => 
+                i.name.toLowerCase().startsWith(searchTerm.toLowerCase())
+            );
+            if (match) {
+                setSuggestion(match.name);
+            } else {
+                setSuggestion('');
+            }
+        } else {
+            setSuggestion('');
+        }
+    }, [searchTerm, inventory]);
 
     const filteredInventory = inventory.filter(item => {
         const matchesSearch =
@@ -403,14 +420,43 @@ const POS = () => {
                         <div style={{ background: 'white', padding: '15px', display: 'flex', gap: '10px' }}>
                             <div style={{ position: 'relative', flex: 1 }}>
                                 <Search size={20} style={{ position: 'absolute', left: '15px', top: '15px', color: '#059669' }} />
-                                <input
-                                    ref={searchInputRef}
-                                    type="text"
-                                    placeholder="F1: SEARCH MEDICINE, FORMULA OR SCAN..."
-                                    style={{ width: '100%', padding: '15px 15px 15px 50px', fontSize: '1.1rem', fontWeight: 800, border: '2px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                                <div style={{ position: 'relative', width: '100%' }}>
+                                    {/* GHOST SUGGESTION */}
+                                    {suggestion && searchTerm && (
+                                        <div style={{ 
+                                            position: 'absolute', 
+                                            left: '50px', 
+                                            top: '15px', 
+                                            fontSize: '1.1rem', 
+                                            fontWeight: 800, 
+                                            color: '#cbd5e1', 
+                                            pointerEvents: 'none',
+                                            whiteSpace: 'pre'
+                                        }}>
+                                            <span style={{ color: 'transparent' }}>{searchTerm}</span>
+                                            {suggestion.slice(searchTerm.length)}
+                                        </div>
+                                    )}
+                                    <input
+                                        ref={searchInputRef}
+                                        type="text"
+                                        placeholder="F1: SEARCH MEDICINE..."
+                                        style={{ width: '100%', padding: '15px 15px 15px 50px', fontSize: '1.1rem', fontWeight: 800, border: '2px solid #cbd5e1', borderRadius: '6px', outline: 'none', background: 'transparent', position: 'relative', zIndex: 2 }}
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if ((e.key === 'Tab' || e.key === 'ArrowRight') && suggestion) {
+                                                e.preventDefault();
+                                                setSearchTerm(suggestion);
+                                                setSuggestion('');
+                                            }
+                                            if (e.key === 'Enter' && suggestion && !filteredInventory.some(i => i.name.toLowerCase() === searchTerm.toLowerCase())) {
+                                                // Optional: auto-pick first match on enter if exact match doesn't exist
+                                                // But let's stick to Tab/Right for now as requested
+                                            }
+                                        }}
+                                    />
+                                </div>
                                 {searchTerm && (
                                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', zIndex: 100, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #cbd5e1', borderRadius: '0 0 6px 6px', maxHeight: '400px', overflowY: 'auto' }}>
                                         {filteredInventory.map(item => (
