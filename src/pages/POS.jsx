@@ -857,13 +857,11 @@ const POS = () => {
                                 </div>
                                 <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
                                     {customers.map(c => (
-                                        <div key={c.id} onClick={() => { setSelectedCustomer(c); setShowCustomerSearch(false); }} style={{ padding: '20px', border: '1px solid #f1f5f9', borderRadius: '8px', cursor: 'pointer', background: '#f8fafc' }} onMouseOver={e => e.currentTarget.style.borderColor = '#10b981'} onMouseOut={e => e.currentTarget.style.borderColor = '#f1f5f9'}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#065f46' }}>{c.name?.toUpperCase()}</div>
-                                                    <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>A/C ID: {c.id} | PH: {c.phone}</div>
-                                                </div>
-                                        <button key={c.id} onClick={() => { setSelectedCustomer(c); setShowCustomerSearch(false); }} style={{ width: '100%', textAlign: 'left', padding: '0', border: 'none', background: 'transparent', cursor: 'pointer' }}>
+                                        <button 
+                                            key={c.id} 
+                                            onClick={() => { setSelectedCustomer(c); setShowCustomerSearch(false); }} 
+                                            style={{ width: '100%', textAlign: 'left', padding: '0', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                                        >
                                             <div style={{ padding: '20px', border: '1px solid #f1f5f9', borderRadius: '8px', background: '#f8fafc' }} onMouseOver={e => e.currentTarget.style.borderColor = '#10b981'} onMouseOut={e => e.currentTarget.style.borderColor = '#f1f5f9'}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <div>
