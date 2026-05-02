@@ -53,6 +53,7 @@ function AppContent() {
   const [pinInput, setPinInput] = useState('');
   const [targetPath, setTargetPath] = useState(null);
   const [pinError, setPinError] = useState(false);
+  const [attempts, setAttempts] = useState(10);
 
   const handleProtectedNavigation = (e, path) => {
     e.preventDefault();
@@ -67,10 +68,20 @@ function AppContent() {
       setShowPinModal(false);
       setPinInput('');
       setPinError(false);
+      setAttempts(10);
       navigate(targetPath);
     } else {
+      const newAttempts = attempts - 1;
+      setAttempts(newAttempts);
       setPinError(true);
-      toast.error("ACCESS DENIED: WRONG PIN");
+
+      if (newAttempts <= 0) {
+        toast.error("TOO MANY FAILED ATTEMPTS - LOGGING OUT");
+        dispatch(logout());
+      } else {
+        toast.error(`WRONG PIN. ${newAttempts} attempts remaining.`);
+      }
+
       setPinInput('');
       setTimeout(() => setPinError(false), 500);
     }
@@ -317,7 +328,12 @@ function AppContent() {
                           onChange={(e) => setPinInput(e.target.value)}
                           maxLength={4}
                       />
-                      {pinError && <p style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: 800, marginBottom: '15px' }}>WRONG SECURITY PIN - TRY AGAIN</p>}
+                      {pinError && (
+                          <div style={{ marginBottom: '15px' }}>
+                              <p style={{ color: '#ef4444', fontSize: '0.7rem', fontWeight: 800, marginBottom: '2px' }}>WRONG SECURITY PIN</p>
+                              <p style={{ color: '#ef4444', fontSize: '0.65rem', fontWeight: 900 }}>{attempts} ATTEMPTS REMAINING</p>
+                          </div>
+                      )}
                       <div style={{ display: 'flex', gap: '10px' }}>
                           <button type="button" onClick={() => setShowPinModal(false)} style={{ flex: 1, padding: '12px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>CANCEL</button>
                           <button type="submit" style={{ flex: 1, padding: '12px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}>UNLOCK</button>
