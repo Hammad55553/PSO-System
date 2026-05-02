@@ -1,3 +1,4 @@
+import React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Lock, X } from 'lucide-react';
