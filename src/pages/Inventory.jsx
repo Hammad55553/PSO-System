@@ -218,7 +218,7 @@ const Inventory = () => {
                                 <th style={{ padding: '15px 20px' }}>MEDICINE ID / BARCODE</th>
                                 <th style={{ padding: '15px 20px' }}>DESCRIPTION</th>
                                 <th style={{ padding: '15px 20px' }}>CATEGORY</th>
-                                <th style={{ padding: '15px 20px' }}>STK ON HAND</th>
+                                <th style={{ padding: '15px 20px', whiteSpace: 'nowrap' }}>STK ON HAND</th>
                                 {isAdmin && <th style={{ padding: '15px 20px' }}>PURCHASE</th>}
                                  <th style={{ padding: '15px 20px' }}>RETAIL</th>
                                 {isAdmin && <th style={{ padding: '15px 20px' }}>DOCTOR</th>}
@@ -235,7 +235,6 @@ const Inventory = () => {
                                 return (
                                     <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                                         <td style={{ padding: '15px 20px' }}>
-                                            <div style={{ fontWeight: 800, color: '#94a3b8', fontSize: '0.75rem' }}>{item.id}</div>
                                             {item.barcode ? (
                                                 <div style={{ marginTop: '5px', display: 'flex', flexDirection: 'column', alignItems: 'center', width: 'fit-content' }}>
                                                     <Barcode value={item.barcode} height={30} width={1.2} fontSize={10} background="transparent" />
@@ -251,7 +250,7 @@ const Inventory = () => {
                                         <td style={{ padding: '15px 20px' }}>
                                             <span style={{ fontSize: '0.7rem', fontWeight: 900, padding: '4px 8px', background: '#ecfdf5', borderRadius: '4px', color: '#047857' }}>{item.category.toUpperCase()}</span>
                                         </td>
-                                        <td style={{ padding: '15px 20px' }}>
+                                        <td style={{ padding: '15px 20px', whiteSpace: 'nowrap' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <span style={{ fontSize: '1.1rem', fontWeight: 950, color: item.stock <= (item.min_stock || 5) ? '#ef4444' : '#1e293b' }}>{item.stock}</span>
                                                 {item.stock <= (item.min_stock || 5) && <AlertCircle size={14} color="#ef4444" />}
