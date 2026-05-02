@@ -374,7 +374,7 @@ const POS = () => {
                                         borderLeft: selectedCategory === cat ? '4px solid #059669' : '4px solid transparent'
                                     }}
                                 >
-                                    {cat.toUpperCase()}
+                                    {cat?.toUpperCase()}
                                 </button>
                             ))}
                         </div>
@@ -581,7 +581,7 @@ const POS = () => {
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
                                     <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#065f46' }}>PATIENT ACCOUNT</span>
                                     <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#065f46' }}>
-                                        {selectedCustomer ? selectedCustomer.name.toUpperCase() : 'WALKING PATIENT'}
+                                        {selectedCustomer ? selectedCustomer.name?.toUpperCase() : 'WALKING PATIENT'}
                                     </span>
                                 </div>
                             </div>

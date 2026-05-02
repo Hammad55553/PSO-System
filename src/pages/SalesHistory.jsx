@@ -150,14 +150,14 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                                     style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer', background: selectedSale?.id === sale.id ? '#f0f9ff' : 'white' }}
                                 >
                                     <td style={{ padding: '15px 20px', fontWeight: 900, color: '#10b981', fontSize: '0.7rem' }}>
-                                        #{sale.id.toString().toUpperCase()}
+                                        #{sale.id?.toString()?.toUpperCase()}
                                     </td>
                                     <td style={{ padding: '15px 20px', fontWeight: 700 }}>{sale.customer_name || '—'}</td>
                                     <td style={{ padding: '15px 20px', fontSize: '0.8rem', color: '#64748b' }}>
                                         {new Date(sale.created_at).toLocaleDateString()} {new Date(sale.created_at).toLocaleTimeString()}
                                     </td>
                                     <td style={{ padding: '15px 20px' }}>
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '4px 8px', background: '#f1f5f9', borderRadius: '4px' }}>{sale.payment_method.toUpperCase()}</span>
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 800, padding: '4px 8px', background: '#f1f5f9', borderRadius: '4px' }}>{sale.payment_method?.toUpperCase()}</span>
                                     </td>
                                     <td style={{ padding: '15px 20px', fontWeight: 900 }}>Rs {sale.total.toLocaleString()}</td>
                                     <td style={{ padding: '15px 20px' }}>

@@ -277,7 +277,7 @@ const Inventory = () => {
                                             </div>
                                         </td>
                                         <td style={{ padding: '15px 20px' }}>
-                                            <span style={{ fontSize: '0.7rem', fontWeight: 900, padding: '4px 8px', background: '#ecfdf5', borderRadius: '4px', color: '#047857' }}>{item.category.toUpperCase()}</span>
+                                            <span style={{ fontSize: '0.7rem', fontWeight: 900, padding: '4px 8px', background: '#ecfdf5', borderRadius: '4px', color: '#047857' }}>{item.category?.toUpperCase()}</span>
                                         </td>
                                         <td style={{ padding: '15px 20px', whiteSpace: 'nowrap' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
