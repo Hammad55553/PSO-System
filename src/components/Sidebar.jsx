@@ -45,8 +45,8 @@ const Sidebar = () => {
 
     const handlePinSubmit = (e) => {
         e.preventDefault();
-        // Master PIN is 1234 or user's custom one if we had it
-        if (pinInput === '1234') {
+        const storedPin = localStorage.getItem('bilal_vet_terminal_pin') || '1234';
+        if (pinInput === storedPin) {
             setShowPinModal(false);
             setPinInput('');
             navigate(targetPath);

@@ -10,6 +10,7 @@ const Settings = () => {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [terminalPin, setTerminalPin] = useState(localStorage.getItem('bilal_vet_terminal_pin') || '1234');
     const [isLoading, setIsLoading] = useState(false);
 
     const handlePasswordChange = async (e) => {
@@ -41,6 +42,16 @@ const Settings = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleUpdatePin = (e) => {
+        e.preventDefault();
+        if (terminalPin.length !== 4) {
+            toast.error("PIN must be exactly 4 digits!");
+            return;
+        }
+        localStorage.setItem('bilal_vet_terminal_pin', terminalPin);
+        toast.success("Terminal Security PIN updated!");
     };
 
     return (
@@ -139,6 +150,34 @@ const Settings = () => {
                             {isLoading ? <Loader2 size={20} className="animate-spin" /> : "UPDATE SECURITY CREDENTIALS"}
                         </button>
                     </form>
+
+                    <div style={{ marginTop: '40px', paddingTop: '30px', borderTop: '2px dashed #f1f5f9' }}>
+                        <div style={{ marginBottom: '25px' }}>
+                            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#4338ca', marginBottom: '5px' }}>Terminal Safety PIN</h3>
+                            <p style={{ fontSize: '0.75rem', color: '#64748b' }}>This PIN is required to leave the Sale Terminal and access the Dashboard.</p>
+                        </div>
+
+                        <form onSubmit={handleUpdatePin} style={{ display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>New 4-Digit PIN</label>
+                                <div style={{ position: 'relative' }}>
+                                    <Lock size={16} style={{ position: 'absolute', left: '12px', top: '12px', color: '#4338ca' }} />
+                                    <input
+                                        type="password"
+                                        maxLength={4}
+                                        className="erp-input"
+                                        style={{ width: '100%', padding: '10px 15px 10px 40px', fontSize: '1.2rem', fontWeight: 900, letterSpacing: '4px' }}
+                                        placeholder="1234"
+                                        value={terminalPin}
+                                        onChange={(e) => setTerminalPin(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <button type="submit" className="btn-erp btn-erp-primary" style={{ padding: '12px 25px', background: '#4338ca' }}>
+                                SAVE PIN
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>
