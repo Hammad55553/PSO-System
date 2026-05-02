@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import ThermalReceipt from '../components/ThermalReceipt';
@@ -16,15 +16,44 @@ import {
     Search,
     Package
 } from 'lucide-react';
+import { supabase } from '../supabase';
+import toast from 'react-hot-toast';
 
 const ProductInsights = () => {
     const { productName } = useParams();
     const navigate = useNavigate();
     const [previewSale, setPreviewSale] = useState(null);
-    const { history } = useSelector(state => state.sales);
     const { items: inventory } = useSelector(state => state.inventory);
     const { user } = useSelector(state => state.auth);
     const isAdmin = user?.role === 'admin';
+
+    const [transactions, setTransactions] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    // Fetch All Transactions for this product
+    useEffect(() => {
+        const fetchProductData = async () => {
+            if (!productName) return;
+            setLoading(true);
+            try {
+                // Simplified Query: Just get sale_items first
+                const { data, error } = await supabase
+                    .from('sale_items')
+                    .select('*, sales(*)')
+                    .ilike('name', `%${productName}%`);
+
+                if (error) throw error;
+                console.log("Transactions Found:", data?.length);
+                setTransactions(data || []);
+            } catch (err) {
+                console.error("Insight Fetch Error:", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProductData();
+    }, [productName]);
 
     // 1. Data Aggregation for this specific product
     const productStats = useMemo(() => {
@@ -33,7 +62,6 @@ const ProductInsights = () => {
             returnedUnits: 0,
             totalRevenue: 0,
             totalProfit: 0,
-            totalDiscount: 0,
             totalTax: 0,
             avgDailySales: 0,
             transactions: [],
@@ -42,62 +70,53 @@ const ProductInsights = () => {
             operators: {},
         };
 
-        history.forEach(sale => {
-            const items = sale.sale_items || sale.items || [];
-            const item = items.find(i => i.name === productName);
-            if (item) {
-                const saleDate = (sale.created_at || sale.date || '').includes(',') ? (sale.created_at || sale.date).split(',')[0] : (sale.created_at || sale.date);
-                const saleTime = (sale.created_at || sale.date || '').includes(',') ? (sale.created_at || sale.date).split(',')[1]?.trim() : '';
+        transactions.forEach(item => {
+            const sale = item.sales;
+            if (!sale) return;
 
-                const qty = item.quantity || 0;
-                const revenue = (item.price || 0) * qty;
-                const profit = ((item.price || 0) - (item.buy_price || item.buyPrice || 0)) * qty;
-                const itemTax = (((item.price || 0) * (item.taxPercent || 0)) / 100) * qty;
+            const saleDate = sale.created_at?.split('T')[0] || 'Unknown';
+            const saleTime = sale.created_at?.split('T')[1] || '';
 
-                if (sale.status === 'Returned') {
-                    stats.returnedUnits += qty;
-                } else {
-                    stats.totalUnits += qty;
-                    stats.totalRevenue += (revenue + itemTax);
-                    stats.totalProfit += profit;
-                    stats.totalTax += itemTax;
+            const qty = Number(item.quantity) || 0;
+            const revenue = (Number(item.price) || 0) * qty;
+            const profit = ((Number(item.price) || 0) - (Number(item.buy_price) || 0)) * qty;
 
-                    const saleTotalItems = items.reduce((a, b) => a + (b.quantity || 0), 0);
-                    const discountShare = (sale.discount || 0) * (qty / (saleTotalItems || 1));
-                    stats.totalDiscount += discountShare;
+            if (sale.status === 'Returned') {
+                stats.returnedUnits += qty;
+            } else {
+                stats.totalUnits += qty;
+                stats.totalRevenue += revenue;
+                stats.totalProfit += profit;
 
-                    let dateKey = 'Unknown';
-                    try { dateKey = new Date(saleDate).toISOString().split('T')[0]; } catch (e) { }
-                    stats.dailyDistribution[dateKey] = (stats.dailyDistribution[dateKey] || 0) + qty;
+                stats.dailyDistribution[saleDate] = (stats.dailyDistribution[saleDate] || 0) + qty;
+                const op = sale.seller_name || 'System';
+                stats.operators[op] = (stats.operators[op] || 0) + qty;
 
-                    const op = sale.seller_name || sale.sellerName || 'System';
-                    stats.operators[op] = (stats.operators[op] || 0) + qty;
-
-                    const hour = parseInt(saleTime.split(':')[0]) || 0;
-                    if (hour < 13) stats.timeDistribution.morning++;
-                    else if (hour < 17) stats.timeDistribution.afternoon++;
-                    else stats.timeDistribution.evening++;
-                }
-
-                stats.transactions.push({
-                    id: sale.id || doc.id,
-                    date: saleDate,
-                    time: saleTime,
-                    qty: qty,
-                    status: sale.status,
-                    customer: sale.customer_name || sale.customerName || '—',
-                    price: item.price,
-                    operator: sale.seller_name || sale.sellerName || 'System',
-                    total: revenue + itemTax
-                });
+                const hour = parseInt(saleTime.split(':')[0]) || 0;
+                if (hour < 13) stats.timeDistribution.morning++;
+                else if (hour < 17) stats.timeDistribution.afternoon++;
+                else stats.timeDistribution.evening++;
             }
+
+            stats.transactions.push({
+                id: sale.id,
+                invoice_no: sale.invoice_no,
+                date: saleDate,
+                time: saleTime.split('.')[0],
+                qty: qty,
+                status: sale.status,
+                customer: sale.customer_name || '—',
+                price: item.price,
+                operator: sale.seller_name || 'System',
+                total: revenue
+            });
         });
 
         const uniqueDays = Object.keys(stats.dailyDistribution).length;
         stats.avgDailySales = uniqueDays ? (stats.totalUnits / uniqueDays).toFixed(1) : 0;
 
         return stats;
-    }, [history, productName]);
+    }, [transactions, productName]);
 
     const inventoryItem = inventory.find(i => i.name === productName);
     const totalRestocked = inventoryItem?.restockHistory?.reduce((a, b) => a + b.quantity, 0) || 0;
@@ -113,7 +132,7 @@ const ProductInsights = () => {
                     </button>
                     <div>
                         <h2 style={{ fontSize: '1.5rem', fontWeight: 950, color: '#0f172a', letterSpacing: '-0.5px' }}>{productName} <span style={{ color: '#ec4899', fontWeight: 900 }}>360° Vision</span></h2>
-                        <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>End-to-end stock cycle and return analytics.</p>
+                        <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>End-to-end stock cycle and return analytics. <span style={{ color: '#10b981' }}>({transactions.length} Records Found)</span></p>
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -172,10 +191,7 @@ const ProductInsights = () => {
                                 {[...productStats.transactions].reverse().map((t, idx) => (
                                     <tr key={idx} style={{ opacity: t.status === 'Returned' ? 0.6 : 1 }}>
                                         <td 
-                                            onClick={() => {
-                                                const fullSale = history.find(s => s.id === t.id);
-                                                if(fullSale) setPreviewSale(fullSale);
-                                            }}
+                                            onClick={() => setPreviewSale(t.sales)}
                                             onMouseOver={e => e.currentTarget.style.color = '#059669'}
                                             onMouseOut={e => e.currentTarget.style.color = '#10b981'}
                                             style={{ 
@@ -187,7 +203,7 @@ const ProductInsights = () => {
                                                 transition: 'color 0.2s'
                                             }}
                                         >
-                                            #{history.find(s => s.id === t.id)?.invoice_no ? (100000 + parseInt(history.find(s => s.id === t.id).invoice_no)).toString() : t.id.toString().slice(-6).toUpperCase()}
+                                            #{t.invoice_no ? (100000 + parseInt(t.invoice_no)).toString() : t.id.toString().slice(-6).toUpperCase()}
                                         </td>
                                         <td style={{ fontSize: '0.75rem', fontWeight: 800 }}>{t.customer || '—'}</td>
                                         <td style={{ fontSize: '0.7rem', fontWeight: 700, color: '#64748b' }}>{t.operator}</td>

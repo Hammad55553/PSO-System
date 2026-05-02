@@ -16,6 +16,7 @@ import {
     ChevronRight,
     CheckCircle2
 } from 'lucide-react';
+import { supabase } from '../supabase';
 
 const ProfitMastery = () => {
     const navigate = useNavigate();
