@@ -284,7 +284,24 @@ const POS = () => {
 
             if (itemsError) throw itemsError;
 
-            // 3. Update Inventory Stock
+            // 3. Automated External Sourcing Expense
+            const externalItems = cart.filter(item => item.reason && item.quantity > (inventory.find(i => i.id === item.id)?.stock || 0));
+            if (externalItems.length > 0) {
+                const totalExpense = externalItems.reduce((sum, item) => sum + ((item.buy_price || 0) * item.quantity), 0);
+                if (totalExpense > 0) {
+                    await supabase.from('expenses').insert([{
+                        title: `EXT. SOURCING: Bill #${savedSale.invoice_no ? (100000 + parseInt(savedSale.invoice_no)).toString() : savedSale.id.toString().slice(-6).toUpperCase()}`,
+                        amount: totalExpense,
+                        category: 'External Sourcing',
+                        date: new Date().toISOString(),
+                        added_by: user?.name || activeShift?.staffName || 'Operator',
+                        sale_id: savedSale.id
+                    }]);
+                    toast.success(`Expense of Rs ${totalExpense} Logged!`);
+                }
+            }
+
+            // 4. Update Inventory Stock
             for (const item of cart) {
                 const { data: currentItem } = await supabase
                     .from('inventory')
@@ -576,19 +593,48 @@ const POS = () => {
                                                 <div style={{ fontSize: '0.65rem', color: '#059669', fontWeight: 700 }}>{item.category} | Stock: {inventory.find(i => i.id === item.id)?.stock || 0}</div>
 
                                                 {item.quantity > (inventory.find(i => i.id === item.id)?.stock || 0) && (
-                                                    <div style={{ marginTop: '8px' }}>
-                                                        <input
-                                                            placeholder="Where did you get this? (e.g. Special Order)"
-                                                            style={{ width: '100%', padding: '6px 10px', fontSize: '0.75rem', border: '1px solid #f59e0b', borderRadius: '4px', background: '#fffbeb' }}
-                                                            value={item.reason || ''}
-                                                            onChange={(e) => updateCartItem(item.id, 'reason', e.target.value)}
-                                                        />
+                                                    <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+                                                        <div style={{ flex: 2 }}>
+                                                            <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#b45309', display: 'block', marginBottom: '2px' }}>SOURCE NOTE</label>
+                                                            <input
+                                                                placeholder="Where from? (e.g. Ali Medicos)"
+                                                                style={{ width: '100%', padding: '6px 10px', fontSize: '0.75rem', border: '1px solid #f59e0b', borderRadius: '4px', background: '#fffbeb', fontWeight: 700 }}
+                                                                value={item.reason || ''}
+                                                                onChange={(e) => updateCartItem(item.id, 'reason', e.target.value)}
+                                                            />
+                                                        </div>
+                                                        <div style={{ flex: 1 }}>
+                                                            <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ef4444', display: 'block', marginBottom: '2px' }}>OUR COST (Rs)</label>
+                                                            <div style={{ display: 'flex', alignItems: 'center', background: '#fff1f2', borderRadius: '4px', border: '1px solid #fecaca', padding: '0 8px', height: '31px' }}>
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Cost"
+                                                                    style={{ width: '100%', background: 'transparent', border: 'none', fontSize: '0.8rem', fontWeight: 900, color: '#dc2626', outline: 'none' }}
+                                                                    value={item.buy_price || 0}
+                                                                    onChange={(e) => updateCartItem(item.id, 'buy_price', parseFloat(e.target.value) || 0)}
+                                                                />
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 )}
                                             </td>
-                                            <td style={{ padding: '15px 20px', fontWeight: 900, color: isDoctorMode ? '#6366f1' : '#1e293b' }}>
-                                                {isDoctorMode ? (item.doctor_price || item.price) : item.price}
-                                                {isDoctorMode && <div style={{ fontSize: '0.5rem', fontWeight: 900 }}>DR. RATE</div>}
+                                            <td style={{ padding: '15px 20px', fontWeight: 900 }}>
+                                                {item.quantity > (inventory.find(i => i.id === item.id)?.stock || 0) ? (
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                        <label style={{ fontSize: '0.5rem', color: '#64748b', fontWeight: 900 }}>SALE PRICE</label>
+                                                        <input 
+                                                            type="number"
+                                                            style={{ width: '80px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 900, fontSize: '0.9rem' }}
+                                                            value={item.price}
+                                                            onChange={(e) => updateCartItem(item.id, 'price', parseFloat(e.target.value) || 0)}
+                                                        />
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <span style={{ color: isDoctorMode ? '#6366f1' : '#1e293b' }}>{isDoctorMode ? (item.doctor_price || item.price) : item.price}</span>
+                                                        {isDoctorMode && <div style={{ fontSize: '0.5rem', fontWeight: 900 }}>DR. RATE</div>}
+                                                    </>
+                                                )}
                                             </td>
                                             <td style={{ padding: '15px 20px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>

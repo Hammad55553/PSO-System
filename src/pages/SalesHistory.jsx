@@ -243,12 +243,19 @@ const SalesHistory = ({ isReturnsPage = false }) => {
 
                         <div style={{ marginBottom: '30px' }}>
                             <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9', marginBottom: '10px' }}>LINE ITEMS</p>
-                            {selectedSale.sale_items?.map(item => (
-                                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.8rem' }}>
-                                    <span>{item.name} <strong style={{ color: '#94a3b8' }}>x{item.quantity}</strong></span>
-                                    <span style={{ fontWeight: 800 }}>Rs {(item.price * item.quantity).toLocaleString()}</span>
-                                </div>
-                            ))}
+                             {selectedSale.sale_items?.map(item => (
+                                 <div key={item.id} style={{ marginBottom: '12px', borderBottom: '1px dashed #f1f5f9', paddingBottom: '8px' }}>
+                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                                         <span>{item.name} <strong style={{ color: '#94a3b8' }}>x{item.quantity}</strong></span>
+                                         <span style={{ fontWeight: 800 }}>Rs {(item.price * item.quantity).toLocaleString()}</span>
+                                     </div>
+                                     {item.reason && (
+                                         <div style={{ fontSize: '0.65rem', color: '#b45309', fontWeight: 700, fontStyle: 'italic', marginTop: '2px' }}>
+                                             * NOTE: {item.reason}
+                                         </div>
+                                     )}
+                                 </div>
+                             ))}
                         </div>
 
                         <div style={{ marginTop: 'auto', padding: '20px', background: '#f8fafc', borderRadius: '8px' }}>
