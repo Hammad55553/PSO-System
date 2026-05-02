@@ -727,8 +727,8 @@ const POS = () => {
                                     <Printer size={16} /> PRINT & FINISH (F10)
                                 </button>
                             </div>
-                        </div>
                     </div>
+                </div>
 
                 {/* PARKED BILLS MODAL */}
                 {showParkedList && (
