@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -21,6 +22,7 @@ import {
 
 const Dashboard = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { history } = useSelector(state => state.sales);
     const { items } = useSelector(state => state.inventory);
     const { activeShift } = useSelector(state => state.shift);
@@ -287,7 +289,10 @@ const Dashboard = () => {
                         <h5 style={{ fontWeight: 950, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <ClipboardList size={20} color="#6366f1" /> RECENT SETTLEMENTS
                         </h5>
-                        <button style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <button 
+                            onClick={() => navigate('/history')}
+                            style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                        >
                             VIEW ALL <ChevronRight size={14} />
                         </button>
                     </div>
@@ -302,9 +307,13 @@ const Dashboard = () => {
                                         transition={{ delay: i * 0.05 }}
                                         style={{ background: '#fcfdfe' }}
                                     >
-                                        <td style={{ padding: '15px', borderRadius: '12px 0 0 12px', fontWeight: 800, fontSize: '0.85rem', color: '#6366f1' }}>#{sale.id}</td>
+                                        <td style={{ padding: '15px', borderRadius: '12px 0 0 12px', fontWeight: 900, fontSize: '0.7rem', color: '#6366f1', verticalAlign: 'middle' }}>
+                                            <div style={{ background: '#eef2ff', padding: '4px 8px', borderRadius: '6px', display: 'inline-block' }}>
+                                                {sale.seller_name ? sale.seller_name.split(' ')[0].toUpperCase() : 'SALE'}
+                                            </div>
+                                        </td>
                                         <td style={{ padding: '12px 15px' }}>
-                                            <div style={{ fontWeight: 900, color: '#1e293b', fontSize: '0.9rem' }}>{sale.customer_name || 'Walking Patient'}</div>
+                                            <div style={{ fontWeight: 900, color: '#1e293b', fontSize: '0.9rem' }}>{sale.customer_name || 'CASH PATIENT'}</div>
                                             <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>{sale.payment_method || 'Cash'} Settlement</div>
                                         </td>
                                         <td style={{ padding: '15px' }}>

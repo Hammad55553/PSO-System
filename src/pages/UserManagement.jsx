@@ -43,7 +43,8 @@ const UserManagement = () => {
             toast.success(`Updated ${permission} access for ${user.name}`);
             fetchUsers();
         } catch (error) {
-            toast.error("Failed to update permissions");
+            console.error(error);
+            toast.error(error.message || "Failed to update permissions");
         }
     };
 
@@ -65,7 +66,8 @@ const UserManagement = () => {
             toast.success(`User marked as ${newStatus}`);
             fetchUsers();
         } catch (error) {
-            toast.error("Failed to update user status");
+            console.error(error);
+            toast.error(error.message || "Failed to update user status");
         }
     };
 
@@ -81,7 +83,8 @@ const UserManagement = () => {
             toast.success("User profile deleted");
             fetchUsers();
         } catch (error) {
-            toast.error("Failed to delete profile");
+            console.error(error);
+            toast.error(error.message || "Failed to delete profile");
         }
     };
 

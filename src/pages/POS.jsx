@@ -59,6 +59,7 @@ const POS = () => {
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     const [lastSale, setLastSale] = useState(null);
     const [isDoctorMode, setIsDoctorMode] = useState(false);
+    const [walkingCustomerName, setWalkingCustomerName] = useState('');
 
     // UI States
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
@@ -105,8 +106,8 @@ const POS = () => {
     }, [searchTerm]);
 
     const filteredInventory = inventory.filter(item => {
-        const matchesSearch = 
-            item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        const matchesSearch =
+            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (item.barcode && item.barcode.includes(searchTerm)) ||
             (item.manufacturer && item.manufacturer.toLowerCase().includes(searchTerm.toLowerCase())) ||
@@ -198,6 +199,7 @@ const POS = () => {
         setLastSale(null);
         setCheckoutStage('idle');
         setIsDoctorMode(false);
+        setWalkingCustomerName('');
     };
 
     const handleCheckout = async (shouldPrint = true) => {
@@ -206,7 +208,7 @@ const POS = () => {
         if (paymentMethod === 'Credit' && !selectedCustomer) { toast.error('Select an Account!'); return; }
 
         const saleData = {
-            customer_name: selectedCustomer ? selectedCustomer.name : 'Walking Patient',
+            customer_name: selectedCustomer ? selectedCustomer.name : (walkingCustomerName || 'WALK-IN CUSTOMER'),
             customer_id: selectedCustomer?.id || null,
             total: finalTotal,
             subtotal,
@@ -252,9 +254,9 @@ const POS = () => {
                     .select('stock')
                     .eq('id', item.id)
                     .single();
-                
+
                 const newStock = (currentItem?.stock || 0) - item.quantity;
-                
+
                 await supabase
                     .from('inventory')
                     .update({ stock: newStock })
@@ -267,7 +269,7 @@ const POS = () => {
                 .select('sales')
                 .eq('id', activeShift.id)
                 .single();
-            
+
             await supabase
                 .from('shifts')
                 .update({ sales: (currentShift?.sales || 0) + finalTotal })
@@ -280,14 +282,14 @@ const POS = () => {
                     .select('balance, history')
                     .eq('id', selectedCustomer.id)
                     .single();
-                
+
                 const newBalance = (custData?.balance || 0) + finalTotal;
                 const newHistory = [
-                    { 
-                        date: new Date().toISOString(), 
-                        amount: finalTotal, 
-                        type: 'credit', 
-                        note: `POS Sale #${savedSale.id.toString().slice(-6)}` 
+                    {
+                        date: new Date().toISOString(),
+                        amount: finalTotal,
+                        type: 'credit',
+                        note: `POS Sale #${savedSale.id.toString().slice(-6)}`
                     },
                     ...(custData?.history || [])
                 ];
@@ -300,7 +302,7 @@ const POS = () => {
 
             setLastSale({ ...saleData, id: savedSale.id, items: cart, cash_received: cashReceived, change_amount: changeAmount, date: new Date().toLocaleString() });
             dispatch(updateShiftStats({ sale: finalTotal }));
-            
+
             if (shouldPrint) {
                 setCheckoutStage('printing');
                 toast.success('Sale Processed. Ready for Print.');
@@ -424,7 +426,7 @@ const POS = () => {
                                                     </div>
                                                     <span style={{ fontWeight: 900, color: '#059669', fontSize: '1.2rem' }}>Rs {isDoctorMode ? (item.doctorPrice || item.price) : item.price}</span>
                                                 </div>
-                                                <button 
+                                                <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         const shortageItem = {
@@ -434,7 +436,7 @@ const POS = () => {
                                                             notes: 'Added from POS'
                                                         };
                                                         dispatch(addToShortage(shortageItem));
-                                                        supabase.from('shortage').insert([shortageItem]).then(({error}) => {
+                                                        supabase.from('shortage').insert([shortageItem]).then(({ error }) => {
                                                             if (!error) toast.success('Marked in Shortage Book (Supabase)');
                                                         });
                                                         toast.success('Marked in Shortage Book');
@@ -448,7 +450,7 @@ const POS = () => {
                                         {filteredInventory.length === 0 && (
                                             <div style={{ padding: '30px', textAlign: 'center' }}>
                                                 <p style={{ color: '#64748b', fontSize: '0.9rem', fontWeight: 700, marginBottom: '15px' }}>Not in inventory?</p>
-                                                <button 
+                                                <button
                                                     onClick={() => {
                                                         const newShortage = {
                                                             name: searchTerm,
@@ -457,7 +459,7 @@ const POS = () => {
                                                             notes: 'Added from POS'
                                                         };
                                                         dispatch(addToShortage(newShortage));
-                                                        supabase.from('shortage').insert([newShortage]).then(({error}) => {
+                                                        supabase.from('shortage').insert([newShortage]).then(({ error }) => {
                                                             if (!error) toast.success(`"${searchTerm}" added to Shortage Book (Supabase)`);
                                                         });
                                                         toast.success(`"${searchTerm}" added to Shortage Book`);
@@ -584,10 +586,20 @@ const POS = () => {
                                     <UserPlus size={22} />
                                 </button>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#065f46' }}>PATIENT ACCOUNT</span>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#065f46' }}>
-                                        {selectedCustomer ? selectedCustomer.name?.toUpperCase() : 'WALKING PATIENT'}
-                                    </span>
+                                    <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#065f46' }}>PATIENT NAME</span>
+                                    {selectedCustomer ? (
+                                        <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#065f46' }}>
+                                            {selectedCustomer.name?.toUpperCase()}
+                                        </span>
+                                    ) : (
+                                        <input
+                                            type="text"
+                                            placeholder="WALK-IN CUSTOME"
+                                            value={walkingCustomerName}
+                                            onChange={(e) => setWalkingCustomerName(e.target.value)}
+                                            style={{ border: 'none', borderBottom: '1px dashed #059669', background: 'transparent', fontSize: '0.8rem', fontWeight: 800, color: '#065f46', outline: 'none', padding: '2px 0', width: '150px' }}
+                                        />
+                                    )}
                                 </div>
                             </div>
                             {selectedCustomer && (
@@ -600,25 +612,25 @@ const POS = () => {
                         {/* DOCTOR MODE TOGGLE */}
                         <div style={{ padding: '10px 20px', background: isDoctorMode ? '#6366f1' : '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: 900, color: isDoctorMode ? 'white' : '#64748b' }}>APPLY DOCTOR PRICES?</span>
-                            <div 
+                            <div
                                 onClick={() => setIsDoctorMode(!isDoctorMode)}
-                                style={{ 
-                                    width: '50px', 
-                                    height: '24px', 
-                                    background: isDoctorMode ? '#4338ca' : '#cbd5e1', 
-                                    borderRadius: '12px', 
-                                    position: 'relative', 
+                                style={{
+                                    width: '50px',
+                                    height: '24px',
+                                    background: isDoctorMode ? '#4338ca' : '#cbd5e1',
+                                    borderRadius: '12px',
+                                    position: 'relative',
                                     cursor: 'pointer',
                                     transition: 'all 0.3s'
                                 }}
                             >
-                                <div style={{ 
-                                    width: '20px', 
-                                    height: '20px', 
-                                    background: 'white', 
-                                    borderRadius: '50%', 
-                                    position: 'absolute', 
-                                    top: '2px', 
+                                <div style={{
+                                    width: '20px',
+                                    height: '20px',
+                                    background: 'white',
+                                    borderRadius: '50%',
+                                    position: 'absolute',
+                                    top: '2px',
                                     left: isDoctorMode ? '28px' : '2px',
                                     transition: 'all 0.3s'
                                 }}></div>
@@ -714,14 +726,14 @@ const POS = () => {
 
                             {/* ACTIONS */}
                             <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-                                <button 
-                                    onClick={() => { setPendingPrint(false); setShowConfirm(true); }} 
+                                <button
+                                    onClick={() => { setPendingPrint(false); setShowConfirm(true); }}
                                     style={{ flex: 1, padding: '12px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 950, cursor: 'pointer' }}
                                 >
                                     FINISH (F9)
                                 </button>
-                                <button 
-                                    onClick={() => { setPendingPrint(true); setShowConfirm(true); }} 
+                                <button
+                                    onClick={() => { setPendingPrint(true); setShowConfirm(true); }}
                                     style={{ flex: 2, padding: '12px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.95rem', fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                                 >
                                     <Printer size={16} /> PRINT & FINISH (F10)
@@ -731,7 +743,7 @@ const POS = () => {
                     </div>
                 </div>
 
-            {/* PARKED BILLS MODAL */}
+                {/* PARKED BILLS MODAL */}
                 {showParkedList && (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <div style={{ background: 'white', width: '650px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
@@ -808,11 +820,11 @@ const POS = () => {
                 {/* ANIMATED CONFIRMATION MODAL */}
                 {showConfirm && (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 11000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(5px)' }}>
-                        <div style={{ 
-                            background: 'white', 
-                            width: '400px', 
-                            padding: '30px', 
-                            borderRadius: '20px', 
+                        <div style={{
+                            background: 'white',
+                            width: '400px',
+                            padding: '30px',
+                            borderRadius: '20px',
                             textAlign: 'center',
                             animation: 'bounceIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)'
                         }}>
@@ -823,15 +835,15 @@ const POS = () => {
                             <p style={{ color: '#64748b', fontWeight: 700, marginBottom: '30px' }}>
                                 Do you want to {pendingPrint ? 'Print and Save' : 'Save Only'} this transaction of <span style={{ color: '#059669' }}>Rs {finalTotal.toLocaleString()}</span>?
                             </p>
-                            
+
                             <div style={{ display: 'flex', gap: '12px' }}>
-                                <button 
+                                <button
                                     onClick={() => setShowConfirm(false)}
                                     style={{ flex: 1, padding: '15px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '12px', fontWeight: 900, cursor: 'pointer' }}
                                 >
                                     NO, CANCEL
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => {
                                         setShowConfirm(false);
                                         handleCheckout(pendingPrint);
