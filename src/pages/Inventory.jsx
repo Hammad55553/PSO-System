@@ -24,7 +24,7 @@ const Inventory = () => {
     const [restockBuyPrice, setRestockBuyPrice] = useState('');
 
     const [formData, setFormData] = useState({
-        name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60', manufacturer: ''
+        name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60', manufacturer: '', batch_no: ''
     });
 
     const categories = ['Medicine', 'Vaccine', 'Syrup', 'Tablet', 'Injection', 'Surgical', 'Pet Food', 'Accessories', 'Feed', 'Other'];
@@ -39,7 +39,8 @@ const Inventory = () => {
             item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
             (item.id && item.id.includes(searchTerm)) || 
             (item.barcode && item.barcode.includes(searchTerm)) ||
-            (item.manufacturer && item.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()));
+            (item.manufacturer && item.manufacturer.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (item.batch_no && item.batch_no.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesCat = selectedCategory === 'All Categories' || item.category === selectedCategory;
         const matchesMan = selectedManufacturer === 'All Companies' || item.manufacturer === selectedManufacturer;
         return matchesSearch && matchesCat && matchesMan;
@@ -60,6 +61,7 @@ const Inventory = () => {
             expiry: formData.expiry || null,
             critical_days: parseInt(formData.critical_days || 60),
             manufacturer: formData.manufacturer || '',
+            batch_no: formData.batch_no || '',
         };
 
         try {
@@ -82,7 +84,7 @@ const Inventory = () => {
             
             setIsModalOpen(false);
             setEditingItem(null);
-            setFormData({ name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60', manufacturer: '' });
+            setFormData({ name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60', manufacturer: '', batch_no: '' });
         } catch (err) {
             console.error(err);
             toast.error(err.message || "Failed to save product.");
@@ -121,7 +123,8 @@ const Inventory = () => {
             tax_percent: item.tax_percent || 0,
             barcode: item.barcode || '',
             critical_days: item.critical_days || 60,
-            manufacturer: item.manufacturer || ''
+            manufacturer: item.manufacturer || '',
+            batch_no: item.batch_no || ''
         });
         setIsModalOpen(true);
     };
@@ -267,8 +270,9 @@ const Inventory = () => {
                                         </td>
                                         <td style={{ padding: '15px 20px' }}>
                                             <div style={{ fontWeight: 800, color: '#1e293b' }}>{item.name}</div>
-                                            <div style={{ fontSize: '0.65rem', color: '#64748b', display: 'flex', gap: '8px' }}>
+                                            <div style={{ fontSize: '0.65rem', color: '#64748b', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                                                 <span>Unit: {item.unit}</span>
+                                                {item.batch_no && <span style={{ color: '#ef4444', fontWeight: 900 }}>• BATCH: {item.batch_no}</span>}
                                                 {item.manufacturer && <span style={{ color: '#059669', fontWeight: 900 }}>• {item.manufacturer.toUpperCase()}</span>}
                                             </div>
                                         </td>
@@ -345,71 +349,81 @@ const Inventory = () => {
 
             {/* 5. DEFINE PRODUCT MODAL */}
             {isModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ background: 'white', width: '550px', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-                        <div style={{ background: '#065f46', padding: '20px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ fontSize: '1.2rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <Plus size={22} /> {editingItem ? 'EDIT MEDICINE INFO' : 'ADD NEW MEDICINE'}
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
+                    <motion.div 
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        style={{ background: 'white', width: '100%', maxWidth: '700px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+                    >
+                        <div style={{ background: 'linear-gradient(135deg, #065f46 0%, #059669 100%)', padding: '20px 25px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ fontSize: '1.2rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+                                <Plus size={22} /> {editingItem ? 'EDIT MEDICINE' : 'ENROLL NEW MEDICINE'}
                             </h3>
-                            <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><X size={24} /></button>
+                            <button onClick={() => setIsModalOpen(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} /></button>
                         </div>
-                        <form onSubmit={handleSave} style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                            <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>FULL MEDICINE NAME (Formula + Brand)</label>
-                                <input required placeholder="Example: Panadol 500mg Tablet" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '1rem', fontWeight: 700 }} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                            </div>
-
-                             <div style={{ display: 'grid', gridTemplateColumns: isAdmin ? '1fr 1fr 1fr 1fr' : '1fr 1fr', gap: '15px' }}>
-                                 {isAdmin && (
-                                    <div>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>BUY PRICE (Rs)</label>
-                                        <input type="number" required placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800 }} value={formData.buy_price} onChange={e => setFormData({ ...formData, buy_price: e.target.value })} />
-                                    </div>
-                                )}
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>SALE PRICE (Rs)</label>
-                                    <input type="number" required placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800 }} value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} />
-                                </div>
-                                {isAdmin && (
-                                    <div>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#6366f1', display: 'block', marginBottom: '8px' }}>DOCTOR PRICE (Rs)</label>
-                                        <input type="number" placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800, color: '#6366f1' }} value={formData.doctor_price} onChange={e => setFormData({ ...formData, doctor_price: e.target.value })} />
-                                    </div>
-                                )}
-                                {isAdmin && (
-                                    <div>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>TAX / GST (%)</label>
-                                        <input type="number" placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800, color: '#059669' }} value={formData.tax_percent} onChange={e => setFormData({ ...formData, tax_percent: e.target.value })} />
-                                    </div>
-                                )}
-                            </div>                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>STOCK QTY</label>
-                                    <input type="number" required placeholder="0" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800 }} value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>COMPANY</label>
-                                    <input placeholder="GSK, Abbott..." style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '1rem', fontWeight: 700, color: '#059669' }} value={formData.manufacturer} onChange={e => setFormData({ ...formData, manufacturer: e.target.value })} />
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>EXPIRY</label>
-                                    <input type="date" required style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 700 }} value={formData.expiry} onChange={e => setFormData({ ...formData, expiry: e.target.value })} />
-                                </div>
-                            </div>
->
-
+                        <form onSubmit={handleSave} style={{ padding: '25px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>CATEGORY</label>
-                                    <select style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 700 }} value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>FULL MEDICINE NAME</label>
+                                    <input required placeholder="Example: Panadol 500mg" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '1rem', fontWeight: 700 }} value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ef4444', display: 'block', marginBottom: '8px' }}>BATCH / LOT NUMBER</label>
+                                    <input placeholder="Example: B-204, L-99..." style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '1rem', fontWeight: 700, color: '#ef4444' }} value={formData.batch_no} onChange={e => setFormData({ ...formData, batch_no: e.target.value })} />
+                                </div>
+                            </div>
+
+                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '15px' }}>
+                                 {isAdmin && (
+                                    <div>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>PURCHASE PRICE</label>
+                                        <input type="number" required placeholder="0" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 800, background: '#f8fafc' }} value={formData.buy_price} onChange={e => setFormData({ ...formData, buy_price: e.target.value })} />
+                                    </div>
+                                )}
+                                <div>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>RETAIL PRICE</label>
+                                    <input type="number" required placeholder="0" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 800, background: '#f8fafc' }} value={formData.price} onChange={e => setFormData({ ...formData, price: e.target.value })} />
+                                </div>
+                                {isAdmin && (
+                                    <div>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#6366f1', display: 'block', marginBottom: '6px' }}>DOCTOR PRICE</label>
+                                        <input type="number" placeholder="0" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 800, color: '#6366f1', background: '#f5f3ff' }} value={formData.doctor_price} onChange={e => setFormData({ ...formData, doctor_price: e.target.value })} />
+                                    </div>
+                                )}
+                                {isAdmin && (
+                                    <div>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>TAX (%)</label>
+                                        <input type="number" placeholder="0" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 800, color: '#059669', background: '#f0fdf4' }} value={formData.tax_percent} onChange={e => setFormData({ ...formData, tax_percent: e.target.value })} />
+                                    </div>
+                                )}
+                            </div>
+
+                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>STOCK QUANTITY</label>
+                                    <input type="number" required placeholder="0" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 800 }} value={formData.stock} onChange={e => setFormData({ ...formData, stock: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>COMPANY / MFR</label>
+                                    <input placeholder="GSK, Abbott..." style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700, color: '#059669' }} value={formData.manufacturer} onChange={e => setFormData({ ...formData, manufacturer: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>EXPIRY DATE</label>
+                                    <input type="date" required style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700 }} value={formData.expiry} onChange={e => setFormData({ ...formData, expiry: e.target.value })} />
+                                </div>
+                            </div>
+                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>CATEGORY</label>
+                                    <select style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700 }} value={formData.category} onChange={e => setFormData({ ...formData, category: e.target.value })}>
                                         {categories.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>PACKING SIZE</label>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>PACKING SIZE</label>
                                     <div style={{ display: 'flex', gap: '10px' }}>
                                         <select 
-                                            style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 700 }} 
+                                            style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700 }} 
                                             value={['Packet', 'Kilogram (Kg)', 'Gram (g)', 'Litre (L)', 'Millilitre (ml)', 'Bottle', 'Injection', 'Strip'].includes(formData.unit) ? formData.unit : 'Other'} 
                                             onChange={e => {
                                                 const val = e.target.value;
@@ -425,52 +439,41 @@ const Inventory = () => {
                                             <option value="Bottle">Bottle</option>
                                             <option value="Injection">Injection</option>
                                             <option value="Strip">Strip</option>
-                                            <option value="Other">Other (Custom)</option>
+                                            <option value="Other">Other</option>
                                         </select>
-                                        
                                         {!['Packet', 'Kilogram (Kg)', 'Gram (g)', 'Litre (L)', 'Millilitre (ml)', 'Bottle', 'Injection', 'Strip'].includes(formData.unit) && (
-                                            <motion.input 
-                                                initial={{ opacity: 0, x: 10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                type="text" 
-                                                placeholder="Specify size (e.g. 500g)" 
-                                                style={{ width: '100%', padding: '10px', border: '2px solid #10b981', borderRadius: '6px', fontWeight: 700 }} 
-                                                value={formData.unit} 
-                                                onChange={e => setFormData({ ...formData, unit: e.target.value })} 
-                                            />
+                                            <input placeholder="Unit" style={{ width: '80px', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px' }} value={formData.unit} onChange={e => setFormData({...formData, unit: e.target.value})} />
                                         )}
                                     </div>
                                 </div>
                             </div>
-
-                             <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '15px', alignItems: 'flex-end' }}>
-                                 <div style={{ flex: 1 }}>
-                                     <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>BARCODE (Scan or Generate)</label>
-                                     <input placeholder="Scan barcode or leave for ID" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '1rem', fontWeight: 700 }} value={formData.barcode} onChange={e => setFormData({ ...formData, barcode: e.target.value })} />
-                                 </div>
-                                 <button 
-                                    type="button"
-                                    onClick={() => setFormData({ ...formData, barcode: Math.floor(100000000000 + Math.random() * 900000000000).toString() })}
-                                    style={{ padding: '12px 20px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', fontWeight: 800, color: '#475569', cursor: 'pointer' }}
-                                 >GENERATE</button>
-                             </div>
-
-                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>LOW STOCK ALERT (Qty)</label>
-                                    <input type="number" placeholder="5" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '6px', fontWeight: 800 }} value={formData.min_stock} onChange={e => setFormData({ ...formData, min_stock: e.target.value })} />
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>BARCODE (SCAN / MANUAL)</label>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <input placeholder="Scan or type..." style={{ flex: 1, padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700 }} value={formData.barcode} onChange={e => setFormData({ ...formData, barcode: e.target.value })} />
+                                        <button type="button" onClick={() => setFormData({ ...formData, barcode: Math.floor(100000000000 + Math.random() * 900000000000).toString() })} style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', padding: '0 15px', borderRadius: '8px', fontSize: '0.6rem', fontWeight: 900, color: '#475569' }}>GENERATE</button>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ef4444', display: 'block', marginBottom: '8px' }}>CRITICAL EXPIRY ALERT (Days)</label>
-                                    <input type="number" placeholder="60" style={{ width: '100%', padding: '12px', border: '2px solid #ef4444', borderRadius: '6px', fontWeight: 800, color: '#ef4444' }} value={formData.critical_days} onChange={e => setFormData({ ...formData, critical_days: e.target.value })} />
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>LOW ALERT</label>
+                                        <input type="number" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 800 }} value={formData.min_stock} onChange={e => setFormData({ ...formData, min_stock: e.target.value })} />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>EXP ALERT</label>
+                                        <input type="number" style={{ width: '100%', padding: '10px 12px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 800 }} value={formData.critical_days} onChange={e => setFormData({ ...formData, critical_days: e.target.value })} />
+                                    </div>
                                 </div>
                             </div>
-
-                            <button type="submit" style={{ width: '100%', padding: '18px', background: '#059669', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 900, cursor: 'pointer', marginTop: '10px', boxShadow: '0 4px 6px -1px rgba(16, 185, 129, 0.4)' }}>
-                                {editingItem ? 'SAVE CHANGES' : 'ADD TO LIST'}
-                            </button>
+                            <div style={{ marginTop: '10px', paddingTop: '20px', borderTop: '1px solid #f1f5f9', display: 'flex', gap: '15px' }}>
+                                <button type="button" onClick={() => setIsModalOpen(false)} style={{ flex: 1, padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', background: 'white', color: '#64748b', fontWeight: 800, cursor: 'pointer' }}>CANCEL</button>
+                                <button type="submit" style={{ flex: 2, padding: '14px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: 'white', fontWeight: 900, cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.2)' }}>
+                                    {editingItem ? 'UPDATE PRODUCT' : 'ENROLL PRODUCT'}
+                                </button>
+                            </div>
                         </form>
-                    </div>
+                    </motion.div>
                 </div>
             )}
 

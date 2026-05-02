@@ -106,7 +106,8 @@ const POS = () => {
             item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
             item.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (item.barcode && item.barcode.includes(searchTerm)) ||
-            (item.manufacturer && item.manufacturer.toLowerCase().includes(searchTerm.toLowerCase()));
+            (item.manufacturer && item.manufacturer.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (item.batch_no && item.batch_no.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesCat = selectedCategory === 'All' || item.category === selectedCategory;
         return matchesSearch && matchesCat;
     });
@@ -412,6 +413,7 @@ const POS = () => {
                                                         <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#1e293b' }}>{item.name}</span>
                                                         <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', display: 'flex', gap: '8px' }}>
                                                             <span>{item.category}</span>
+                                                            {item.batch_no && <span style={{ color: '#ef4444', fontWeight: 900 }}>• BATCH: {item.batch_no}</span>}
                                                             {item.manufacturer && <span style={{ color: '#059669', fontWeight: 900 }}>• {item.manufacturer.toUpperCase()}</span>}
                                                         </div>
                                                     </div>
