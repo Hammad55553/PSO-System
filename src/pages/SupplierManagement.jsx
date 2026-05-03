@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
+import { addSupplier, updateSupplierBalance, removeSupplier } from '../store/slices/suppliersSlice';
+import { addToSyncQueue } from '../utils/offlineSync';
 
 const SupplierManagement = () => {
     const dispatch = useDispatch();
@@ -42,7 +44,10 @@ const SupplierManagement = () => {
     const handleAddSupplier = async (e) => {
         e.preventDefault();
         if (!newSupplier.name || !newSupplier.company) return toast.error('Name and Company are required');
-        const supplier = {
+        
+        const supplierId = `SUP-${Date.now()}`;
+        const supplierData = {
+            id: supplierId,
             name: newSupplier.name,
             contact: newSupplier.contact,
             company: newSupplier.company,
@@ -55,17 +60,31 @@ const SupplierManagement = () => {
             }] : []
         };
 
+        // Optimistic Redux Update
+        dispatch(addSupplier(supplierData));
+
         try {
             const { error } = await supabase
                 .from('suppliers')
-                .insert([supplier]);
+                .insert([supplierData]);
             
-            if (error) throw error;
-            toast.success('Supplier Profile Created in Supabase');
+            if (error) {
+                console.error("Supabase Supplier Insert Error:", error);
+                // If it fails (e.g. 400 or network), queue it
+                addToSyncQueue('suppliers', 'insert', supplierData);
+                toast.success('Added Locally (Offline Sync Queued)');
+            } else {
+                toast.success('Supplier Profile Created Successfully');
+            }
+            
             setNewSupplier({ name: '', contact: '', company: '', balance: '' });
             setIsAddModalOpen(false);
         } catch (err) {
-            toast.error('Failed to create supplier');
+            console.error("Fatal Error Add Supplier:", err);
+            addToSyncQueue('suppliers', 'insert', supplierData);
+            toast.success('Saved Locally (Offline Mode)');
+            setNewSupplier({ name: '', contact: '', company: '', balance: '' });
+            setIsAddModalOpen(false);
         }
     };
 
@@ -86,33 +105,60 @@ const SupplierManagement = () => {
         ];
 
         try {
+            // Optimistic Update
+            dispatch(updateSupplierBalance({ id: selectedSupplier.id, amount, type: actionType, note: actionData.note }));
+
             const { error } = await supabase
                 .from('suppliers')
                 .update({ balance: newBalance, history: newHistory })
                 .eq('id', selectedSupplier.id);
             
-            if (error) throw error;
-            toast.success(actionType === 'purchase' ? 'Purchase Recorded' : 'Payment Recorded');
+            if (error) {
+                console.error("Supabase Supplier Update Error:", error);
+                addToSyncQueue('suppliers', 'update', { balance: newBalance, history: newHistory }, selectedSupplier.id);
+                toast.success('Queued for Sync');
+            } else {
+                toast.success(actionType === 'purchase' ? 'Purchase Recorded' : 'Payment Recorded');
+            }
+            
             setActionData({ amount: '', note: '' });
             setIsActionModalOpen(false);
+            // Update local selection to show new balance/history
+            setSelectedSupplier(prev => ({ ...prev, balance: newBalance, history: newHistory }));
         } catch (err) {
-            toast.error('Failed to update balance');
+            console.error("Fatal Error Supplier Action:", err);
+            addToSyncQueue('suppliers', 'update', { balance: newBalance, history: newHistory }, selectedSupplier.id);
+            toast.success('Saved Locally');
+            setActionData({ amount: '', note: '' });
+            setIsActionModalOpen(false);
         }
     };
 
     const handleDeleteSupplier = async (id) => {
         if (!window.confirm('Delete this supplier?')) return;
+        
+        // Optimistic Update
+        dispatch(removeSupplier(id));
+
         try {
             const { error } = await supabase
                 .from('suppliers')
                 .delete()
                 .eq('id', id);
             
-            if (error) throw error;
+            if (error) {
+                console.error("Supabase Supplier Delete Error:", error);
+                addToSyncQueue('suppliers', 'delete', null, id);
+                toast.success('Removal queued (Offline)');
+            } else {
+                toast.success('Supplier Deleted from Supabase');
+            }
             setSelectedSupplier(null);
-            toast.success('Supplier Deleted from Supabase');
         } catch (err) {
-            toast.error('Delete failed');
+            console.error("Fatal Error Supplier Delete:", err);
+            addToSyncQueue('suppliers', 'delete', null, id);
+            toast.success('Removed locally');
+            setSelectedSupplier(null);
         }
     };
 
