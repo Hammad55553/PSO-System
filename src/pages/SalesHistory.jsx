@@ -30,11 +30,38 @@ const SalesHistory = ({ isReturnsPage = false }) => {
     const isAdmin = user?.role === 'admin';
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedSale, setSelectedSale] = useState(null);
+    const [period, setPeriod] = useState('all');
+    const [isPeriodOpen, setIsPeriodOpen] = useState(false);
 
-    const filteredSales = sales.filter(s =>
-        s.id.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.customer_name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredSales = sales.filter(s => {
+        const matchesSearch = s.id.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             s.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        if (!matchesSearch) return false;
+        if (period === 'all') return true;
+
+        const saleDate = new Date(s.created_at);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (period === 'today') return saleDate >= today;
+        if (period === 'yesterday') {
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            return saleDate >= yesterday && saleDate < today;
+        }
+        if (period === 'week') {
+            const weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return saleDate >= weekAgo;
+        }
+        if (period === 'month') {
+            const monthAgo = new Date(today);
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            return saleDate >= monthAgo;
+        }
+        return true;
+    });
 
     const handleDelete = async (saleId) => {
         if (!isAdmin) {
@@ -122,12 +149,39 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                         />
                     </div>
 
-                    <button style={{ padding: '10px 15px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                        <Calendar size={16} />
-                        <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>PERIOD</span>
-                    </button>
+                    <div style={{ position: 'relative' }}>
+                        <button 
+                            onClick={() => setIsPeriodOpen(!isPeriodOpen)}
+                            style={{ padding: '10px 15px', background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', minWidth: '140px' }}
+                        >
+                            <Calendar size={16} />
+                            <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>
+                                {period === 'all' ? 'ALL TIME' : period.toUpperCase().replace('_', ' ')}
+                            </span>
+                        </button>
 
-                    <button style={{ padding: '10px 15px', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                        {isPeriodOpen && (
+                            <div style={{ position: 'absolute', top: '110%', right: 0, background: 'white', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 100, width: '180px', overflow: 'hidden' }}>
+                                {[
+                                    { id: 'all', label: 'All Time' },
+                                    { id: 'today', label: 'Today' },
+                                    { id: 'yesterday', label: 'Yesterday' },
+                                    { id: 'week', label: 'Last 7 Days' },
+                                    { id: 'month', label: 'This Month' }
+                                ].map(p => (
+                                    <div 
+                                        key={p.id}
+                                        onClick={() => { setPeriod(p.id); setIsPeriodOpen(false); }}
+                                        style={{ padding: '12px 15px', fontSize: '0.8rem', fontWeight: period === p.id ? 800 : 600, color: period === p.id ? '#2563eb' : '#64748b', background: period === p.id ? '#eff6ff' : 'white', cursor: 'pointer', borderBottom: '1px solid #f1f5f9' }}
+                                    >
+                                        {p.label}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <button style={{ padding: '10px 15px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '4px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                         <Download size={16} />
                         <span style={{ fontSize: '0.8rem', fontWeight: 700 }}>EXPORT</span>
                     </button>
