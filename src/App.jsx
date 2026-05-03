@@ -36,6 +36,7 @@ import { setShifts } from './store/slices/shiftSlice';
 import { setShortageItems } from './store/slices/shortageSlice';
 import { setExpenses } from './store/slices/expensesSlice';
 import { setSuppliers } from './store/slices/suppliersSlice';
+import { setOrders } from './store/slices/ordersSlice';
 import { processSyncQueue } from './utils/offlineSync';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -106,14 +107,15 @@ function AppContent() {
         setIsSyncing(true);
         try {
             // 1. Initial Fetch
-            const [inv, cust, sales, shifts, short, exp, sup] = await Promise.all([
+            const [inv, cust, sales, shifts, short, exp, sup, ord] = await Promise.all([
                 supabase.from('inventory').select('*').is('deleted_at', null),
                 supabase.from('customers').select('*').is('deleted_at', null),
                 supabase.from('sales').select('*, sale_items(*)').is('deleted_at', null),
                 supabase.from('shifts').select('*'),
                 supabase.from('shortage').select('*'),
                 supabase.from('expenses').select('*'),
-                supabase.from('suppliers').select('*').is('deleted_at', null)
+                supabase.from('suppliers').select('*').is('deleted_at', null),
+                supabase.from('orders').select('*').is('deleted_at', null)
             ]);
 
             if (inv.data) dispatch(setInventory(inv.data));
@@ -129,6 +131,7 @@ function AppContent() {
             if (short.data) dispatch(setShortageItems(short.data));
             if (exp.data) dispatch(setExpenses(exp.data));
             if (sup.data) dispatch(setSuppliers(sup.data));
+            if (typeof ord !== 'undefined' && ord.data) dispatch(setOrders(ord.data.sort((a,b) => new Date(b.created_at)-new Date(a.created_at))));
 
         } catch (err) {
             console.error(err);
@@ -147,6 +150,7 @@ function AppContent() {
             .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => fetchData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, () => fetchData())
             .on('postgres_changes', { event: '*', schema: 'public', table: 'shortage' }, () => fetchData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchData())
             .subscribe();
         
         channels.push(mainChannel);

@@ -11,13 +11,14 @@ import {
     AlertCircle,
     CheckCircle2,
     Loader2,
-    Box
+    Box,
+    ShoppingCart
 } from 'lucide-react';
 import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
 
 const Trash = () => {
-    const [activeTab, setActiveTab] = useState('sales'); // 'sales', 'suppliers', 'inventory'
+    const [activeTab, setActiveTab] = useState('sales'); // 'sales', 'suppliers', 'inventory', 'orders'
     const [trashData, setTrashData] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isActionLoading, setIsActionLoading] = useState(null); 
@@ -26,9 +27,7 @@ const Trash = () => {
     const fetchTrash = async () => {
         setIsLoading(true);
         try {
-            let table = 'sales';
-            if (activeTab === 'suppliers') table = 'suppliers';
-            if (activeTab === 'inventory') table = 'inventory';
+            let table = activeTab;
 
             const { data, error } = await supabase
                 .from(table)
@@ -53,12 +52,8 @@ const Trash = () => {
     const handleRestore = async (id) => {
         setIsActionLoading(id);
         try {
-            let table = 'sales';
-            if (activeTab === 'suppliers') table = 'suppliers';
-            if (activeTab === 'inventory') table = 'inventory';
-
             const { error } = await supabase
-                .from(table)
+                .from(activeTab)
                 .update({ deleted_at: null })
                 .eq('id', id);
 
@@ -79,12 +74,8 @@ const Trash = () => {
         
         setIsActionLoading(id);
         try {
-            let table = 'sales';
-            if (activeTab === 'suppliers') table = 'suppliers';
-            if (activeTab === 'inventory') table = 'inventory';
-
             const { error } = await supabase
-                .from(table)
+                .from(activeTab)
                 .delete()
                 .eq('id', id);
 
@@ -106,6 +97,8 @@ const Trash = () => {
             return item.customer_name?.toLowerCase().includes(query) || item.id.toString().includes(query);
         } else if (activeTab === 'suppliers') {
             return item.name?.toLowerCase().includes(query) || item.company?.toLowerCase().includes(query);
+        } else if (activeTab === 'orders') {
+            return item.supplier?.toLowerCase().includes(query) || item.id.toString().includes(query);
         } else {
             return item.name?.toLowerCase().includes(query) || item.id.toString().includes(query) || item.barcode?.includes(query);
         }
@@ -124,24 +117,30 @@ const Trash = () => {
                 </div>
                 
                 <div style={{ display: 'flex', background: '#f1f5f9', padding: '5px', borderRadius: '12px', gap: '5px' }}>
-                    <button 
-                        onClick={() => setActiveTab('sales')}
-                        style={{ padding: '10px 15px', border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', background: activeTab === 'sales' ? 'white' : 'transparent', color: activeTab === 'sales' ? '#2563eb' : '#64748b', boxShadow: activeTab === 'sales' ? '0 4px 6px -1px rgba(0,0,0,0.05)' : 'none' }}
-                    >
-                        SALES
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('inventory')}
-                        style={{ padding: '10px 15px', border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', background: activeTab === 'inventory' ? 'white' : 'transparent', color: activeTab === 'inventory' ? '#2563eb' : '#64748b', boxShadow: activeTab === 'inventory' ? '0 4px 6px -1px rgba(0,0,0,0.05)' : 'none' }}
-                    >
-                        INVENTORY
-                    </button>
-                    <button 
-                        onClick={() => setActiveTab('suppliers')}
-                        style={{ padding: '10px 15px', border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', background: activeTab === 'suppliers' ? 'white' : 'transparent', color: activeTab === 'suppliers' ? '#2563eb' : '#64748b', boxShadow: activeTab === 'suppliers' ? '0 4px 6px -1px rgba(0,0,0,0.05)' : 'none' }}
-                    >
-                        SUPPLIERS
-                    </button>
+                    {[
+                        { id: 'sales', label: 'SALES' },
+                        { id: 'inventory', label: 'INVENTORY' },
+                        { id: 'suppliers', label: 'SUPPLIERS' },
+                        { id: 'orders', label: 'ORDERS' }
+                    ].map(tab => (
+                        <button 
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            style={{ 
+                                padding: '10px 15px', 
+                                border: 'none', 
+                                borderRadius: '10px', 
+                                fontWeight: 800, 
+                                fontSize: '0.75rem', 
+                                cursor: 'pointer', 
+                                background: activeTab === tab.id ? 'white' : 'transparent', 
+                                color: activeTab === tab.id ? '#2563eb' : '#64748b', 
+                                boxShadow: activeTab === tab.id ? '0 4px 6px -1px rgba(0,0,0,0.05)' : 'none' 
+                            }}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
                 </div>
             </header>
 
@@ -193,15 +192,19 @@ const Trash = () => {
                                                     <div style={{ padding: '10px', background: '#f1f5f9', borderRadius: '10px' }}>
                                                         {activeTab === 'sales' ? <History size={20} color="#2563eb" /> : 
                                                          activeTab === 'inventory' ? <Box size={20} color="#059669" /> :
+                                                         activeTab === 'orders' ? <ShoppingCart size={20} color="#6366f1" /> :
                                                          <Truck size={20} color="#2563eb" />}
                                                     </div>
                                                     <div>
                                                         <p style={{ fontWeight: 900, color: '#1e293b' }}>
-                                                            {activeTab === 'sales' ? `Invoice #${item.id.toString().slice(-6).toUpperCase()}` : item.name}
+                                                            {activeTab === 'sales' ? `Invoice #${item.id.toString().slice(-6).toUpperCase()}` : 
+                                                             activeTab === 'orders' ? `Order #${item.id}` :
+                                                             item.name}
                                                         </p>
                                                         <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>
                                                             {activeTab === 'sales' ? item.customer_name : 
                                                              activeTab === 'inventory' ? item.category :
+                                                             activeTab === 'orders' ? item.supplier :
                                                              item.company}
                                                         </p>
                                                     </div>

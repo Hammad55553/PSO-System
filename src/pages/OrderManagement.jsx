@@ -96,17 +96,18 @@ const OrderManagement = () => {
     };
 
     const handleDeleteOrder = async (id) => {
-        if (!window.confirm('Delete this order record permanently?')) return;
+        if (!window.confirm('Move this order record to Trash?')) return;
         try {
+            // Soft Delete
             const { error } = await supabase
                 .from('orders')
-                .delete()
+                .update({ deleted_at: new Date().toISOString() })
                 .eq('id', id);
             
             if (error) throw error;
-            toast.success("Order record deleted from Supabase");
+            toast.success("Order record moved to Trash");
         } catch (err) {
-            toast.error('Delete failed');
+            toast.error('Action failed');
         }
     };
 
