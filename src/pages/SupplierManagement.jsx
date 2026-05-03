@@ -14,7 +14,8 @@ import {
     Trash2, 
     X, 
     CheckCircle,
-    UserPlus
+    UserPlus,
+    Loader2
 } from 'lucide-react';
 import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
@@ -33,6 +34,7 @@ const SupplierManagement = () => {
 
     const [newSupplier, setNewSupplier] = useState({ name: '', contact: '', company: '', balance: '' });
     const [actionData, setActionData] = useState({ amount: '', note: '' });
+    const [isSaving, setIsSaving] = useState(false);
 
     const filteredSuppliers = suppliers.filter(s => 
         s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -41,10 +43,13 @@ const SupplierManagement = () => {
 
     const totalOutstanding = suppliers.reduce((acc, s) => acc + s.balance, 0);
 
+    // --- ADD SUPPLIER (Direct Save Priority) ---
     const handleAddSupplier = async (e) => {
         e.preventDefault();
+        if (isSaving) return;
         if (!newSupplier.name || !newSupplier.company) return toast.error('Name and Company are required');
         
+        setIsSaving(true);
         const supplierId = `SUP-${Date.now()}`;
         const supplierData = {
             id: supplierId,
@@ -60,37 +65,45 @@ const SupplierManagement = () => {
             }] : []
         };
 
-        // Optimistic Redux Update
-        dispatch(addSupplier(supplierData));
-
         try {
-            const { error } = await supabase
-                .from('suppliers')
-                .insert([supplierData]);
+            // Hum wait karenge taake cloud par save ho jaye (taake foran delete bhi ho sakay)
+            const { error } = await supabase.from('suppliers').insert([supplierData]);
             
             if (error) {
-                console.error("Supabase Supplier Insert Error:", error);
-                // If it fails (e.g. 400 or network), queue it
-                addToSyncQueue('suppliers', 'insert', supplierData);
-                toast.success('Added Locally (Offline Sync Queued)');
+                console.error("Supabase Error:", error);
+                // Agar internet ka masla hai sirf tab queue mein dalein
+                if (!navigator.onLine || error.message?.includes('Fetch')) {
+                    addToSyncQueue('suppliers', 'insert', supplierData);
+                    dispatch(addSupplier(supplierData));
+                    toast.success('Offline: Saved locally, will sync later');
+                    setIsAddModalOpen(false);
+                } else {
+                    // Agar DB error hai (400), toh user ko error dikhayein
+                    toast.error(`Database Error: ${error.message}`);
+                }
             } else {
-                toast.success('Supplier Profile Created Successfully');
+                // Success on Cloud!
+                dispatch(addSupplier(supplierData));
+                toast.success('Supplier Profile Created LIVE on Cloud');
+                setNewSupplier({ name: '', contact: '', company: '', balance: '' });
+                setIsAddModalOpen(false);
             }
-            
-            setNewSupplier({ name: '', contact: '', company: '', balance: '' });
-            setIsAddModalOpen(false);
         } catch (err) {
             console.error("Fatal Error Add Supplier:", err);
             addToSyncQueue('suppliers', 'insert', supplierData);
+            dispatch(addSupplier(supplierData));
             toast.success('Saved Locally (Offline Mode)');
-            setNewSupplier({ name: '', contact: '', company: '', balance: '' });
             setIsAddModalOpen(false);
+        } finally {
+            setIsSaving(false);
         }
     };
 
     const handleAction = async (e) => {
         e.preventDefault();
+        if (isSaving) return;
         if (!actionData.amount) return toast.error('Enter amount');
+        setIsSaving(true);
         
         const amount = parseFloat(actionData.amount);
         const newBalance = actionType === 'purchase' ? selectedSupplier.balance + amount : selectedSupplier.balance - amount;
@@ -131,34 +144,41 @@ const SupplierManagement = () => {
             toast.success('Saved Locally');
             setActionData({ amount: '', note: '' });
             setIsActionModalOpen(false);
+        } finally {
+            setIsSaving(false);
         }
     };
 
+    // --- DELETE SUPPLIER (Improved) ---
     const handleDeleteSupplier = async (id) => {
-        if (!window.confirm('Delete this supplier?')) return;
+        if (!window.confirm('Are you sure you want to delete this supplier?')) return;
         
-        // Optimistic Update
-        dispatch(removeSupplier(id));
-
+        const cleanId = id.trim();
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('suppliers')
                 .delete()
-                .eq('id', id);
+                .eq('id', cleanId)
+                .select();
             
             if (error) {
-                console.error("Supabase Supplier Delete Error:", error);
-                addToSyncQueue('suppliers', 'delete', null, id);
-                toast.success('Removal queued (Offline)');
+                console.error("Delete Error:", error);
+                if (error.code === '23503') {
+                    toast.error('Cannot delete: Supplier has linked inventory items');
+                } else {
+                    toast.error(`Delete Failed: ${error.message}`);
+                }
+            } else if (!data || data.length === 0) {
+                // Agar DB mein nahi mila, toh iska matlab hai cloud par abhi save nahi hua
+                toast.error('Not found on Cloud yet. Please wait a moment for sync.');
             } else {
-                toast.success('Supplier Deleted from Supabase');
+                dispatch(removeSupplier(cleanId));
+                toast.success('Supplier Deleted Successfully');
+                setSelectedSupplier(null);
             }
-            setSelectedSupplier(null);
         } catch (err) {
-            console.error("Fatal Error Supplier Delete:", err);
-            addToSyncQueue('suppliers', 'delete', null, id);
-            toast.success('Removed locally');
-            setSelectedSupplier(null);
+            console.error("Fatal Error Delete:", err);
+            toast.error('Fatal delete error');
         }
     };
 
@@ -336,8 +356,13 @@ const SupplierManagement = () => {
                                 <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>OPENING PAYABLE BALANCE (Rs)</label>
                                 <input type="number" style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 700 }} value={newSupplier.balance} onChange={e => setNewSupplier({...newSupplier, balance: e.target.value})} placeholder="0.00" />
                             </div>
-                            <button type="submit" style={{ width: '100%', padding: '15px', background: '#2563eb', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '1rem', cursor: 'pointer', marginTop: '10px' }}>
-                                CREATE SUPPLIER PROFILE
+                            <button 
+                                type="submit" 
+                                disabled={isSaving}
+                                style={{ width: '100%', padding: '15px', background: isSaving ? '#94a3b8' : '#2563eb', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '1rem', cursor: isSaving ? 'not-allowed' : 'pointer', marginTop: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                                {isSaving ? <Loader2 size={20} className="animate-spin" /> : <Plus size={20} />}
+                                {isSaving ? 'REGISTERING...' : 'CREATE SUPPLIER PROFILE'}
                             </button>
                         </form>
                     </div>
@@ -377,8 +402,13 @@ const SupplierManagement = () => {
                                     onChange={(e) => setActionData({ ...actionData, note: e.target.value })}
                                 />
                             </div>
-                            <button type="submit" style={{ width: '100%', padding: '15px', background: actionType === 'purchase' ? '#ef4444' : '#059669', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '1rem', cursor: 'pointer' }}>
-                                {actionType === 'purchase' ? 'ADD TO PAYABLES' : 'REDUCE BALANCE'}
+                            <button 
+                                type="submit" 
+                                disabled={isSaving}
+                                style={{ width: '100%', padding: '15px', background: isSaving ? '#94a3b8' : (actionType === 'purchase' ? '#ef4444' : '#059669'), color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '1rem', cursor: isSaving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                                {isSaving ? <Loader2 size={20} className="animate-spin" /> : <CheckCircle size={20} />}
+                                {isSaving ? 'PROCESSING...' : (actionType === 'purchase' ? 'ADD TO PAYABLES' : 'REDUCE BALANCE')}
                             </button>
                         </form>
                     </div>
