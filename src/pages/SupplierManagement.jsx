@@ -31,10 +31,10 @@ const SupplierManagement = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isActionModalOpen, setIsActionModalOpen] = useState(false);
     const [actionType, setActionType] = useState('purchase'); // purchase or payment
+    const [isSaving, setIsSaving] = useState(false);
 
     const [newSupplier, setNewSupplier] = useState({ name: '', contact: '', company: '', balance: '' });
     const [actionData, setActionData] = useState({ amount: '', note: '' });
-    const [isSaving, setIsSaving] = useState(false);
 
     const filteredSuppliers = suppliers.filter(s => 
         s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -99,12 +99,13 @@ const SupplierManagement = () => {
         }
     };
 
+    // --- UPDATE BALANCE (Purchase/Payment) ---
     const handleAction = async (e) => {
         e.preventDefault();
         if (isSaving) return;
         if (!actionData.amount) return toast.error('Enter amount');
-        setIsSaving(true);
         
+        setIsSaving(true);
         const amount = parseFloat(actionData.amount);
         const newBalance = actionType === 'purchase' ? selectedSupplier.balance + amount : selectedSupplier.balance - amount;
         const newHistory = [
@@ -118,31 +119,23 @@ const SupplierManagement = () => {
         ];
 
         try {
-            // Optimistic Update
-            dispatch(updateSupplierBalance({ id: selectedSupplier.id, amount, type: actionType, note: actionData.note }));
-
-            const { error } = await supabase
-                .from('suppliers')
-                .update({ balance: newBalance, history: newHistory })
-                .eq('id', selectedSupplier.id);
+            const { error } = await supabase.from('suppliers').update({ balance: newBalance, history: newHistory }).eq('id', selectedSupplier.id);
             
             if (error) {
-                console.error("Supabase Supplier Update Error:", error);
                 addToSyncQueue('suppliers', 'update', { balance: newBalance, history: newHistory }, selectedSupplier.id);
+                dispatch(updateSupplierBalance({ id: selectedSupplier.id, amount, type: actionType, note: actionData.note }));
                 toast.success('Queued for Sync');
             } else {
-                toast.success(actionType === 'purchase' ? 'Purchase Recorded' : 'Payment Recorded');
+                dispatch(updateSupplierBalance({ id: selectedSupplier.id, amount, type: actionType, note: actionData.note }));
+                toast.success('Balance Updated Successfully');
             }
-            
-            setActionData({ amount: '', note: '' });
             setIsActionModalOpen(false);
-            // Update local selection to show new balance/history
+            setActionData({ amount: '', note: '' });
             setSelectedSupplier(prev => ({ ...prev, balance: newBalance, history: newHistory }));
         } catch (err) {
-            console.error("Fatal Error Supplier Action:", err);
             addToSyncQueue('suppliers', 'update', { balance: newBalance, history: newHistory }, selectedSupplier.id);
+            dispatch(updateSupplierBalance({ id: selectedSupplier.id, amount, type: actionType, note: actionData.note }));
             toast.success('Saved Locally');
-            setActionData({ amount: '', note: '' });
             setIsActionModalOpen(false);
         } finally {
             setIsSaving(false);
@@ -272,7 +265,7 @@ const SupplierManagement = () => {
                     </div>
                 </div>
 
-                {/* SUPPLIER DETAILS & HISTORY */}
+                {/* DETAILS PANEL */}
                 <div style={{ background: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                     {selectedSupplier ? (
                         <>
@@ -299,8 +292,8 @@ const SupplierManagement = () => {
                                                 {h.type.includes('Payment') ? <ArrowDownRight size={18} color="#059669" /> : <ArrowUpRight size={18} color="#ef4444" />}
                                             </div>
                                             <div style={{ flex: 1 }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>{h.type}</span>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                                    <p style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>{h.type}</p>
                                                     <span style={{ fontSize: '0.9rem', fontWeight: 950, color: h.type.includes('Payment') ? '#059669' : '#ef4444' }}>
                                                         {h.type.includes('Payment') ? '-' : '+'} Rs {h.amount.toLocaleString()}
                                                     </span>
