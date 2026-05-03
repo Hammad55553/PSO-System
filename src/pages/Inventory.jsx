@@ -141,21 +141,24 @@ const Inventory = () => {
 
     const handleDelete = async (id) => {
         if (!isAdmin) {
-            toast.error("Only Admins can delete products.");
+            toast.error("Only Admins can move products to Trash.");
             return;
         }
-        if (window.confirm('Are you sure you want to delete this product?')) {
+        if (window.confirm('Move this product to Trash? It will be permanently deleted after 30 days.')) {
             try {
                 const { error } = await supabase
                     .from('inventory')
-                    .delete()
+                    .update({ deleted_at: new Date().toISOString() })
                     .eq('id', id);
                 
                 if (error) throw error;
-                toast.success('Product removed from Supabase');
+                
+                // Redux se hata dein
+                dispatch(deleteItem(id));
+                toast.success('Product moved to Trash');
             } catch (err) {
                 console.error(err);
-                toast.error("Cloud Delete Failed.");
+                toast.error("Cloud Move to Trash Failed.");
             }
         }
     };

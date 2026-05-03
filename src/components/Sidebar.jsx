@@ -18,7 +18,8 @@ import {
     Users,
     Users2,
     Wallet,
-    Lock
+    Lock,
+    Trash2
 } from 'lucide-react';
 import { logout } from '../store/slices/authSlice';
 import toast from 'react-hot-toast';
@@ -151,6 +152,7 @@ const Sidebar = () => {
                     {isAdmin && (
                         <>
                             <div className="nav-label">Management</div>
+                            <NavItem to="/trash" icon={Trash2} label="System Trash" />
                             <NavItem to="/users" icon={Users2} label="Team Access" />
                             <NavItem to="/settings" icon={Settings} label="System Setup" />
                         </>

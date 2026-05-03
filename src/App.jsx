@@ -22,6 +22,7 @@ import ExpiryManagement from './pages/ExpiryManagement';
 import ShortageBook from './pages/ShortageBook';
 import ExpenseTracker from './pages/ExpenseTracker';
 import SupplierManagement from './pages/SupplierManagement';
+import Trash from './pages/Trash';
 
 import { supabase } from './supabase';
 import { useDispatch, useSelector } from 'react-redux';
@@ -106,13 +107,13 @@ function AppContent() {
         try {
             // 1. Initial Fetch
             const [inv, cust, sales, shifts, short, exp, sup] = await Promise.all([
-                supabase.from('inventory').select('*'),
-                supabase.from('customers').select('*'),
-                supabase.from('sales').select('*, sale_items(*)'),
+                supabase.from('inventory').select('*').is('deleted_at', null),
+                supabase.from('customers').select('*').is('deleted_at', null),
+                supabase.from('sales').select('*, sale_items(*)').is('deleted_at', null),
                 supabase.from('shifts').select('*'),
                 supabase.from('shortage').select('*'),
                 supabase.from('expenses').select('*'),
-                supabase.from('suppliers').select('*')
+                supabase.from('suppliers').select('*').is('deleted_at', null)
             ]);
 
             if (inv.data) dispatch(setInventory(inv.data));
@@ -290,6 +291,7 @@ function AppContent() {
             <Route path="/shortage" element={<ShortageBook />} />
             <Route path="/expenses" element={<ExpenseTracker />} />
             <Route path="/suppliers" element={<SupplierManagement />} />
+            <Route path="/trash" element={<Trash />} />
             <Route path="/profit" element={isAdmin ? <ProfitMastery /> : <Navigate to="/" />} />
             <Route path="/insights/:productName" element={<ProductInsights />} />
 

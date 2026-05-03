@@ -144,34 +144,34 @@ const SupplierManagement = () => {
 
     // --- DELETE SUPPLIER (Improved) ---
     const handleDeleteSupplier = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this supplier?')) return;
+        if (!window.confirm('Move this supplier to Trash? It will be permanently deleted after 30 days.')) return;
         
         const cleanId = id.trim();
         try {
+            // Hum .delete() ki jagah .update() use karenge (Soft Delete)
             const { data, error } = await supabase
                 .from('suppliers')
-                .delete()
+                .update({ deleted_at: new Date().toISOString() })
                 .eq('id', cleanId)
                 .select();
             
             if (error) {
                 console.error("Delete Error:", error);
                 if (error.code === '23503') {
-                    toast.error('Cannot delete: Supplier has linked inventory items');
+                    toast.error('Cannot move to Trash: Supplier has linked inventory items');
                 } else {
-                    toast.error(`Delete Failed: ${error.message}`);
+                    toast.error(`Action Failed: ${error.message}`);
                 }
             } else if (!data || data.length === 0) {
-                // Agar DB mein nahi mila, toh iska matlab hai cloud par abhi save nahi hua
-                toast.error('Not found on Cloud yet. Please wait a moment for sync.');
+                toast.error('ID Mismatch or Record not found');
             } else {
                 dispatch(removeSupplier(cleanId));
-                toast.success('Supplier Deleted Successfully');
+                toast.success('Supplier moved to Trash');
                 setSelectedSupplier(null);
             }
         } catch (err) {
             console.error("Fatal Error Delete:", err);
-            toast.error('Fatal delete error');
+            toast.error('Action failed due to application error');
         }
     };
 

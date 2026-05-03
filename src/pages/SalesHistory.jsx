@@ -69,22 +69,25 @@ const SalesHistory = ({ isReturnsPage = false }) => {
 
     const handleDelete = async (saleId) => {
         if (!isAdmin) {
-            toast.error("Only Admins can delete transactions.");
+            toast.error("Only Admins can move transactions to trash.");
             return;
         }
-        if (window.confirm('CRITICAL: Delete this invoice permanently?')) {
+        if (window.confirm('Move this invoice to Trash? It will be permanently deleted after 30 days.')) {
             try {
                 const { error } = await supabase
                     .from('sales')
-                    .delete()
+                    .update({ deleted_at: new Date().toISOString() })
                     .eq('id', saleId);
                 
                 if (error) throw error;
-                toast.success('Invoice Purged from Supabase');
+                toast.success('Invoice moved to Trash');
+                
+                // Redux se bhi hata dein (Optimistic UI)
+                dispatch(deleteSale(saleId));
                 setSelectedSale(null);
             } catch (err) {
                 console.error("Delete Failed:", err);
-                toast.error("Delete Failed: " + err.message);
+                toast.error("Action Failed: " + err.message);
             }
         }
     };
