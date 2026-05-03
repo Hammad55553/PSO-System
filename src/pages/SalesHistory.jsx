@@ -34,8 +34,12 @@ const SalesHistory = ({ isReturnsPage = false }) => {
     const [isPeriodOpen, setIsPeriodOpen] = useState(false);
 
     const filteredSales = sales.filter(s => {
+        const formattedInvoiceNo = s.invoice_no ? (100000 + parseInt(s.invoice_no)).toString() : s.id?.toString().slice(-6).toUpperCase();
+        
         const matchesSearch = s.id.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-                             s.customer_name?.toLowerCase().includes(searchTerm.toLowerCase());
+                             s.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             formattedInvoiceNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             (s.invoice_no && s.invoice_no.toString().includes(searchTerm));
         
         if (!matchesSearch) return false;
         if (period === 'all') return true;
