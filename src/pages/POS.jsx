@@ -31,7 +31,7 @@ import {
 import { addToSyncQueue } from '../utils/offlineSync';
 import { useNavigate } from 'react-router-dom';
 import { addSale } from '../store/slices/salesSlice';
-import { updateStock } from '../store/slices/inventorySlice';
+import { updateStock, setInventory } from '../store/slices/inventorySlice';
 import { updateShiftStats } from '../store/slices/shiftSlice';
 import { updateBalance } from '../store/slices/customerSlice';
 import { addToShortage } from '../store/slices/shortageSlice';
@@ -319,21 +319,24 @@ const POS = () => {
             }
 
             // 4. Update Inventory Stock & Redux
-            const updatedInventory = [...inventory];
-            for (const item of cart) {
-                const invItem = updatedInventory.find(i => i.id === item.id);
-                if (invItem) {
-                    const newStock = invItem.stock - item.quantity;
-                    invItem.stock = newStock;
+            const updatedInventory = inventory.map(invItem => {
+                const cartItem = cart.find(c => c.id === invItem.id);
+                if (cartItem) {
+                    const newStock = invItem.stock - cartItem.quantity;
                     
-                    const { error: invError } = await supabase
-                        .from('inventory')
+                    // Fire-and-forget database update (errors handled via sync queue)
+                    supabase.from('inventory')
                         .update({ stock: newStock })
-                        .eq('id', item.id);
-                    
-                    if (invError) addToSyncQueue('inventory', 'update', { stock: newStock }, item.id);
+                        .eq('id', invItem.id)
+                        .then(({ error }) => {
+                            if (error) addToSyncQueue('inventory', 'update', { stock: newStock }, invItem.id);
+                        });
+                        
+                    return { ...invItem, stock: newStock };
                 }
-            }
+                return invItem;
+            });
+            
             dispatch(setInventory(updatedInventory));
 
             // 5. Update Shift Stats
