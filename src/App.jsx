@@ -23,6 +23,7 @@ import ShortageBook from './pages/ShortageBook';
 import ExpenseTracker from './pages/ExpenseTracker';
 import SupplierManagement from './pages/SupplierManagement';
 import Trash from './pages/Trash';
+import StockRecords from './pages/StockRecords';
 
 import { supabase } from './supabase';
 import { useDispatch, useSelector } from 'react-redux';
@@ -296,6 +297,7 @@ function AppContent() {
             <Route path="/expenses" element={<ExpenseTracker />} />
             <Route path="/suppliers" element={<SupplierManagement />} />
             <Route path="/trash" element={<Trash />} />
+            <Route path="/stock-records" element={<StockRecords />} />
             <Route path="/profit" element={isAdmin ? <ProfitMastery /> : <Navigate to="/" />} />
             <Route path="/insights/:productName" element={<ProductInsights />} />
 

@@ -281,10 +281,10 @@ const POS = () => {
             const finalSaleId = savedSale?.id || saleId;
 
             // 2. Save sale items
-            const itemsToSave = cart.map(item => ({
+            const saleItemsData = cart.map(item => ({
                 sale_id: finalSaleId,
                 product_id: item.id,
-                name: item.name,
+                product_name: item.name,
                 quantity: item.quantity,
                 price: isDoctorMode ? (item.doctor_price || item.price) : item.price,
                 buy_price: item.buy_price || 0,
@@ -293,10 +293,10 @@ const POS = () => {
 
             const { error: itemsError } = await supabase
                 .from('sale_items')
-                .insert(itemsToSave);
+                .insert(saleItemsData);
 
             if (itemsError) {
-                addToSyncQueue('sale_items', 'insert', itemsToSave);
+                addToSyncQueue('sale_items', 'insert', saleItemsData);
             }
 
             // 3. Automated External Sourcing Expense
@@ -323,16 +323,17 @@ const POS = () => {
                 const cartItem = cart.find(c => c.id === invItem.id);
                 if (cartItem) {
                     const newStock = invItem.stock - cartItem.quantity;
+                    const newTotalSold = (invItem.total_sold || 0) + cartItem.quantity;
                     
                     // Fire-and-forget database update (errors handled via sync queue)
                     supabase.from('inventory')
-                        .update({ stock: newStock })
+                        .update({ stock: newStock, total_sold: newTotalSold })
                         .eq('id', invItem.id)
                         .then(({ error }) => {
-                            if (error) addToSyncQueue('inventory', 'update', { stock: newStock }, invItem.id);
+                            if (error) addToSyncQueue('inventory', 'update', { stock: newStock, total_sold: newTotalSold }, invItem.id);
                         });
                         
-                    return { ...invItem, stock: newStock };
+                    return { ...invItem, stock: newStock, total_sold: newTotalSold };
                 }
                 return invItem;
             });

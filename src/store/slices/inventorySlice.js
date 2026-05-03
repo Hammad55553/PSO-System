@@ -7,7 +7,13 @@ const inventorySlice = createSlice({
     },
     reducers: {
         addItem: (state, action) => {
-            state.items.push(action.payload);
+            const newItem = {
+                ...action.payload,
+                initial_stock: action.payload.stock || 0,
+                restock_history: [],
+                total_sold: 0
+            };
+            state.items.push(newItem);
             localStorage.setItem('bilal_vet_inventory', JSON.stringify(state.items));
         },
         updateStock: (state, action) => {
@@ -16,20 +22,28 @@ const inventorySlice = createSlice({
             if (item) {
                 if (mode === 'add') {
                     item.stock += quantity;
-                    if (!item.restockHistory) item.restockHistory = [];
-                    item.restockHistory.push({
+                    if (!item.restock_history) item.restock_history = [];
+                    item.restock_history.push({
                         date: new Date().toISOString(),
-                        quantity: quantity
+                        quantity: quantity,
+                        prev_stock: item.stock - quantity,
+                        new_stock: item.stock
                     });
                 }
-                else if (mode === 'remove') item.stock -= quantity;
+                else if (mode === 'remove') {
+                    item.stock -= quantity;
+                    item.total_sold = (item.total_sold || 0) + quantity;
+                }
             }
             localStorage.setItem('bilal_vet_inventory', JSON.stringify(state.items));
         },
         editItem: (state, action) => {
             const index = state.items.findIndex(i => i.id === action.payload.id);
             if (index !== -1) {
-                state.items[index] = action.payload;
+                state.items[index] = {
+                    ...state.items[index],
+                    ...action.payload
+                };
             }
             localStorage.setItem('bilal_vet_inventory', JSON.stringify(state.items));
         },

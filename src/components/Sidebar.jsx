@@ -19,7 +19,8 @@ import {
     Users2,
     Wallet,
     Lock,
-    Trash2
+    Trash2,
+    Layers
 } from 'lucide-react';
 import { logout } from '../store/slices/authSlice';
 import toast from 'react-hot-toast';
@@ -142,6 +143,7 @@ const Sidebar = () => {
                     <div className="nav-label">Reports & Audit</div>
                     {hasAccess('reports') && (
                         <>
+                            <NavItem to="/stock-records" icon={Layers} label="Stock Records" />
                             <NavItem to="/reports" icon={FileText} label="Analytic Reports" />
                             <NavItem to="/history" icon={History} label="Registry Log" />
                         </>
