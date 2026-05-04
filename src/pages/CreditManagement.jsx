@@ -19,7 +19,7 @@ const CreditManagement = () => {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isExportModalOpen, setIsExportModalOpen] = useState(false);
     const [exportPreviewMode, setExportPreviewMode] = useState(null); // 'image', 'pdf', 'excel'
-    const [khataType, setKhataType] = useState('Client'); 
+    const [khataType, setKhataType] = useState('Client');
     const [newCust, setNewCust] = useState({ name: '', phone: '', email: '', address: '', type: 'Client' });
     const [editData, setEditData] = useState({ id: '', name: '', phone: '', email: '', address: '', type: 'Client' });
 
@@ -36,11 +36,11 @@ const CreditManagement = () => {
 
     const filtered = React.useMemo(() => {
         if (!customers) return [];
-        return customers.filter(c => 
+        return customers.filter(c =>
             (c.type || 'Client') === khataType &&
-            (c.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-             c.phone?.includes(searchTerm))
-        ).sort((a,b) => b.balance - a.balance);
+            (c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.phone?.includes(searchTerm))
+        ).sort((a, b) => b.balance - a.balance);
     }, [customers, khataType, searchTerm]);
 
     const handleDeleteCustomer = async (id) => {
@@ -51,7 +51,7 @@ const CreditManagement = () => {
                     .from('customers')
                     .delete()
                     .eq('id', id);
-                
+
                 if (error) throw error;
                 setSelectedCust(null);
                 toast.success('Customer deleted from Supabase');
@@ -66,14 +66,14 @@ const CreditManagement = () => {
         try {
             const { error } = await supabase
                 .from('customers')
-                .update({ 
-                    name: editData.name, 
+                .update({
+                    name: editData.name,
                     phone: editData.phone,
                     email: editData.email || '',
                     address: editData.address || ''
                 })
                 .eq('id', editData.id);
-            
+
             if (error) throw error;
             setIsEditModalOpen(false);
             toast.success('Details updated in Supabase');
@@ -97,7 +97,7 @@ const CreditManagement = () => {
                 .from('customers')
                 .update({ balance: newBalance, history: newHistory })
                 .eq('id', selectedCust.id);
-            
+
             if (error) throw error;
             toast.success(type === 'credit' ? 'Debt recorded' : 'Payment received');
             setAmount('');
@@ -109,21 +109,21 @@ const CreditManagement = () => {
 
     const handleAddCustomer = async (e) => {
         e.preventDefault();
-        const customerData = { 
-            name: newCust.name, 
-            phone: newCust.phone, 
-            email: newCust.email || '', 
-            address: newCust.address || '', 
+        const customerData = {
+            name: newCust.name,
+            phone: newCust.phone,
+            email: newCust.email || '',
+            address: newCust.address || '',
             type: newCust.type,
-            balance: 0, 
-            history: [] 
+            balance: 0,
+            history: []
         };
 
         try {
             const { error } = await supabase
                 .from('customers')
                 .insert([customerData]);
-            
+
             if (error) throw error;
             toast.success('New account registered in Supabase');
             setIsAddModalOpen(false);
@@ -169,7 +169,7 @@ const CreditManagement = () => {
                     <p style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>Receivables: <span style={{ color: '#ef4444' }}>Rs {totals.receivable.toLocaleString()}</span> | Payables: <span style={{ color: '#10b981' }}>Rs {totals.payable.toLocaleString()}</span></p>
                 </div>
                 {isAdmin && (
-                    <button 
+                    <button
                         onClick={() => {
                             setNewCust({ ...newCust, type: khataType });
                             setIsAddModalOpen(true);
@@ -184,17 +184,17 @@ const CreditManagement = () => {
             {/* TAB SWITCHER */}
             <div style={{ display: 'flex', gap: '8px', marginBottom: '10px', flexShrink: 0 }}>
                 {['Client', 'Company'].map(t => (
-                    <button 
+                    <button
                         key={t}
                         onClick={() => {
                             setKhataType(t);
                             setSelectedCust(null);
                         }}
-                        style={{ 
-                            padding: '6px 18px', 
-                            borderRadius: '8px', 
-                            border: khataType === t ? 'none' : '1px solid #e2e8f0', 
-                            fontWeight: 900, 
+                        style={{
+                            padding: '6px 18px',
+                            borderRadius: '8px',
+                            border: khataType === t ? 'none' : '1px solid #e2e8f0',
+                            fontWeight: 900,
                             cursor: 'pointer',
                             fontSize: '0.75rem',
                             backgroundColor: khataType === t ? '#1e293b' : 'white',
@@ -252,13 +252,13 @@ const CreditManagement = () => {
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', minHeight: 0 }}>
                     {selectedCust ? (
                         <>
-                             <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, flex: 1 }}>
+                            <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, flex: 1 }}>
                                 <div style={{ padding: '8px 15px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', flexShrink: 0 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <span style={{ fontWeight: 950, fontSize: '0.95rem' }}>{selectedCust.name}</span>
                                         <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 800 }}>#{selectedCust.id.toString().slice(-6).toUpperCase()}</span>
                                         <div style={{ display: 'flex', gap: '4px', marginLeft: '5px' }}>
-                                            <button onClick={() => { setEditData({...selectedCust}); setIsEditModalOpen(true); }} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', padding: '2px' }}><Edit3 size={12} /></button>
+                                            <button onClick={() => { setEditData({ ...selectedCust }); setIsEditModalOpen(true); }} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', padding: '2px' }}><Edit3 size={12} /></button>
                                             <button onClick={() => handleDeleteCustomer(selectedCust.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }}><Trash2 size={12} /></button>
                                         </div>
                                     </div>
@@ -300,7 +300,7 @@ const CreditManagement = () => {
                             </div>
 
                             {/* Action Panel */}
-                             <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '12px', flexShrink: 0 }}>
+                            <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '12px', flexShrink: 0 }}>
                                 {isAdmin ? (
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr auto', gap: '15px', height: '100%' }}>
                                         <div>
@@ -339,7 +339,7 @@ const CreditManagement = () => {
                                             </button>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center' }}>
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     setIsExportModalOpen(true);
                                                     setExportPreviewMode('pdf');
@@ -401,7 +401,7 @@ const CreditManagement = () => {
                                 <div style={{ textAlign: 'center', marginBottom: '40px', borderBottom: '2px solid #0f172a', paddingBottom: '20px' }}>
                                     <img src={logo} alt="Clinic Logo" style={{ height: '70px', marginBottom: '10px' }} />
                                     <h1 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#0f172a', letterSpacing: '-1px' }}>BILAL VETERINARY CLINIC</h1>
-                                    <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Mian Channu Road, Near Shell Pump | 0300-1234567</p>
+                                    <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Near HBL Bank Khoka Market Hasilpur | 0305-6699899</p>
                                 </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px' }}>
@@ -440,7 +440,7 @@ const CreditManagement = () => {
 
                                 <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <p style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>Thank you for your business. Please clear outstanding dues.</p>
-                                    <button 
+                                    <button
                                         onClick={() => exportPreviewMode === 'image' ? handleExportWhatsApp(selectedCust) : handlePrintLedger()}
                                         style={{ background: '#0f172a', color: 'white', border: 'none', padding: '15px 30px', borderRadius: '12px', fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                                     >
