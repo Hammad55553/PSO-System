@@ -62,6 +62,13 @@ function AppContent() {
   const [attempts, setAttempts] = useState(10);
   const isCalculatorOpen = useSelector(state => state.ui.isCalculatorOpen);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleProtectedNavigation = (e, path) => {
     // Only ask for PIN if we are currently in billing mode (POS/Returns)
@@ -254,7 +261,7 @@ function AppContent() {
       <main className="main-area">
         <header className="app-header no-print">
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            {!isBillingMode && (
+            {isMobile && !isBillingMode && (
               <button 
                 className="erp-btn-icon"
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
