@@ -3,7 +3,8 @@ import { HashRouter as Router, Routes, Route, useLocation, Link, Navigate, useNa
 import { Provider } from 'react-redux';
 import { store } from './store';
 import { Toaster } from 'react-hot-toast';
-import { LayoutDashboard, Menu, X, Wifi, WifiOff, Box } from 'lucide-react';
+import { LayoutDashboard, Menu, X, Wifi, WifiOff, Box, Hash } from 'lucide-react';
+import Calculator from './components/Calculator';
 
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -42,6 +43,7 @@ import { processSyncQueue } from './utils/offlineSync';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import UserManagement from './pages/UserManagement';
+import { toggleCalculator, openCalculator, closeCalculator } from './store/slices/uiSlice';
 
 function AppContent() {
   const dispatch = useDispatch();
@@ -58,6 +60,7 @@ function AppContent() {
   const [targetPath, setTargetPath] = useState(null);
   const [pinError, setPinError] = useState(false);
   const [attempts, setAttempts] = useState(10);
+  const isCalculatorOpen = useSelector(state => state.ui.isCalculatorOpen);
 
   const handleProtectedNavigation = (e, path) => {
     // Only ask for PIN if we are currently in billing mode (POS/Returns)
@@ -164,6 +167,17 @@ function AppContent() {
     };
   }, [isAuthenticated, dispatch]);
 
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'F3') {
+        e.preventDefault();
+        dispatch(toggleCalculator());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const { items: localInv } = useSelector(state => state.inventory);
   const { list: localCust } = useSelector(state => state.customers);
   const { history: localSales } = useSelector(state => state.sales);
@@ -252,6 +266,26 @@ function AppContent() {
                 <span style={{ fontSize: '0.65rem', fontWeight: 900 }}>LIVE CLOUD SYNC: ACTIVE</span>
               </div>
             )}
+
+            <button 
+              onClick={() => dispatch(openCalculator())}
+              style={{ 
+                background: '#10b981', 
+                border: 'none', 
+                color: 'white', 
+                padding: '6px 12px', 
+                borderRadius: '4px', 
+                fontWeight: 900, 
+                fontSize: '0.7rem', 
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Hash size={14} /> CALCULATOR (F3)
+            </button>
           </div>
 
           <div className="flex items-center gap-6" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
@@ -308,6 +342,8 @@ function AppContent() {
           </Routes>
         </div>
       </main>
+
+      <Calculator isOpen={isCalculatorOpen} onClose={() => dispatch(closeCalculator())} />
 
       {/* SAFETY LOCK MODAL */}
       {showPinModal && (

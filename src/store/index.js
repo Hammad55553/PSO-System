@@ -8,6 +8,7 @@ import ordersReducer from './slices/ordersSlice';
 import shortageReducer from './slices/shortageSlice';
 import expensesReducer from './slices/expensesSlice';
 import suppliersReducer from './slices/suppliersSlice';
+import uiReducer from './slices/uiSlice';
 
 // 1. Load data from LocalStorage
 const loadState = () => {
@@ -32,7 +33,8 @@ export const store = configureStore({
         orders: ordersReducer,
         shortage: shortageReducer,
         expenses: expensesReducer,
-        suppliers: suppliersReducer
+        suppliers: suppliersReducer,
+        ui: uiReducer
     },
     preloadedState: persistedState
 });

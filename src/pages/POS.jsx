@@ -26,7 +26,8 @@ import {
     AlertCircle,
     CheckCircle,
     Wallet,
-    RefreshCw
+    RefreshCw,
+    Hash
 } from 'lucide-react';
 import { addToSyncQueue } from '../utils/offlineSync';
 import { useNavigate } from 'react-router-dom';
@@ -45,6 +46,7 @@ import jazzcashLogo from '../assets/jazzcash.webp';
 import easypaisaLogo from '../assets/Easypaisa.jpg';
 import ThermalReceipt from '../components/ThermalReceipt';
 import CheckoutSuccessModal from '../components/CheckoutSuccessModal';
+import { openCalculator, closeCalculator } from '../store/slices/uiSlice';
 
 const POS = () => {
     const dispatch = useDispatch();
@@ -90,6 +92,7 @@ const POS = () => {
         const handleKeyDown = (e) => {
             if (e.key === 'F1') { e.preventDefault(); searchInputRef.current?.focus(); }
             if (e.key === 'F2') { e.preventDefault(); setShowCustomerSearch(true); }
+            if (e.key === 'F3') { e.preventDefault(); dispatch(openCalculator()); }
             if (e.key === 'F10') { e.preventDefault(); { setPendingPrint(true); setShowConfirm(true); } }
             if (e.key === 'F9') { e.preventDefault(); { setPendingPrint(false); setShowConfirm(true); } }
             if (e.key === 'F4') { e.preventDefault(); handleParkBill(); }
@@ -439,6 +442,28 @@ const POS = () => {
                         <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>
                             SESSION: {activeShift ? new Date(activeShift.start_time || activeShift.startTime).toLocaleTimeString() : 'NO ACTIVE SESSION'}
                         </span>
+                        <div style={{ height: '20px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}></div>
+                        <button 
+                            onClick={() => dispatch(openCalculator())}
+                            style={{ 
+                                background: '#10b981', 
+                                border: 'none', 
+                                color: 'white', 
+                                padding: '6px 12px', 
+                                borderRadius: '4px', 
+                                fontWeight: 900, 
+                                fontSize: '0.7rem', 
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseOver={(e) => e.currentTarget.style.background = '#059669'}
+                            onMouseOut={(e) => e.currentTarget.style.background = '#10b981'}
+                        >
+                            <Hash size={14} /> CALCULATOR (F3)
+                        </button>
                     </div>
                 </header>
 
@@ -477,6 +502,7 @@ const POS = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.65rem', fontWeight: 700 }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F1:</span> <span>Search Drug</span></div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F2:</span> <span>Patient</span></div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F3:</span> <span>Calculator</span></div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F10:</span> <span>Print Bill</span></div>
                                 <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F4:</span> <span>Hold Bill</span></div>
                             </div>
@@ -1105,6 +1131,16 @@ const POS = () => {
                 activeShift={activeShift}
                 logo={logo}
             />
+
+            <style>
+                {`
+                .qty-input-no-spin::-webkit-inner-spin-button,
+                .qty-input-no-spin::-webkit-outer-spin-button {
+                    -webkit-appearance: none;
+                    margin: 0;
+                }
+                `}
+            </style>
         </>
     );
 };
