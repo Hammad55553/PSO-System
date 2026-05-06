@@ -14,7 +14,8 @@ import {
     ChevronRight,
     ChevronLeft,
     XCircle,
-    CheckCircle2
+    CheckCircle2,
+    Trash2
 } from 'lucide-react';
 import { supabase } from '../supabase';
 import { returnSale, deleteSale } from '../store/slices/salesSlice';

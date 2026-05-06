@@ -433,7 +433,7 @@ const POS = () => {
 
     return (
         <>
-            <div className="no-print" style={{ display: 'grid', gridTemplateRows: isMobile ? '50px 1fr' : '50px 1fr', height: '100%', background: '#e2e8f0', overflow: 'hidden' }}>
+            <div className="no-print" style={{ display: 'grid', gridTemplateRows: isMobile ? '50px 1fr auto' : '50px 1fr', height: '100%', background: '#e2e8f0', overflow: 'hidden' }}>
 
                 {/* 1. TOP ERP BAR */}
                 <header style={{
@@ -805,17 +805,6 @@ const POS = () => {
                             </div>
                         )}
 
-                        {isMobile && (
-                            <div style={{ background: 'white', borderTop: '2px solid #e2e8f0', display: 'flex', padding: '10px 12px', gap: '15px' }}>
-                                <button onClick={() => setMobileTab('browse')} style={{ flex: 1, padding: '5px', background: mobileTab === 'browse' ? '#ecfdf5' : 'transparent', color: mobileTab === 'browse' ? '#059669' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: 950, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '0.65rem' }}>
-                                    <Search size={16} /> BROWSE
-                                </button>
-                                <button onClick={() => setMobileTab('cart')} style={{ flex: 1, padding: '5px', background: mobileTab === 'cart' ? '#ecfdf5' : 'transparent', color: mobileTab === 'cart' ? '#059669' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: 950, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', position: 'relative', fontSize: '0.65rem' }}>
-                                    <ShoppingCart size={16} /> CART
-                                    {cart.length > 0 && <span style={{ position: 'absolute', top: '2px', right: '25%', background: '#ef4444', color: 'white', fontSize: '0.55rem', padding: '1px 4px', borderRadius: '10px' }}>{cart.length}</span>}
-                                </button>
-                            </div>
-                        )}
                     </div>
 
                     {/* RIGHT: SETTLEMENT PANEL */}
@@ -1222,6 +1211,74 @@ const POS = () => {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* 3. MOBILE NAVIGATION FOOTER */}
+                {isMobile && (
+                    <div style={{ 
+                        background: 'white', 
+                        borderTop: '2px solid #e2e8f0', 
+                        display: 'flex', 
+                        padding: '10px 15px', 
+                        gap: '15px', 
+                        zIndex: 1000,
+                        boxShadow: '0 -4px 15px rgba(0,0,0,0.05)'
+                    }}>
+                        <button 
+                            onClick={() => setMobileTab('browse')} 
+                            style={{ 
+                                flex: 1, 
+                                padding: '12px', 
+                                background: mobileTab === 'browse' ? '#ecfdf5' : 'transparent', 
+                                color: mobileTab === 'browse' ? '#059669' : '#64748b', 
+                                border: 'none', 
+                                borderRadius: '12px', 
+                                fontWeight: 950, 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                gap: '8px', 
+                                fontSize: '0.8rem' 
+                            }}
+                        >
+                            <Search size={18} /> BROWSE
+                        </button>
+                        <button 
+                            onClick={() => setMobileTab('cart')} 
+                            style={{ 
+                                flex: 1, 
+                                padding: '12px', 
+                                background: mobileTab === 'cart' ? '#ecfdf5' : 'transparent', 
+                                color: mobileTab === 'cart' ? '#059669' : '#64748b', 
+                                border: 'none', 
+                                borderRadius: '12px', 
+                                fontWeight: 950, 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'center', 
+                                gap: '8px', 
+                                position: 'relative', 
+                                fontSize: '0.8rem' 
+                            }}
+                        >
+                            <ShoppingCart size={18} /> CART
+                            {cart.length > 0 && (
+                                <span style={{ 
+                                    position: 'absolute', 
+                                    top: '5px', 
+                                    right: '20%', 
+                                    background: '#ef4444', 
+                                    color: 'white', 
+                                    fontSize: '0.65rem', 
+                                    padding: '2px 6px', 
+                                    borderRadius: '10px',
+                                    fontWeight: 900
+                                }}>
+                                    {cart.length}
+                                </span>
+                            )}
+                        </button>
                     </div>
                 )}
             </div>
