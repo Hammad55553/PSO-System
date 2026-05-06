@@ -140,25 +140,44 @@ const BillManagement = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px', overflow: 'hidden' }}>
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', background: 'white', padding: '15px 25px', borderRadius: '15px', border: '1px solid #e2e8f0' }}>
+            <header style={{ 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 600 ? 'column' : 'row',
+                justifyContent: 'space-between', 
+                alignItems: window.innerWidth <= 600 ? 'stretch' : 'center', 
+                marginBottom: '20px', 
+                background: 'white', 
+                padding: window.innerWidth <= 480 ? '15px' : '20px 25px', 
+                borderRadius: '15px', 
+                border: '1px solid #e2e8f0',
+                gap: '15px'
+            }}>
                 <div>
-                    <h2 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ background: '#f59e0b', padding: '8px', borderRadius: '10px', color: 'white' }}><FileText size={20} /></div>
+                    <h2 style={{ fontSize: window.innerWidth <= 480 ? '1.2rem' : '1.4rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ background: '#f59e0b', padding: '8px', borderRadius: '10px', color: 'white' }}><FileText size={window.innerWidth <= 480 ? 18 : 20} /></div>
                         Paper Bill Management
                     </h2>
                     <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Digitize and store your physical supplier bills & receipts</p>
                 </div>
                 <button 
                     onClick={() => setIsModalOpen(true)}
-                    style={{ background: '#0f172a', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                    style={{ background: '#0f172a', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer' }}
                 >
                     <Plus size={20} /> ADD NEW BILL
                 </button>
             </header>
 
             <div style={{ background: 'white', borderRadius: '15px', border: '1px solid #e2e8f0', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ padding: '15px 25px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ position: 'relative', width: '300px' }}>
+                <div style={{ 
+                    padding: '15px 25px', 
+                    borderBottom: '1px solid #f1f5f9', 
+                    display: 'flex', 
+                    flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                    justifyContent: 'space-between', 
+                    alignItems: window.innerWidth <= 768 ? 'stretch' : 'center',
+                    gap: '15px'
+                }}>
+                    <div style={{ position: 'relative', width: window.innerWidth <= 768 ? '100%' : '300px' }}>
                         <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                         <input
                             style={{ width: '100%', padding: '10px 10px 10px 40px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600 }}
@@ -167,43 +186,47 @@ const BillManagement = () => {
                             onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748b' }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748b', textAlign: window.innerWidth <= 768 ? 'center' : 'right' }}>
                         Showing {filteredBills.length} Digital Records
                     </div>
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: window.innerWidth <= 480 ? '15px' : '20px' }}>
+                    <div style={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', 
+                        gap: '20px' 
+                    }}>
                         {filteredBills.map(bill => (
-                            <div key={bill.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', transition: 'all 0.2s', position: 'relative' }}>
+                            <div key={bill.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', transition: 'all 0.2s', position: 'relative', display: 'flex', flexDirection: 'column' }}>
                                 {bill.image ? (
-                                    <div style={{ height: '140px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }} onClick={() => setViewBill(bill)}>
+                                    <div style={{ height: '160px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }} onClick={() => setViewBill(bill)}>
                                         <img src={bill.image} alt="Bill" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                         <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: '0.2s' }} className="hover-eye">
                                             <Eye color="white" />
                                         </div>
                                     </div>
                                 ) : (
-                                    <div style={{ height: '140px', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <div style={{ height: '160px', background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <Camera size={32} color="#94a3b8" />
                                     </div>
                                 )}
-                                <div style={{ padding: '15px' }}>
+                                <div style={{ padding: '15px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                                        <h3 style={{ fontWeight: 900, fontSize: '0.95rem', color: '#1e293b' }}>{bill.title}</h3>
-                                        <span style={{ background: '#fef3c7', color: '#92400e', fontSize: '0.65rem', padding: '3px 8px', borderRadius: '5px', fontWeight: 800 }}>{bill.category}</span>
+                                        <h3 style={{ fontWeight: 900, fontSize: '0.95rem', color: '#1e293b', flex: 1, marginRight: '10px' }}>{bill.title}</h3>
+                                        <span style={{ background: '#fef3c7', color: '#92400e', fontSize: '0.65rem', padding: '3px 8px', borderRadius: '5px', fontWeight: 800, whiteSpace: 'nowrap' }}>{bill.category}</span>
                                     </div>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                                         <span style={{ fontSize: '1rem', fontWeight: 950, color: '#059669' }}>Rs {bill.amount.toLocaleString()}</span>
                                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b' }}>{new Date(bill.date).toLocaleDateString()}</span>
                                     </div>
-                                    {bill.note && <p style={{ fontSize: '0.7rem', color: '#64748b', marginTop: '8px', borderTop: '1px dashed #e2e8f0', paddingTop: '8px' }}>{bill.note}</p>}
-                                    <div style={{ marginTop: '15px', display: 'flex', gap: '10px' }}>
-                                        <button onClick={() => setViewBill(bill)} style={{ flex: 1, padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                                    {bill.note && <p style={{ fontSize: '0.7rem', color: '#64748b', marginBottom: '15px', borderTop: '1px dashed #e2e8f0', paddingTop: '8px', flex: 1 }}>{bill.note}</p>}
+                                    <div style={{ marginTop: 'auto', display: 'flex', gap: '10px' }}>
+                                        <button onClick={() => setViewBill(bill)} style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: 'white', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
                                             <Eye size={14} /> View Details
                                         </button>
                                         {isAdmin && (
-                                            <button onClick={() => handleDelete(bill.id)} style={{ padding: '8px', borderRadius: '8px', border: 'none', background: '#fff1f1', color: '#ef4444', cursor: 'pointer' }}>
+                                            <button onClick={() => handleDelete(bill.id)} style={{ padding: '10px', borderRadius: '8px', border: 'none', background: '#fff1f1', color: '#ef4444', cursor: 'pointer' }}>
                                                 <Trash2 size={14} />
                                             </button>
                                         )}
@@ -217,15 +240,22 @@ const BillManagement = () => {
 
             {/* Modal for adding bill */}
             {isModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-                    <div style={{ background: 'white', width: '450px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: window.innerWidth <= 480 ? 'flex-end' : 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div style={{ 
+                        background: 'white', 
+                        width: window.innerWidth <= 480 ? '100%' : '450px', 
+                        maxHeight: window.innerWidth <= 480 ? '90vh' : 'auto',
+                        borderRadius: window.innerWidth <= 480 ? '20px 20px 0 0' : '20px', 
+                        overflow: 'hidden', 
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' 
+                    }}>
                         <div style={{ background: '#0f172a', padding: '20px 25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'white' }}>
                             <h3 style={{ fontWeight: 900, fontSize: '1rem' }}>UPLOAD PHYSICAL BILL</h3>
                             <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><X /></button>
                         </div>
-                        <form onSubmit={handleSaveBill} style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                        <form onSubmit={handleSaveBill} style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '18px', overflowY: 'auto' }}>
                             <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>BILL TITLE / SUPPLIER NAME</label>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>BILL TITLE / SUPPLIER NAME</label>
                                 <input 
                                     required
                                     style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700 }} 
@@ -233,9 +263,9 @@ const BillManagement = () => {
                                     onChange={e => setNewBill({ ...newBill, title: e.target.value })}
                                 />
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : '1fr 1fr', gap: '15px' }}>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>TOTAL AMOUNT (RS)</label>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>TOTAL AMOUNT (RS)</label>
                                     <input 
                                         type="number"
                                         required
@@ -245,7 +275,7 @@ const BillManagement = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>BILL DATE</label>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>BILL DATE</label>
                                     <input 
                                         type="date"
                                         required
@@ -256,7 +286,7 @@ const BillManagement = () => {
                                 </div>
                             </div>
                             <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>ATTACH BILL PHOTO (FREE STORAGE)</label>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>ATTACH BILL PHOTO (FREE STORAGE)</label>
                                 <div style={{ border: '2px dashed #e2e8f0', borderRadius: '12px', height: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
                                     {newBill.image ? (
                                         <img src={newBill.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -275,7 +305,7 @@ const BillManagement = () => {
                                 </div>
                             </div>
                             <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>ADDITIONAL NOTES</label>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>ADDITIONAL NOTES</label>
                                 <textarea 
                                     style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, minHeight: '60px' }} 
                                     value={newBill.note} 
@@ -296,35 +326,70 @@ const BillManagement = () => {
             {/* Viewer Modal */}
             {viewBill && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-                    <div style={{ background: 'white', width: '90vw', maxWidth: '800px', borderRadius: '20px', overflow: 'hidden', display: 'flex', height: '80vh' }}>
-                        <div style={{ flex: 1, background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                    <div style={{ 
+                        background: 'white', 
+                        width: '95vw', 
+                        maxWidth: '900px', 
+                        borderRadius: '20px', 
+                        overflow: 'hidden', 
+                        display: 'flex', 
+                        flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                        height: window.innerWidth <= 768 ? '95vh' : '80vh' 
+                    }}>
+                        <div style={{ 
+                            flex: 1, 
+                            background: '#1e293b', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            overflow: 'hidden',
+                            position: 'relative',
+                            minHeight: window.innerWidth <= 768 ? '50%' : 'auto'
+                        }}>
                             <img src={viewBill.image} alt="Full Bill" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                            {window.innerWidth <= 768 && (
+                                <button onClick={() => setViewBill(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.2)', border: 'none', padding: '10px', borderRadius: '50%', cursor: 'pointer', color: 'white', backdropFilter: 'blur(5px)' }}><X size={24} /></button>
+                            )}
                         </div>
-                        <div style={{ width: '300px', padding: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ 
+                            width: window.innerWidth <= 768 ? '100%' : '320px', 
+                            padding: window.innerWidth <= 480 ? '20px' : '30px', 
+                            display: 'flex', 
+                            flexDirection: 'column', 
+                            gap: '15px', 
+                            overflowY: 'auto' 
+                        }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <h3 style={{ fontWeight: 950, fontSize: '1.2rem' }}>Bill Details</h3>
-                                <button onClick={() => setViewBill(null)} style={{ background: '#f1f5f9', border: 'none', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}><X size={20} /></button>
+                                {window.innerWidth > 768 && (
+                                    <button onClick={() => setViewBill(null)} style={{ background: '#f1f5f9', border: 'none', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}><X size={20} /></button>
+                                )}
                             </div>
-                            <div>
-                                <label style={{ fontSize: '0.65rem', fontWeight: 950, color: '#64748b', textTransform: 'uppercase' }}>Supplier / Title</label>
-                                <p style={{ fontWeight: 800, fontSize: '1.1rem' }}>{viewBill.title}</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : 'repeat(auto-fit, minmax(140px, 1fr))', gap: '15px' }}>
+                                <div>
+                                    <label style={{ fontSize: '0.65rem', fontWeight: 950, color: '#64748b', textTransform: 'uppercase' }}>Supplier / Title</label>
+                                    <p style={{ fontWeight: 800, fontSize: '1rem' }}>{viewBill.title}</p>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.65rem', fontWeight: 950, color: '#64748b', textTransform: 'uppercase' }}>Amount Paid</label>
+                                    <p style={{ fontWeight: 950, fontSize: '1.2rem', color: '#059669' }}>Rs {viewBill.amount.toLocaleString()}</p>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '0.65rem', fontWeight: 950, color: '#64748b', textTransform: 'uppercase' }}>Date</label>
+                                    <p style={{ fontWeight: 800, fontSize: '0.9rem' }}>{new Date(viewBill.date).toLocaleDateString()}</p>
+                                </div>
                             </div>
-                            <div>
-                                <label style={{ fontSize: '0.65rem', fontWeight: 950, color: '#64748b', textTransform: 'uppercase' }}>Amount Paid</label>
-                                <p style={{ fontWeight: 950, fontSize: '1.4rem', color: '#059669' }}>Rs {viewBill.amount.toLocaleString()}</p>
-                            </div>
-                            <div>
-                                <label style={{ fontSize: '0.65rem', fontWeight: 950, color: '#64748b', textTransform: 'uppercase' }}>Date</label>
-                                <p style={{ fontWeight: 800 }}>{new Date(viewBill.date).toLocaleDateString(undefined, { dateStyle: 'full' })}</p>
-                            </div>
-                            <div style={{ flex: 1 }}>
+                            <div style={{ flex: 1, borderTop: '1px solid #f1f5f9', paddingTop: '15px' }}>
                                 <label style={{ fontSize: '0.65rem', fontWeight: 950, color: '#64748b', textTransform: 'uppercase' }}>Notes</label>
                                 <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: '1.5' }}>{viewBill.note || 'No notes added to this record.'}</p>
                             </div>
-                            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '20px' }}>
-                                <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>Record ID: {viewBill.id}</p>
-                                <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>Creator: {viewBill.created_by}</p>
+                            <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '15px' }}>
+                                <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>Record ID: #{viewBill.id.toString().slice(-8)}</p>
+                                <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>Operator: {viewBill.created_by || 'System'}</p>
                             </div>
+                            {window.innerWidth <= 768 && (
+                                <button onClick={() => setViewBill(null)} style={{ width: '100%', padding: '15px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 900, marginTop: '10px' }}>CLOSE VIEWER</button>
+                            )}
                         </div>
                     </div>
                 </div>

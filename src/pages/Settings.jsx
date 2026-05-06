@@ -55,10 +55,10 @@ const Settings = () => {
     };
 
     return (
-        <div style={{ maxWidth: '800px', margin: '0 auto', height: '100%', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <header style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ maxWidth: '800px', margin: '0 auto', height: '100%', display: 'flex', flexDirection: 'column', gap: '20px', padding: window.innerWidth <= 768 ? '10px' : '0', overflowY: 'auto' }}>
+            <header style={{ background: 'white', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
                 <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 900 }}>SYSTEM SETTINGS</h2>
+                    <h2 style={{ fontSize: window.innerWidth <= 480 ? '1.2rem' : '1.5rem', fontWeight: 900 }}>SYSTEM SETTINGS</h2>
                     <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Security and profile configurations for {user?.name}.</p>
                 </div>
                 <div style={{ background: 'var(--primary)', color: 'white', padding: '10px', borderRadius: '8px' }}>
@@ -66,9 +66,13 @@ const Settings = () => {
                 </div>
             </header>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '20px' }}>
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 768 ? 'column' : 'row', 
+                gap: '20px' 
+            }}>
                 {/* Side Navigation */}
-                <div className="pos-card" style={{ padding: '10px' }}>
+                <div className="pos-card" style={{ padding: '10px', minWidth: window.innerWidth <= 768 ? '100%' : '300px' }}>
                     <button style={{ width: '100%', padding: '12px', background: '#eff6ff', border: 'none', borderRadius: '6px', color: '#2563eb', fontWeight: 800, textAlign: 'left', display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
                         <Lock size={18} />
                         Security Settings
@@ -107,7 +111,11 @@ const Settings = () => {
                             </div>
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                        <div style={{ 
+                            display: 'grid', 
+                            gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : '1fr 1fr', 
+                            gap: '15px' 
+                        }}>
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>New Password</label>
                                 <input
@@ -157,7 +165,12 @@ const Settings = () => {
                             <p style={{ fontSize: '0.75rem', color: '#64748b' }}>This PIN is required to leave the Sale Terminal and access the Dashboard.</p>
                         </div>
 
-                        <form onSubmit={handleUpdatePin} style={{ display: 'flex', alignItems: 'flex-end', gap: '20px' }}>
+                        <form onSubmit={handleUpdatePin} style={{ 
+                            display: 'flex', 
+                            flexDirection: window.innerWidth <= 480 ? 'column' : 'row', 
+                            alignItems: window.innerWidth <= 480 ? 'stretch' : 'flex-end', 
+                            gap: '20px' 
+                        }}>
                             <div style={{ flex: 1 }}>
                                 <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>New 4-Digit PIN</label>
                                 <div style={{ position: 'relative' }}>

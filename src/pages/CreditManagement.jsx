@@ -160,10 +160,22 @@ const CreditManagement = () => {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '15px', overflow: 'hidden', boxSizing: 'border-box' }}>
             {/* Toolbar */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', background: 'white', padding: '10px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', flexShrink: 0 }}>
+            <header style={{ 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                justifyContent: 'space-between', 
+                alignItems: window.innerWidth <= 768 ? 'stretch' : 'center', 
+                marginBottom: '15px', 
+                background: 'white', 
+                padding: window.innerWidth <= 480 ? '15px' : '10px 20px', 
+                borderRadius: '12px', 
+                border: '1px solid #e2e8f0', 
+                flexShrink: 0,
+                gap: '15px'
+            }}>
                 <div>
-                    <h2 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ background: 'linear-gradient(45deg, #6366f1, #4f46e5)', padding: '5px', borderRadius: '8px', color: 'white' }}><CreditCard size={16} /></div>
+                    <h2 style={{ fontSize: window.innerWidth <= 480 ? '1.1rem' : '1.2rem', fontWeight: 950, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ background: 'linear-gradient(45deg, #6366f1, #4f46e5)', padding: '5px', borderRadius: '8px', color: 'white' }}><CreditCard size={window.innerWidth <= 480 ? 14 : 16} /></div>
                         Executive Khata Hub
                     </h2>
                     <p style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>Receivables: <span style={{ color: '#ef4444' }}>Rs {totals.receivable.toLocaleString()}</span> | Payables: <span style={{ color: '#10b981' }}>Rs {totals.payable.toLocaleString()}</span></p>
@@ -174,7 +186,7 @@ const CreditManagement = () => {
                             setNewCust({ ...newCust, type: khataType });
                             setIsAddModalOpen(true);
                         }}
-                        style={{ background: '#6366f1', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '8px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.75rem' }}
+                        style={{ background: '#6366f1', color: 'white', border: 'none', padding: '10px 16px', borderRadius: '8px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', fontSize: '0.75rem' }}
                     >
                         <UserPlus size={16} /> REGISTER NEW {khataType.toUpperCase()}
                     </button>
@@ -207,91 +219,111 @@ const CreditManagement = () => {
                 ))}
             </div>
 
-            <div style={{ display: 'flex', gap: '15px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', gap: '15px', flex: 1, minHeight: 0, overflow: 'hidden', flexDirection: window.innerWidth <= 1024 ? 'column' : 'row' }}>
                 {/* Left: Customer Selection Wall */}
-                <div style={{ width: '260px', background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
-                    <div className="section-header" style={{ background: '#f8fafc', padding: '10px 15px', fontWeight: 950, color: '#0f172a', borderBottom: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
-                        {khataType === 'Client' ? 'Client List' : 'Company List'}
+                <div style={{ 
+                    width: window.innerWidth <= 1024 ? '100%' : '280px', 
+                    background: 'white', 
+                    borderRadius: '12px', 
+                    border: '1px solid #e2e8f0', 
+                    display: (window.innerWidth <= 1024 && selectedCust) ? 'none' : 'flex', 
+                    flexDirection: 'column', 
+                    overflow: 'hidden', 
+                    flexShrink: 0,
+                    maxHeight: window.innerWidth <= 1024 ? '100%' : 'none'
+                }}>
+                    <div className="section-header" style={{ background: '#f8fafc', padding: '12px 15px', fontWeight: 950, color: '#0f172a', borderBottom: '1px solid #e2e8f0', fontSize: '0.85rem' }}>
+                        {khataType === 'Client' ? 'Client Accounts' : 'Company Accounts'}
                     </div>
-                    <div style={{ padding: '10px', borderBottom: '1px solid #f1f5f9' }}>
+                    <div style={{ padding: '12px', borderBottom: '1px solid #f1f5f9' }}>
                         <div style={{ position: 'relative' }}>
                             <Search size={14} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                             <input
-                                style={{ width: '100%', padding: '8px 10px 8px 35px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.75rem', fontWeight: 600 }}
+                                style={{ width: '100%', padding: '10px 10px 10px 35px', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600 }}
                                 placeholder={`Find ${khataType.toLowerCase()}...`}
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
                             />
                         </div>
                     </div>
-                    <div style={{ overflowY: 'scroll', flex: 1, background: '#fff' }}>
+                    <div style={{ overflowY: 'auto', flex: 1, background: '#fff' }}>
                         {filtered.map(c => (
                             <div
                                 key={c.id}
                                 onClick={() => setSelectedCust(c)}
                                 style={{
-                                    padding: '10px 15px',
+                                    padding: '12px 15px',
                                     borderBottom: '1px solid #f8fafc',
                                     cursor: 'pointer',
-                                    background: selectedCust?.id === c.id ? '#f1f5f9' : 'transparent'
+                                    background: selectedCust?.id === c.id ? '#f1f5f9' : 'transparent',
+                                    transition: 'background 0.2s'
                                 }}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <span style={{ fontWeight: 800, fontSize: '0.8rem', color: '#1e293b' }}>{c.name}</span>
-                                    <span style={{ fontWeight: 950, fontSize: '0.75rem', color: c.balance > 0 ? '#ef4444' : '#10b981' }}>
+                                    <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1e293b' }}>{c.name}</span>
+                                    <span style={{ fontWeight: 950, fontSize: '0.8rem', color: c.balance > 0 ? '#ef4444' : '#10b981' }}>
                                         Rs {c.balance.toLocaleString()}
                                     </span>
                                 </div>
-                                <p style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>{c.phone}</p>
+                                <p style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, marginTop: '3px' }}>{c.phone}</p>
                             </div>
                         ))}
                     </div>
                 </div>
 
                 {/* Right: Account Ledger & Actions */}
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '10px', minHeight: 0 }}>
+                <div style={{ 
+                    flex: 1, 
+                    display: (window.innerWidth <= 1024 && !selectedCust) ? 'none' : 'flex', 
+                    flexDirection: 'column', 
+                    gap: '10px', 
+                    minHeight: 0 
+                }}>
                     {selectedCust ? (
                         <>
                             <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0, flex: 1 }}>
-                                <div style={{ padding: '8px 15px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', flexShrink: 0 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ fontWeight: 950, fontSize: '0.95rem' }}>{selectedCust.name}</span>
-                                        <span style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 800 }}>#{selectedCust.id.toString().slice(-6).toUpperCase()}</span>
-                                        <div style={{ display: 'flex', gap: '4px', marginLeft: '5px' }}>
-                                            <button onClick={() => { setEditData({ ...selectedCust }); setIsEditModalOpen(true); }} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', padding: '2px' }}><Edit3 size={12} /></button>
-                                            <button onClick={() => handleDeleteCustomer(selectedCust.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }}><Trash2 size={12} /></button>
+                                <div style={{ padding: '12px 15px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', flexShrink: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        {window.innerWidth <= 1024 && (
+                                            <button onClick={() => setSelectedCust(null)} style={{ background: '#f1f5f9', border: 'none', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}><X size={16} /></button>
+                                        )}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span style={{ fontWeight: 950, fontSize: '0.95rem' }}>{selectedCust.name}</span>
+                                            <div style={{ display: 'flex', gap: '6px' }}>
+                                                <button onClick={() => { setEditData({ ...selectedCust }); setIsEditModalOpen(true); }} style={{ background: 'none', border: 'none', color: '#6366f1', cursor: 'pointer', padding: '2px' }}><Edit3 size={14} /></button>
+                                                <button onClick={() => handleDeleteCustomer(selectedCust.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px' }}><Trash2 size={14} /></button>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', fontSize: '0.7rem', fontWeight: 700, color: '#475569' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', fontSize: '0.75rem', fontWeight: 700, color: '#475569', flexWrap: 'wrap' }}>
                                         <span>📞 {selectedCust.phone}</span>
-                                        {selectedCust.email && <span style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '10px' }}>📧 {selectedCust.email}</span>}
-                                        <span style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: '10px', color: selectedCust.balance > 0 ? '#ef4444' : '#10b981', fontWeight: 950 }}>
-                                            BAL: Rs {selectedCust.balance.toLocaleString()}
+                                        <span style={{ color: selectedCust.balance > 0 ? '#ef4444' : '#10b981', fontWeight: 950 }}>
+                                            BALANCE: Rs {selectedCust.balance.toLocaleString()}
                                         </span>
                                     </div>
-                                    {selectedCust.address && (
-                                        <div style={{ width: '100%', borderTop: '1px dashed #e2e8f0', paddingTop: '4px', fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>
-                                            🏠 {selectedCust.address}
-                                        </div>
-                                    )}
                                 </div>
-                                <div style={{ flex: 1, overflowY: 'scroll', background: '#fff' }}>
-                                    <table className="erp-table">
+                                {selectedCust.address && (
+                                    <div style={{ padding: '4px 15px', borderBottom: '1px dashed #e2e8f0', fontSize: '0.65rem', color: '#64748b', fontWeight: 600 }}>
+                                        🏠 {selectedCust.address}
+                                    </div>
+                                )}
+                                <div style={{ flex: 1, overflowX: 'auto', background: '#fff' }}>
+                                    <table className="erp-table" style={{ minWidth: '600px' }}>
                                         <thead style={{ position: 'sticky', top: 0, zIndex: 1, backgroundColor: 'white' }}>
                                             <tr style={{ background: '#f8fafc' }}>
-                                                <th style={{ padding: '6px 15px', fontWeight: 900, fontSize: '0.7rem' }}>Date & Time</th>
-                                                <th style={{ padding: '6px 15px', fontWeight: 900, fontSize: '0.7rem' }}>Note / Detail</th>
-                                                <th style={{ padding: '6px 15px', fontWeight: 900, fontSize: '0.7rem' }}>Debit (+)</th>
-                                                <th style={{ padding: '6px 15px', fontWeight: 900, fontSize: '0.7rem' }}>Credit (-)</th>
+                                                <th style={{ padding: '10px 15px', fontWeight: 900, fontSize: '0.75rem' }}>Date & Time</th>
+                                                <th style={{ padding: '10px 15px', fontWeight: 900, fontSize: '0.75rem' }}>Note / Detail</th>
+                                                <th style={{ padding: '10px 15px', fontWeight: 900, fontSize: '0.75rem' }}>Debit (+)</th>
+                                                <th style={{ padding: '10px 15px', fontWeight: 900, fontSize: '0.75rem' }}>Credit (-)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {selectedCust.history.map((h, i) => (
                                                 <tr key={i} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                                    <td style={{ padding: '5px 15px', fontSize: '0.65rem', fontWeight: 600 }}>{new Date(h.date).toLocaleDateString()} {new Date(h.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</td>
-                                                    <td style={{ padding: '5px 15px', fontSize: '0.7rem', fontWeight: 700 }}>{h.note}</td>
-                                                    <td style={{ padding: '5px 15px', color: '#ef4444', fontWeight: 900, fontSize: '0.7rem' }}>{h.type === 'credit' ? `Rs ${h.amount.toLocaleString()}` : '-'}</td>
-                                                    <td style={{ padding: '5px 15px', color: '#10b981', fontWeight: 900, fontSize: '0.7rem' }}>{h.type === 'payment' ? `Rs ${h.amount.toLocaleString()}` : '-'}</td>
+                                                    <td style={{ padding: '8px 15px', fontSize: '0.75rem', fontWeight: 600 }}>{new Date(h.date).toLocaleDateString()}</td>
+                                                    <td style={{ padding: '8px 15px', fontSize: '0.75rem', fontWeight: 700 }}>{h.note}</td>
+                                                    <td style={{ padding: '8px 15px', color: '#ef4444', fontWeight: 900, fontSize: '0.8rem' }}>{h.type === 'credit' ? `Rs ${h.amount.toLocaleString()}` : '—'}</td>
+                                                    <td style={{ padding: '8px 15px', color: '#10b981', fontWeight: 900, fontSize: '0.8rem' }}>{h.type === 'payment' ? `Rs ${h.amount.toLocaleString()}` : '—'}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -300,56 +332,54 @@ const CreditManagement = () => {
                             </div>
 
                             {/* Action Panel */}
-                            <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '12px', flexShrink: 0 }}>
+                            <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '15px', flexShrink: 0 }}>
                                 {isAdmin ? (
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 1fr auto', gap: '15px', height: '100%' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 600 ? '1fr' : '1fr 1.5fr auto auto', gap: '15px' }}>
                                         <div>
-                                            <label style={{ fontSize: '0.6rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '4px' }}>AMOUNT</label>
+                                            <label style={{ fontSize: '0.65rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '5px' }}>AMOUNT (Rs)</label>
                                             <input
                                                 type="number"
-                                                style={{ width: '100%', padding: '10px', fontSize: '1.1rem', fontWeight: 950, color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none' }}
+                                                style={{ width: '100%', padding: '12px', fontSize: '1.2rem', fontWeight: 950, color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: '10px', outline: 'none' }}
                                                 value={amount}
                                                 onChange={e => setAmount(e.target.value)}
-                                                placeholder="0"
+                                                placeholder="0.00"
                                             />
                                         </div>
                                         <div>
-                                            <label style={{ fontSize: '0.6rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '4px' }}>NOTE / REMARK</label>
+                                            <label style={{ fontSize: '0.65rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '5px' }}>NOTE / REMARK</label>
                                             <input
-                                                style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, outline: 'none', fontSize: '0.8rem' }}
+                                                style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, outline: 'none', fontSize: '0.9rem' }}
                                                 value={note}
                                                 onChange={e => setNote(e.target.value)}
-                                                placeholder="Transaction reason..."
+                                                placeholder="e.g. For Feed Purchase..."
                                             />
                                         </div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                        <div style={{ display: 'flex', gap: '10px' }}>
                                             <button
                                                 onClick={() => handleAction('payment')}
-                                                style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', fontSize: '0.65rem' }}
+                                                style={{ flex: 1, background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.7rem', padding: '10px 15px' }}
                                             >
-                                                <ArrowDownCircle size={16} />
+                                                <ArrowDownCircle size={18} />
                                                 PAYMENT
                                             </button>
                                             <button
                                                 onClick={() => handleAction('credit')}
-                                                style={{ background: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', fontSize: '0.65rem' }}
+                                                style={{ flex: 1, background: '#ef4444', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '0.7rem', padding: '10px 15px' }}
                                             >
-                                                <ArrowUpCircle size={16} />
+                                                <ArrowUpCircle size={18} />
                                                 DEBT/BILL
                                             </button>
                                         </div>
-                                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                                            <button
-                                                onClick={() => {
-                                                    setIsExportModalOpen(true);
-                                                    setExportPreviewMode('pdf');
-                                                }}
-                                                style={{ background: '#f1f5f9', color: '#6366f1', border: '1px solid #e2e8f0', borderRadius: '10px', height: '100%', padding: '0 15px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                                            >
-                                                <Share2 size={18} />
-                                                <span style={{ fontSize: '0.55rem', fontWeight: 900 }}>SHARE</span>
-                                            </button>
-                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setIsExportModalOpen(true);
+                                                setExportPreviewMode('pdf');
+                                            }}
+                                            style={{ background: '#f8fafc', color: '#6366f1', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 20px', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                                        >
+                                            <Share2 size={18} />
+                                            <span style={{ fontSize: '0.65rem', fontWeight: 900 }}>SHARE</span>
+                                        </button>
                                     </div>
                                 ) : (
                                     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
@@ -367,85 +397,113 @@ const CreditManagement = () => {
                     )}
                 </div>
             </div>
-
-            {/* LEDGER EXPORT MODAL */}
+                      {/* LEDGER EXPORT MODAL */}
             {isExportModalOpen && selectedCust && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-                    <div style={{ background: 'white', width: '100%', maxWidth: '900px', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', display: 'grid', gridTemplateColumns: '280px 1fr', height: '85vh' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
+                    <div style={{ 
+                        background: 'white', 
+                        width: '100%', 
+                        maxWidth: '1000px', 
+                        borderRadius: '24px', 
+                        overflow: 'hidden', 
+                        boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', 
+                        display: 'flex', 
+                        flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                        height: window.innerWidth <= 768 ? '95vh' : '85vh' 
+                    }}>
                         {/* SIDEBAR OPTIONS */}
-                        <div style={{ background: '#f8fafc', padding: '30px', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
-                            <div style={{ marginBottom: '30px' }}>
-                                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#0f172a' }}>Statement Export</h3>
-                                <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Export ledger for {selectedCust.name}.</p>
+                        <div style={{ 
+                            width: window.innerWidth <= 768 ? '100%' : '280px',
+                            background: '#f8fafc', 
+                            padding: '25px', 
+                            borderRight: window.innerWidth <= 768 ? 'none' : '1px solid #e2e8f0', 
+                            borderBottom: window.innerWidth <= 768 ? '1px solid #e2e8f0' : 'none',
+                            display: 'flex', 
+                            flexDirection: 'column' 
+                        }}>
+                            <div style={{ marginBottom: '20px' }}>
+                                <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a' }}>Export Options</h3>
+                                <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Generate statement for {selectedCust.name}</p>
                             </div>
-
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1 }}>
-                                <button onClick={() => setExportPreviewMode('image')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '15px', background: exportPreviewMode === 'image' ? '#0f172a' : 'white', color: exportPreviewMode === 'image' ? 'white' : '#1e293b', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, textAlign: 'left' }}>
-                                    <MessageCircle size={20} color="#10b981" /> WhatsApp Summary
+ 
+                            <div style={{ display: 'flex', flexDirection: window.innerWidth <= 768 ? 'row' : 'column', gap: '10px', flexWrap: 'wrap' }}>
+                                <button onClick={() => setExportPreviewMode('image')} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: exportPreviewMode === 'image' ? '#0f172a' : 'white', color: exportPreviewMode === 'image' ? 'white' : '#1e293b', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem' }}>
+                                    <MessageCircle size={18} color="#10b981" /> WhatsApp
                                 </button>
-                                <button onClick={() => setExportPreviewMode('pdf')} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '15px', background: exportPreviewMode === 'pdf' ? '#0f172a' : 'white', color: exportPreviewMode === 'pdf' ? 'white' : '#1e293b', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, textAlign: 'left' }}>
-                                    <FileText size={20} color="#ef4444" /> Print / PDF Ledger
+                                <button onClick={() => setExportPreviewMode('pdf')} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: exportPreviewMode === 'pdf' ? '#0f172a' : 'white', color: exportPreviewMode === 'pdf' ? 'white' : '#1e293b', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem' }}>
+                                    <FileText size={18} color="#ef4444" /> Print/PDF
                                 </button>
-                                <button onClick={() => handleExportExcel(selectedCust)} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '15px', background: 'white', color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, textAlign: 'left' }}>
-                                    <Download size={20} color="#0ea5e9" /> Download Excel
+                                <button onClick={() => handleExportExcel(selectedCust)} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px', padding: '12px', background: 'white', color: '#1e293b', border: '1px solid #e2e8f0', borderRadius: '12px', cursor: 'pointer', fontWeight: 800, fontSize: '0.8rem' }}>
+                                    <Download size={18} color="#0ea5e9" /> Excel
                                 </button>
                             </div>
-
-                            <button onClick={() => setIsExportModalOpen(false)} style={{ width: '100%', padding: '15px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: 900, color: '#64748b', cursor: 'pointer', marginTop: '20px' }}>Close Preview</button>
+ 
+                            <button onClick={() => setIsExportModalOpen(false)} style={{ width: '100%', padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: 900, color: '#64748b', cursor: 'pointer', marginTop: 'auto' }}>Close</button>
                         </div>
-
+ 
                         {/* PREVIEW AREA */}
-                        <div style={{ padding: '40px', overflowY: 'auto', background: '#94a3b8' }}>
-                            <div id="ledger-document" style={{ background: 'white', width: '100%', minHeight: '100%', padding: '50px', boxShadow: '0 10px 30px rgba(0,0,0,0.2)', position: 'relative', boxSizing: 'border-box' }}>
+                        <div style={{ flex: 1, padding: window.innerWidth <= 480 ? '10px' : '30px', overflowY: 'auto', background: '#94a3b8', display: 'flex', justifyContent: 'center' }}>
+                            <div id="ledger-document" style={{ 
+                                background: 'white', 
+                                width: '100%', 
+                                maxWidth: '800px',
+                                minHeight: '100%', 
+                                padding: window.innerWidth <= 480 ? '20px' : '50px', 
+                                boxShadow: '0 10px 30px rgba(0,0,0,0.2)', 
+                                position: 'relative', 
+                                boxSizing: 'border-box' 
+                            }}>
                                 {/* LOGO & HEADER */}
-                                <div style={{ textAlign: 'center', marginBottom: '40px', borderBottom: '2px solid #0f172a', paddingBottom: '20px' }}>
-                                    <img src={logo} alt="Clinic Logo" style={{ height: '70px', marginBottom: '10px' }} />
-                                    <h1 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#0f172a', letterSpacing: '-1px' }}>BILAL VETERINARY CLINIC</h1>
-                                    <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 800, textTransform: 'uppercase' }}>Near HBL Bank Khoka Market Hasilpur | 0305-6699899</p>
+                                <div style={{ textAlign: 'center', marginBottom: '30px', borderBottom: '2px solid #0f172a', paddingBottom: '15px' }}>
+                                    <img src={logo} alt="Clinic Logo" style={{ height: '50px', marginBottom: '10px' }} />
+                                    <h1 style={{ fontSize: '1.4rem', fontWeight: 950, color: '#0f172a', letterSpacing: '-1px' }}>BILAL VETERINARY CLINIC</h1>
+                                    <p style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 800 }}>RESULTS DRIVEN VETERINARY CARE | HASILPUR</p>
                                 </div>
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px' }}>
+ 
+                                <div style={{ display: 'flex', flexDirection: window.innerWidth <= 480 ? 'column' : 'row', justifyContent: 'space-between', marginBottom: '30px', gap: '15px' }}>
                                     <div>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block' }}>ACCOUNT STATEMENT</span>
-                                        <h2 style={{ fontSize: '1.4rem', fontWeight: 950, color: '#1e293b' }}>{selectedCust.name}</h2>
-                                        <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 700 }}>Phone: {selectedCust.phone}</p>
+                                        <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#64748b', display: 'block' }}>ACCOUNT STATEMENT</span>
+                                        <h2 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#1e293b' }}>{selectedCust.name}</h2>
+                                        <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>Phone: {selectedCust.phone}</p>
                                     </div>
-                                    <div style={{ textAlign: 'right' }}>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block' }}>NET BALANCE</span>
-                                        <h2 style={{ fontSize: '2rem', fontWeight: 950, color: selectedCust.balance > 0 ? '#ef4444' : '#10b981' }}>Rs {selectedCust.balance.toLocaleString()}</h2>
-                                        <span style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>Generated: {new Date().toLocaleDateString()}</span>
+                                    <div style={{ textAlign: window.innerWidth <= 480 ? 'left' : 'right' }}>
+                                        <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#64748b', display: 'block' }}>NET BALANCE</span>
+                                        <h2 style={{ fontSize: '1.6rem', fontWeight: 950, color: selectedCust.balance > 0 ? '#ef4444' : '#10b981' }}>Rs {selectedCust.balance.toLocaleString()}</h2>
+                                        <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#94a3b8' }}>As of: {new Date().toLocaleDateString()}</span>
                                     </div>
                                 </div>
-
-                                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '50px' }}>
-                                    <thead>
-                                        <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #0f172a' }}>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 900 }}>DATE</th>
-                                            <th style={{ padding: '12px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 900 }}>DESCRIPTION</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 900 }}>DEBIT (+)</th>
-                                            <th style={{ padding: '12px', textAlign: 'right', fontSize: '0.75rem', fontWeight: 900 }}>CREDIT (-)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {selectedCust.history.map((h, i) => (
-                                            <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                                <td style={{ padding: '12px', fontSize: '0.8rem', fontWeight: 700 }}>{new Date(h.date).toLocaleDateString()}</td>
-                                                <td style={{ padding: '12px', fontSize: '0.8rem' }}>{h.note}</td>
-                                                <td style={{ padding: '12px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 900, color: '#ef4444' }}>{h.type === 'credit' ? `Rs ${h.amount.toLocaleString()}` : '—'}</td>
-                                                <td style={{ padding: '12px', textAlign: 'right', fontSize: '0.85rem', fontWeight: 900, color: '#10b981' }}>{h.type === 'payment' ? `Rs ${h.amount.toLocaleString()}` : '—'}</td>
+ 
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '40px', minWidth: '500px' }}>
+                                        <thead>
+                                            <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #0f172a' }}>
+                                                <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 900 }}>DATE</th>
+                                                <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 900 }}>DESCRIPTION</th>
+                                                <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.7rem', fontWeight: 900 }}>DEBIT (+)</th>
+                                                <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.7rem', fontWeight: 900 }}>CREDIT (-)</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-
-                                <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <p style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>Thank you for your business. Please clear outstanding dues.</p>
+                                        </thead>
+                                        <tbody>
+                                            {selectedCust.history.map((h, i) => (
+                                                <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                    <td style={{ padding: '10px', fontSize: '0.75rem', fontWeight: 700 }}>{new Date(h.date).toLocaleDateString()}</td>
+                                                    <td style={{ padding: '10px', fontSize: '0.75rem' }}>{h.note}</td>
+                                                    <td style={{ padding: '10px', textAlign: 'right', fontSize: '0.8rem', fontWeight: 900, color: '#ef4444' }}>{h.type === 'credit' ? `Rs ${h.amount.toLocaleString()}` : '—'}</td>
+                                                    <td style={{ padding: '10px', textAlign: 'right', fontSize: '0.8rem', fontWeight: 900, color: '#10b981' }}>{h.type === 'payment' ? `Rs ${h.amount.toLocaleString()}` : '—'}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+ 
+                                <div style={{ borderTop: '2px solid #e2e8f0', paddingTop: '15px', display: 'flex', flexDirection: window.innerWidth <= 480 ? 'column' : 'row', justifyContent: 'space-between', alignItems: 'center', gap: '15px' }}>
+                                    <p style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>Digitally generated by Bilal Vet Clinic.</p>
                                     <button
                                         onClick={() => exportPreviewMode === 'image' ? handleExportWhatsApp(selectedCust) : handlePrintLedger()}
-                                        style={{ background: '#0f172a', color: 'white', border: 'none', padding: '15px 30px', borderRadius: '12px', fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                                        style={{ width: window.innerWidth <= 480 ? '100%' : 'auto', background: '#0f172a', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '12px', fontWeight: 950, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
                                     >
-                                        {exportPreviewMode === 'image' ? <MessageCircle size={20} /> : <FileText size={20} />}
-                                        {exportPreviewMode === 'image' ? 'SEND VIA WHATSAPP' : 'PRINT / SAVE AS PDF'}
+                                        {exportPreviewMode === 'image' ? <MessageCircle size={18} /> : <FileText size={18} />}
+                                        {exportPreviewMode === 'image' ? 'SEND WHATSAPP' : 'PRINT LEDGER'}
                                     </button>
                                 </div>
                             </div>

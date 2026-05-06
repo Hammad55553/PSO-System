@@ -80,6 +80,14 @@ const POS = () => {
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [pendingPrint, setPendingPrint] = useState(true);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+    const [mobileTab, setMobileTab] = useState('browse'); // browse, cart
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 1024);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
 
     const searchInputRef = useRef(null);
@@ -117,11 +125,11 @@ const POS = () => {
             }
         }
     }, [searchTerm]);
- 
+
     // GHOST AUTOCOMPLETE LOGIC
     useEffect(() => {
         if (searchTerm && searchTerm.length >= 2) {
-            const match = inventory.find(i => 
+            const match = inventory.find(i =>
                 i.name.toLowerCase().startsWith(searchTerm.toLowerCase())
             );
             if (match) {
@@ -236,10 +244,10 @@ const POS = () => {
 
     const handleCheckout = async (shouldPrint = true) => {
         if (!activeShift || isCheckingOut) return;
-        
+
         if (cart.length === 0) { toast.error('Add items first!'); return; }
         if (paymentMethod === 'Credit' && !selectedCustomer) { toast.error('Select an Account!'); return; }
-        
+
         // ONLINE & CARD VALIDATION
         if ((paymentMethod === 'Online' || paymentMethod === 'Card') && !customerPhone) {
             toast.error(`CUSTOMER PHONE IS MANDATORY FOR ${paymentMethod.toUpperCase()} PAYMENT!`);
@@ -248,7 +256,7 @@ const POS = () => {
 
         setIsCheckingOut(true);
         const saleId = crypto.randomUUID(); // Generate ID locally for offline safety
-        
+
         const saleData = {
             id: saleId,
             customer_name: selectedCustomer ? selectedCustomer.name : (walkingCustomerName || 'WALK-IN CUSTOMER'),
@@ -327,7 +335,7 @@ const POS = () => {
                 if (cartItem) {
                     const newStock = invItem.stock - cartItem.quantity;
                     const newTotalSold = (invItem.total_sold || 0) + cartItem.quantity;
-                    
+
                     // Fire-and-forget database update (errors handled via sync queue)
                     supabase.from('inventory')
                         .update({ stock: newStock, total_sold: newTotalSold })
@@ -335,12 +343,12 @@ const POS = () => {
                         .then(({ error }) => {
                             if (error) addToSyncQueue('inventory', 'update', { stock: newStock, total_sold: newTotalSold }, invItem.id);
                         });
-                        
+
                     return { ...invItem, stock: newStock, total_sold: newTotalSold };
                 }
                 return invItem;
             });
-            
+
             dispatch(setInventory(updatedInventory));
 
             // 5. Update Shift Stats
@@ -381,7 +389,7 @@ const POS = () => {
                     .from('customers')
                     .update({ balance: newBalance, history: newHistory })
                     .eq('id', selectedCustomer.id);
-                
+
                 if (custError) addToSyncQueue('customers', 'update', { balance: newBalance, history: newHistory }, selectedCustomer.id);
             }
 
@@ -425,92 +433,142 @@ const POS = () => {
 
     return (
         <>
-            <div className="no-print" style={{ display: 'grid', gridTemplateRows: '50px 1fr', height: '100%', background: '#e2e8f0', overflow: 'hidden' }}>
+            <div className="no-print" style={{ display: 'grid', gridTemplateRows: isMobile ? '50px 1fr' : '50px 1fr', height: '100%', background: '#e2e8f0', overflow: 'hidden' }}>
 
                 {/* 1. TOP ERP BAR */}
-                <header style={{ background: '#064e3b', color: 'white', display: 'flex', alignItems: 'center', padding: '0 20px', gap: '30px' }}>
+                <header style={{
+                    background: '#064e3b',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: isMobile ? '10px 12px' : '0 20px', 
+                    gap: isMobile ? '6px' : '30px',
+                    height: isMobile ? '50px' : '50px'
+
+                }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ background: '#10b981', padding: '4px', borderRadius: '4px' }}><Zap size={18} color="white" /></div>
-                        <span style={{ fontWeight: 900, fontSize: '0.9rem', letterSpacing: '0.5px' }}>MEDICAL POS <small style={{ color: '#34d399', fontWeight: 700 }}>PHARMACY EDITION</small></span>
+                        <span style={{ fontWeight: 950, fontSize: isMobile ? '0.75rem' : '0.9rem', letterSpacing: '0.5px' }}>MEDICAL POS <small style={{ color: '#34d399', fontWeight: 700 }}>PHARMACY EDITION</small></span>
                     </div>
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: '25px', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#a7f3d0' }}>
-                            <div style={{ width: '8px', height: '8px', background: '#34d399', borderRadius: '50%' }}></div>
-                            PHARMACIST ON DUTY
+
+                    {!isMobile ? (
+                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '25px', alignItems: 'center' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#a7f3d0' }}>
+                                <div style={{ width: '8px', height: '8px', background: '#34d399', borderRadius: '50%' }}></div>
+                                PHARMACIST ON DUTY
+                            </div>
+                            <div style={{ height: '20px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}></div>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>
+                                SESSION: {activeShift ? new Date(activeShift.start_time || activeShift.startTime).toLocaleTimeString() : 'OFFLINE'}
+                            </span>
+                            <div style={{ height: '20px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}></div>
+                            <button
+                                onClick={() => dispatch(openCalculator())}
+                                style={{ background: '#10b981', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '4px', fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer' }}
+                            >
+                                <Hash size={14} /> CALCULATOR (F3)
+                            </button>
                         </div>
-                        <div style={{ height: '20px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}></div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>
-                            SESSION: {activeShift ? new Date(activeShift.start_time || activeShift.startTime).toLocaleTimeString() : 'NO ACTIVE SESSION'}
-                        </span>
-                        <div style={{ height: '20px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}></div>
-                        <button 
-                            onClick={() => dispatch(openCalculator())}
-                            style={{ 
-                                background: '#10b981', 
-                                border: 'none', 
-                                color: 'white', 
-                                padding: '6px 12px', 
-                                borderRadius: '4px', 
-                                fontWeight: 900, 
-                                fontSize: '0.7rem', 
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                transition: 'all 0.2s'
-                            }}
-                            onMouseOver={(e) => e.currentTarget.style.background = '#059669'}
-                            onMouseOut={(e) => e.currentTarget.style.background = '#10b981'}
-                        >
-                            <Hash size={14} /> CALCULATOR (F3)
-                        </button>
-                    </div>
+                    ) : (
+                        <div style={{ marginLeft: 'auto', display: 'flex', gap: '10px' }}>
+                            <button onClick={() => dispatch(openCalculator())} style={{ background: '#10b981', border: 'none', color: 'white', padding: '8px', borderRadius: '6px' }}><Hash size={18} /></button>
+                            <button onClick={() => setShowParkedList(true)} style={{ background: '#334155', border: 'none', color: 'white', padding: '8px', borderRadius: '6px' }}><Pause size={18} /></button>
+                        </div>
+                    )}
                 </header>
 
                 {/* 2. OPERATIONAL GRID */}
-                <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr 350px', gap: '2px', padding: '2px', overflow: 'hidden' }}>
+                <div style={{
+                    display: 'grid', 
+                    gridTemplateColumns: isMobile ? '1fr' : '220px 1fr 350px', 
+                    gap: isMobile ? '10px' : '2px', 
+                    padding: isMobile ? '0' : '2px', 
+                    overflow: 'hidden',
+                    gridTemplateRows: isMobile ? 'auto 1fr' : 'none'
+                }}>
 
-                    {/* LEFT SIDEBAR: CATEGORIES & QUICK ACCESS */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: '#e2e8f0' }}>
-                        <div style={{ background: '#065f46', color: 'white', padding: '12px 15px', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <LayoutGrid size={14} /> DRUG CATEGORIES
-                        </div>
-                        <div style={{ background: 'white', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-                            {categories.map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => setSelectedCategory(cat)}
-                                    style={{
-                                        padding: '15px 20px',
-                                        border: 'none',
-                                        borderBottom: '1px solid #f1f5f9',
-                                        background: selectedCategory === cat ? '#ecfdf5' : 'transparent',
-                                        color: selectedCategory === cat ? '#059669' : '#475569',
-                                        textAlign: 'left',
-                                        fontWeight: 700,
-                                        fontSize: '0.8rem',
-                                        cursor: 'pointer',
-                                        borderLeft: selectedCategory === cat ? '4px solid #059669' : '4px solid transparent'
-                                    }}
-                                >
-                                    {cat?.toUpperCase()}
-                                </button>
-                            ))}
-                        </div>
-                        <div style={{ background: '#064e3b', padding: '15px', color: 'white' }}>
-                            <p style={{ fontSize: '0.65rem', fontWeight: 900, color: '#34d399', marginBottom: '10px' }}>HOTKEYS</p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.65rem', fontWeight: 700 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F1:</span> <span>Search Drug</span></div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F2:</span> <span>Patient</span></div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F3:</span> <span>Calculator</span></div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F10:</span> <span>Print Bill</span></div>
-                                <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F4:</span> <span>Hold Bill</span></div>
+                    {/* LEFT SIDEBAR: CATEGORIES */}
+                    {!isMobile ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: '#e2e8f0' }}>
+                            <div style={{ background: '#065f46', color: 'white', padding: '12px 15px', fontSize: '0.75rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <LayoutGrid size={14} /> DRUG CATEGORIES
+                            </div>
+                            <div style={{ background: 'white', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setSelectedCategory(cat)}
+                                        style={{
+                                            padding: '15px 20px',
+                                            border: 'none',
+                                            borderBottom: '1px solid #f1f5f9',
+                                            background: selectedCategory === cat ? '#ecfdf5' : 'transparent',
+                                            color: selectedCategory === cat ? '#059669' : '#475569',
+                                            textAlign: 'left',
+                                            fontWeight: 700,
+                                            fontSize: '0.8rem',
+                                            cursor: 'pointer',
+                                            borderLeft: selectedCategory === cat ? '4px solid #059669' : '4px solid transparent'
+                                        }}
+                                    >
+                                        {cat?.toUpperCase()}
+                                    </button>
+                                ))}
+                            </div>
+                            <div style={{ background: '#064e3b', padding: '15px', color: 'white' }}>
+                                <p style={{ fontSize: '0.65rem', fontWeight: 900, color: '#34d399', marginBottom: '10px' }}>HOTKEYS</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.65rem', fontWeight: 700 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F1:</span> <span>Search Drug</span></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F2:</span> <span>Patient</span></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F3:</span> <span>Calculator</span></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F10:</span> <span>Print Bill</span></div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F4:</span> <span>Hold Bill</span></div>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    ) : (
+                        mobileTab === 'browse' && (
+                            <div style={{
+                                background: '#065f46',
+                                padding: '10px 5px',
+                                height: 'fit-content',
+                                overflowX: 'auto',
+                                whiteSpace: 'nowrap',
+                                scrollbarWidth: 'none',
+                                msOverflowStyle: 'none'
+                            }}>
+                                {categories.map(cat => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setSelectedCategory(cat)}
+                                        style={{
+                                            display: 'inline-block',
+                                            padding: '5px 12px',
+                                            margin: '0 8px',
+                                            background: selectedCategory === cat ? '#10b981' : 'rgba(255,255,255,0.1)',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '15px',
+                                            fontSize: '0.65rem',
+                                            fontWeight: 850,
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        {cat?.toUpperCase()}
+                                    </button>
+                                ))}
+                            </div>
+                        )
+                    )}
 
                     {/* MIDDLE: SEARCH & ITEM LIST */}
-                    <div style={{ display: 'grid', gridTemplateRows: 'auto 1fr auto', gap: '1px', background: '#e2e8f0', overflow: 'hidden' }}>
+                    <div style={{
+                        display: (isMobile && mobileTab !== 'browse') ? 'none' : 'grid',
+                        gridTemplateRows: 'auto 1fr auto',
+                        gap: '1px',
+                        background: '#e2e8f0',
+                        overflow: 'hidden'
+                    }}>
 
                         {/* SEARCH HEADER */}
                         <div style={{ background: 'white', padding: '15px', display: 'flex', gap: '10px' }}>
@@ -519,13 +577,13 @@ const POS = () => {
                                 <div style={{ position: 'relative', width: '100%' }}>
                                     {/* GHOST SUGGESTION */}
                                     {suggestion && searchTerm && (
-                                        <div style={{ 
-                                            position: 'absolute', 
-                                            left: '50px', 
-                                            top: '15px', 
-                                            fontSize: '1.1rem', 
-                                            fontWeight: 800, 
-                                            color: '#cbd5e1', 
+                                        <div style={{
+                                            position: 'absolute',
+                                            left: '50px',
+                                            top: '15px',
+                                            fontSize: '1.1rem',
+                                            fontWeight: 800,
+                                            color: '#cbd5e1',
                                             pointerEvents: 'none',
                                             whiteSpace: 'pre'
                                         }}>
@@ -678,7 +736,7 @@ const POS = () => {
                                                 {item.quantity > (inventory.find(i => i.id === item.id)?.stock || 0) ? (
                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                                         <label style={{ fontSize: '0.5rem', color: '#64748b', fontWeight: 900 }}>SALE PRICE</label>
-                                                        <input 
+                                                        <input
                                                             type="number"
                                                             style={{ width: '80px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 900, fontSize: '0.9rem' }}
                                                             value={item.price}
@@ -732,22 +790,43 @@ const POS = () => {
                         </div>
 
                         {/* MIDDLE FOOTER */}
-                        <div style={{ background: '#f8fafc', padding: '12px 20px', borderTop: '2px solid #e2e8f0', display: 'flex', gap: '15px' }}>
-                            <button onClick={handleParkBill} style={{ padding: '10px 20px', background: '#334155', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Pause size={16} /> HOLD BILL
-                            </button>
-                            <button onClick={() => setShowParkedList(true)} style={{ padding: '10px 20px', background: '#334155', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Play size={16} /> RECALL ({parkedBills.length})
-                            </button>
-                            <div style={{ marginLeft: 'auto', display: 'flex', gap: '30px', alignItems: 'center' }}>
-                                <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#1e293b' }}>ITEMS: {cart.length}</span>
-                                <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#1e293b' }}>TOTAL QTY: {cart.reduce((acc, c) => acc + c.quantity, 0)}</span>
+                        {!isMobile && (
+                            <div style={{ background: '#f8fafc', padding: '12px 20px', borderTop: '2px solid #e2e8f0', display: 'flex', gap: '15px' }}>
+                                <button onClick={handleParkBill} style={{ padding: '10px 20px', background: '#334155', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Pause size={16} /> HOLD BILL
+                                </button>
+                                <button onClick={() => setShowParkedList(true)} style={{ padding: '10px 20px', background: '#334155', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Play size={16} /> RECALL ({parkedBills.length})
+                                </button>
+                                <div style={{ marginLeft: 'auto', display: 'flex', gap: '30px', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#1e293b' }}>ITEMS: {cart.length}</span>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: 900, color: '#1e293b' }}>TOTAL QTY: {cart.reduce((acc, c) => acc + c.quantity, 0)}</span>
+                                </div>
                             </div>
-                        </div>
+                        )}
+
+                        {isMobile && (
+                            <div style={{ background: 'white', borderTop: '2px solid #e2e8f0', display: 'flex', padding: '10px 12px', gap: '15px' }}>
+                                <button onClick={() => setMobileTab('browse')} style={{ flex: 1, padding: '5px', background: mobileTab === 'browse' ? '#ecfdf5' : 'transparent', color: mobileTab === 'browse' ? '#059669' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: 950, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '0.65rem' }}>
+                                    <Search size={16} /> BROWSE
+                                </button>
+                                <button onClick={() => setMobileTab('cart')} style={{ flex: 1, padding: '5px', background: mobileTab === 'cart' ? '#ecfdf5' : 'transparent', color: mobileTab === 'cart' ? '#059669' : '#64748b', border: 'none', borderRadius: '8px', fontWeight: 950, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', position: 'relative', fontSize: '0.65rem' }}>
+                                    <ShoppingCart size={16} /> CART
+                                    {cart.length > 0 && <span style={{ position: 'absolute', top: '2px', right: '25%', background: '#ef4444', color: 'white', fontSize: '0.55rem', padding: '1px 4px', borderRadius: '10px' }}>{cart.length}</span>}
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* RIGHT: SETTLEMENT PANEL */}
-                    <div style={{ background: 'white', borderLeft: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+                    <div style={{
+                        display: (isMobile && mobileTab !== 'cart') ? 'none' : 'flex',
+                        flexDirection: 'column',
+                        background: 'white',
+                        height: '100%',
+                        overflow: 'hidden',
+                        borderLeft: isMobile ? 'none' : '1px solid #e2e8f0'
+                    }}>
 
                         {/* COMPACT HEADER WITH PATIENT ICON */}
                         <div style={{ padding: '12px 20px', background: '#ecfdf5', borderBottom: '1px solid #d1fae5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -779,6 +858,27 @@ const POS = () => {
                             {selectedCustomer && (
                                 <button onClick={() => setSelectedCustomer(null)} style={{ background: '#fee2e2', border: 'none', color: '#ef4444', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     <X size={14} />
+                                </button>
+                            )}
+
+                            {isMobile && (
+                                <button
+                                    onClick={() => setMobileTab('browse')}
+                                    style={{
+                                        background: '#065f46',
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '8px',
+                                        padding: '10px 15px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: 900,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                                    }}
+                                >
+                                    <Plus size={16} /> ADD ITEMS
                                 </button>
                             )}
                         </div>
@@ -887,20 +987,20 @@ const POS = () => {
                                                     { id: 'Easypaisa', icon: <img src={easypaisaLogo} alt="EP" style={{ height: '18px', objectFit: 'contain' }} />, color: '#10b981' },
                                                     { id: 'Bank', icon: <Banknote size={18} />, color: '#0ea5e9' }
                                                 ].map(p => (
-                                                    <button 
+                                                    <button
                                                         key={p.id}
                                                         type="button"
                                                         onClick={() => setOnlineProvider(p.id)}
-                                                        style={{ 
-                                                            flex: 1, 
-                                                            padding: '10px 4px', 
-                                                            borderRadius: '8px', 
-                                                            border: '2px solid', 
-                                                            borderColor: onlineProvider === p.id ? p.color : '#e2e8f0', 
-                                                            background: 'white', 
-                                                            color: onlineProvider === p.id ? p.color : '#64748b', 
-                                                            fontSize: '0.6rem', 
-                                                            fontWeight: 900, 
+                                                        style={{
+                                                            flex: 1,
+                                                            padding: '10px 4px',
+                                                            borderRadius: '8px',
+                                                            border: '2px solid',
+                                                            borderColor: onlineProvider === p.id ? p.color : '#e2e8f0',
+                                                            background: 'white',
+                                                            color: onlineProvider === p.id ? p.color : '#64748b',
+                                                            fontSize: '0.6rem',
+                                                            fontWeight: 900,
                                                             cursor: 'pointer',
                                                             display: 'flex',
                                                             flexDirection: 'column',
@@ -919,7 +1019,7 @@ const POS = () => {
                                         {paymentMethod === 'Online' && (
                                             <div>
                                                 <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#0369a1', display: 'block', marginBottom: '4px' }}>RECEIVED ON (WHICH NUMBER?)</label>
-                                                <input 
+                                                <input
                                                     placeholder="Enter recipient number/ID"
                                                     style={{ width: '100%', padding: '8px', border: '1px solid #bae6fd', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700 }}
                                                     value={onlineAccount}
@@ -929,7 +1029,7 @@ const POS = () => {
                                         )}
                                         <div>
                                             <label style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ef4444', display: 'block', marginBottom: '4px' }}>CUSTOMER NUMBER (MANDATORY*)</label>
-                                            <input 
+                                            <input
                                                 placeholder="Customer phone for contact"
                                                 style={{ width: '100%', padding: '8px', border: '1px solid #fecaca', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, background: '#fff5f5' }}
                                                 value={customerPhone}
@@ -1027,9 +1127,9 @@ const POS = () => {
                                 </div>
                                 <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
                                     {customers.map(c => (
-                                        <button 
-                                            key={c.id} 
-                                            onClick={() => { setSelectedCustomer(c); setShowCustomerSearch(false); }} 
+                                        <button
+                                            key={c.id}
+                                            onClick={() => { setSelectedCustomer(c); setShowCustomerSearch(false); }}
                                             style={{ width: '100%', textAlign: 'left', padding: '0', border: 'none', background: 'transparent', cursor: 'pointer' }}
                                         >
                                             <div style={{ padding: '20px', border: '1px solid #f1f5f9', borderRadius: '8px', background: '#f8fafc' }} onMouseOver={e => e.currentTarget.style.borderColor = '#10b981'} onMouseOut={e => e.currentTarget.style.borderColor = '#f1f5f9'}>
@@ -1095,15 +1195,15 @@ const POS = () => {
                                         await handleCheckout(pendingPrint);
                                         setShowConfirm(false);
                                     }}
-                                    style={{ 
-                                        flex: 1, 
-                                        padding: '15px', 
-                                        background: isCheckingOut ? '#94a3b8' : (pendingPrint ? '#10b981' : '#3b82f6'), 
-                                        color: 'white', 
-                                        border: 'none', 
-                                        borderRadius: '12px', 
-                                        fontWeight: 900, 
-                                        cursor: isCheckingOut ? 'not-allowed' : 'pointer', 
+                                    style={{
+                                        flex: 1,
+                                        padding: '15px',
+                                        background: isCheckingOut ? '#94a3b8' : (pendingPrint ? '#10b981' : '#3b82f6'),
+                                        color: 'white',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        fontWeight: 900,
+                                        cursor: isCheckingOut ? 'not-allowed' : 'pointer',
                                         boxShadow: isCheckingOut ? 'none' : '0 10px 15px -3px rgba(0,0,0,0.1)',
                                         display: 'flex',
                                         alignItems: 'center',

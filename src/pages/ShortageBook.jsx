@@ -82,32 +82,88 @@ const ShortageBook = () => {
     };
 
     return (
-        <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '20px', padding: '25px', backgroundColor: '#f4f7fa' }}>
+        <div style={{ 
+            height: '100%', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: window.innerWidth <= 480 ? '15px' : '20px', 
+            padding: window.innerWidth <= 480 ? '15px' : '25px', 
+            backgroundColor: '#f4f7fa',
+            overflow: 'hidden',
+            boxSizing: 'border-box'
+        }}>
             
             {/* HEADER */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '20px 25px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <header style={{ 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                justifyContent: 'space-between', 
+                alignItems: window.innerWidth <= 768 ? 'stretch' : 'center', 
+                background: 'white', 
+                padding: window.innerWidth <= 480 ? '15px 20px' : '20px 25px', 
+                borderRadius: '16px', 
+                border: '1px solid #e2e8f0', 
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                gap: '15px'
+            }}>
                 <div>
-                    <h2 style={{ fontSize: '1.6rem', fontWeight: 950, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <BookOpen size={28} color="#6366f1" /> SHORTAGE & DEMAND BOOK
+                    <h2 style={{ 
+                        fontSize: window.innerWidth <= 480 ? '1.2rem' : '1.6rem', 
+                        fontWeight: 950, 
+                        color: '#1e293b', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '12px' 
+                    }}>
+                        <div style={{ background: '#e0e7ff', padding: '8px', borderRadius: '10px' }}>
+                            <BookOpen size={window.innerWidth <= 480 ? 20 : 24} color="#6366f1" />
+                        </div>
+                        SHORTAGE BOOK
                     </h2>
-                    <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600, marginTop: '5px' }}>Track items requested by customers that are out of stock.</p>
+                    <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>Track out-of-stock items and customer demands.</p>
                 </div>
                 <button 
                     onClick={() => setIsModalOpen(true)}
-                    style={{ background: '#6366f1', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    style={{ 
+                        background: '#6366f1', 
+                        color: 'white', 
+                        border: 'none', 
+                        padding: '12px 20px', 
+                        borderRadius: '10px', 
+                        fontWeight: 800, 
+                        cursor: 'pointer', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        gap: '8px',
+                        fontSize: '0.85rem'
+                    }}
                 >
-                    <Plus size={18} /> ADD NEW DEMAND
+                    <Plus size={18} /> NEW DEMAND
                 </button>
             </header>
 
             {/* SEARCH */}
-            <div style={{ background: 'white', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <div style={{ 
+                background: 'white', 
+                padding: window.innerWidth <= 480 ? '12px' : '15px', 
+                borderRadius: '12px', 
+                border: '1px solid #e2e8f0' 
+            }}>
                 <div style={{ position: 'relative' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '15px', top: '12px', color: '#64748b' }} />
+                    <Search size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
                     <input 
                         type="text" 
-                        placeholder="Search for requested medicines..." 
-                        style={{ width: '100%', padding: '12px 15px 12px 45px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 600 }}
+                        placeholder="Search requested medicines..." 
+                        style={{ 
+                            width: '100%', 
+                            padding: '12px 15px 12px 45px', 
+                            border: '1px solid #cbd5e1', 
+                            borderRadius: '8px', 
+                            fontSize: '0.85rem', 
+                            fontWeight: 600,
+                            outline: 'none'
+                        }}
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -115,57 +171,70 @@ const ShortageBook = () => {
             </div>
 
             {/* LIST */}
-            <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+            <div style={{ 
+                flex: 1, 
+                overflowY: 'auto', 
+                display: 'grid', 
+                gridTemplateColumns: window.innerWidth <= 640 ? '1fr' : 'repeat(auto-fill, minmax(320px, 1fr))', 
+                gap: '20px',
+                paddingBottom: '20px'
+            }}>
                 {filteredItems.map((item, idx) => (
                     <motion.div 
                         key={item.id}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.05 }}
                         style={{ 
                             background: 'white', 
-                            padding: '20px', 
+                            padding: window.innerWidth <= 480 ? '15px' : '20px', 
                             borderRadius: '16px', 
                             border: '1px solid #e2e8f0', 
                             boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
-                            position: 'relative'
+                            position: 'relative',
+                            display: 'flex',
+                            flexDirection: 'column'
                         }}
                     >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', alignItems: 'center' }}>
                             <span style={{ 
-                                fontSize: '0.65rem', 
+                                fontSize: '0.6rem', 
                                 fontWeight: 900, 
-                                padding: '4px 8px', 
+                                padding: '4px 10px', 
                                 background: item.status === 'resolved' ? '#ecfdf5' : item.status === 'ordered' ? '#eff6ff' : '#fff7ed', 
                                 color: item.status === 'resolved' ? '#059669' : item.status === 'ordered' ? '#2563eb' : '#c2410c',
-                                borderRadius: '6px',
-                                textTransform: 'uppercase'
+                                borderRadius: '20px',
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px'
                             }}>
                                 {item.status}
                             </span>
-                            <div style={{ display: 'flex', gap: '5px' }}>
-                                <button onClick={() => handleDelete(item.id)} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' }}><Trash2 size={16} /></button>
-                            </div>
+                            <button 
+                                onClick={() => handleDelete(item.id)} 
+                                style={{ background: '#f8fafc', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '6px', borderRadius: '8px' }}
+                            >
+                                <Trash2 size={14} />
+                            </button>
                         </div>
 
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: '#1e293b', marginBottom: '10px' }}>{item.name}</h3>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#1e293b', marginBottom: '12px', lineHeight: 1.3 }}>{item.name}</h3>
                         
-                        <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
-                            <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', flex: 1 }}>
-                                <p style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 800 }}>DEMAND COUNT</p>
-                                <p style={{ fontSize: '1.1rem', fontWeight: 950, color: '#6366f1' }}>{item.demand_count || 1} Times</p>
+                        <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                            <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '10px', flex: 1 }}>
+                                <p style={{ fontSize: '0.55rem', color: '#64748b', fontWeight: 800 }}>DEMAND</p>
+                                <p style={{ fontSize: '0.95rem', fontWeight: 950, color: '#6366f1' }}>{item.demand_count || 1} <span style={{ fontSize: '0.7rem' }}>x</span></p>
                             </div>
-                            <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '8px', flex: 1 }}>
-                                <p style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 800 }}>LAST REQUEST</p>
-                                <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569' }}>{new Date(item.created_at).toLocaleDateString()}</p>
+                            <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '10px', flex: 1 }}>
+                                <p style={{ fontSize: '0.55rem', color: '#64748b', fontWeight: 800 }}>DATE</p>
+                                <p style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569' }}>{new Date(item.created_at).toLocaleDateString()}</p>
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '10px' }}>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
                             {item.status === 'pending' && (
                                 <button 
                                     onClick={() => handleStatusChange(item.id, 'ordered')}
-                                    style={{ flex: 1, padding: '10px', background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}
+                                    style={{ flex: 1, padding: '10px', background: '#eff6ff', color: '#2563eb', border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '0.7rem', cursor: 'pointer' }}
                                 >
                                     MARK ORDERED
                                 </button>
@@ -173,7 +242,7 @@ const ShortageBook = () => {
                             {item.status !== 'resolved' && (
                                 <button 
                                     onClick={() => handleStatusChange(item.id, 'resolved')}
-                                    style={{ flex: 1, padding: '10px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer' }}
+                                    style={{ flex: 1, padding: '10px', background: '#ecfdf5', color: '#059669', border: 'none', borderRadius: '10px', fontWeight: 800, fontSize: '0.7rem', cursor: 'pointer' }}
                                 >
                                     RESOLVED
                                 </button>
@@ -185,28 +254,73 @@ const ShortageBook = () => {
 
             {/* MANUAL ADD MODAL */}
             {isModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ background: 'white', width: '450px', borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ 
+                    position: 'fixed', 
+                    inset: 0, 
+                    background: 'rgba(15, 23, 42, 0.7)', 
+                    backdropFilter: 'blur(4px)',
+                    zIndex: 1000, 
+                    display: 'flex', 
+                    alignItems: window.innerWidth <= 480 ? 'flex-end' : 'center', 
+                    justifyContent: 'center',
+                    padding: window.innerWidth <= 480 ? '0' : '20px'
+                }}>
+                    <motion.div 
+                        initial={{ y: 50, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        style={{ 
+                            background: 'white', 
+                            width: '100%', 
+                            maxWidth: '450px', 
+                            borderRadius: window.innerWidth <= 480 ? '24px 24px 0 0' : '16px', 
+                            overflow: 'hidden',
+                            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+                        }}
+                    >
                         <div style={{ background: '#6366f1', padding: '20px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ fontWeight: 900 }}>NEW DEMAND ENTRY</h3>
-                            <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><X size={24} /></button>
+                            <h3 style={{ fontWeight: 900, fontSize: '1rem' }}>NEW DEMAND ENTRY</h3>
+                            <button onClick={() => setIsModalOpen(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', padding: '5px', borderRadius: '8px' }}><X size={20} /></button>
                         </div>
                         <form onSubmit={handleAddManual} style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>MEDICINE NAME / DESCRIPTION</label>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>MEDICINE NAME / DESCRIPTION</label>
                                 <input 
                                     autoFocus
-                                    placeholder="Enter what the customer asked for..." 
-                                    style={{ width: '100%', padding: '15px', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '1rem', fontWeight: 700 }}
+                                    placeholder="e.g. Panadol 500mg (10 strips)..." 
+                                    style={{ 
+                                        width: '100%', 
+                                        padding: '15px', 
+                                        border: '1px solid #e2e8f0', 
+                                        borderRadius: '12px', 
+                                        fontSize: '1rem', 
+                                        fontWeight: 700,
+                                        outline: 'none',
+                                        background: '#f8fafc'
+                                    }}
                                     value={newItemName}
                                     onChange={(e) => setNewItemName(e.target.value)}
                                 />
                             </div>
-                            <button type="submit" style={{ width: '100%', padding: '15px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '1rem', cursor: 'pointer' }}>
+                            <button 
+                                type="submit" 
+                                style={{ 
+                                    width: '100%', 
+                                    padding: '15px', 
+                                    background: '#6366f1', 
+                                    color: 'white', 
+                                    border: 'none', 
+                                    borderRadius: '12px', 
+                                    fontWeight: 900, 
+                                    fontSize: '1rem', 
+                                    cursor: 'pointer',
+                                    boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)'
+                                }}
+                            >
                                 ADD TO SHORTAGE BOOK
                             </button>
+                            {window.innerWidth <= 480 && <div style={{ height: '20px' }} />}
                         </form>
-                    </div>
+                    </motion.div>
                 </div>
             )}
         </div>

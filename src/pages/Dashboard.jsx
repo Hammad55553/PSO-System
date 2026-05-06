@@ -91,312 +91,251 @@ const Dashboard = () => {
     const maxRevenue = Math.max(...revenueTrend.map(d => d.revenue)) || 1000;
 
     return (
-        <div style={{ height: '100%', overflowY: 'auto', padding: '25px', backgroundColor: '#f4f7fa', color: '#1e293b' }}>
+        <div style={{ 
+            height: '100%', 
+            overflowY: 'auto', 
+            padding: window.innerWidth <= 480 ? '15px' : '25px', 
+            backgroundColor: '#f8fafc', 
+            color: '#1e293b' 
+        }}>
             
             {/* 1. TOP PREMIUM HEADER */}
             <motion.header 
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}
+                style={{ 
+                    display: 'flex', 
+                    flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                    justifyContent: 'space-between', 
+                    alignItems: window.innerWidth <= 768 ? 'flex-start' : 'center', 
+                    marginBottom: '30px',
+                    gap: '15px'
+                }}
             >
                 <div>
-                    <h2 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#0f172a', letterSpacing: '-0.8px' }}>
-                        Command Terminal <span style={{ color: '#10b981', fontSize: '0.8rem', fontWeight: 800, verticalAlign: 'middle', background: '#ecfdf5', padding: '4px 10px', borderRadius: '20px', marginLeft: '10px' }}>PRO EDITION</span>
+                    <h2 style={{ fontSize: window.innerWidth <= 480 ? '1.3rem' : '1.8rem', fontWeight: 950, color: '#0f172a', letterSpacing: '-0.8px' }}>
+                        Command Terminal <span style={{ color: '#10b981', fontSize: '0.7rem', fontWeight: 800, verticalAlign: 'middle', background: '#ecfdf5', padding: '4px 10px', borderRadius: '20px', marginLeft: '5px' }}>PRO</span>
                     </h2>
-                    <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600, marginTop: '5px' }}>
-                        Welcome back, <span style={{ color: '#0f172a', fontWeight: 900 }}>{user?.name || 'Administrator'}</span>
+                    <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600, marginTop: '2px' }}>
+                        Welcome, <span style={{ color: '#0f172a', fontWeight: 900 }}>{user?.name || 'Administrator'}</span>
                     </p>
                 </div>
-                <div style={{ display: 'flex', gap: '15px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'white', padding: '10px 20px', borderRadius: '14px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                        <div style={{ width: '10px', background: activeShift ? '#10b981' : '#f59e0b', borderRadius: '5px', height: '10px' }}></div>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 800 }}>{activeShift ? 'LIVE OPERATIONS' : 'TERMINAL IDLE'}</span>
+                <div style={{ display: 'flex', gap: '10px', width: window.innerWidth <= 768 ? '100%' : 'auto' }}>
+                    <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '10px', 
+                        background: 'white', 
+                        padding: '10px 15px', 
+                        borderRadius: '12px', 
+                        border: '1px solid #e2e8f0', 
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                        flex: window.innerWidth <= 768 ? 1 : 'none',
+                        justifyContent: 'center'
+                    }}>
+                        <div style={{ width: '8px', background: activeShift ? '#10b981' : '#f59e0b', borderRadius: '50%', height: '8px' }}></div>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 900, letterSpacing: '0.5px' }}>{activeShift ? 'OPERATIONAL' : 'IDLE'}</span>
                     </div>
                 </div>
             </motion.header>
 
             {/* 2. STATS OVERVIEW CARDS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : 'repeat(auto-fit, minmax(220px, 1fr))', 
+                gap: '15px', 
+                marginBottom: '30px' 
+            }}>
                 {[
-                    { label: isAdmin ? 'TOTAL CLINIC REVENUE' : 'MY REVENUE', value: `Rs ${totalSales.toLocaleString()}`, color: '#6366f1', icon: <DollarSign size={20} />, sub: isAdmin ? 'Global gross billing' : 'Total cumulative sales' },
-                    ...(isAdmin ? [{ label: 'NET CLINIC PROFIT', value: `Rs ${totalProfit.toLocaleString()}`, color: '#059669', icon: <TrendingUp size={20} />, sub: 'After cost & discounts' }] : []),
-                    { label: "TODAY'S TURNOVER", value: `Rs ${todayRevenue.toLocaleString()}`, color: '#10b981', icon: <BarChart3 size={20} />, sub: `${todaySales.length} Transactions completed` },
-                    ...(isAdmin ? [{ label: 'TOTAL TAX COLLECTED', value: `Rs ${filteredHistory.reduce((s, x) => s + (x.tax || 0), 0).toLocaleString()}`, color: '#06b6d4', icon: <DollarSign size={20} />, sub: 'GST/Tax accumulation' }] : []),
-                    { label: 'ACTIVE UDHAAR', value: `Rs ${totalReceivables.toLocaleString()}`, color: '#f59e0b', icon: <Users size={20} />, sub: 'Outstanding patient balance' },
-                    { label: 'INVENTORY HEALTH', value: `${items.length} SKUs`, color: '#ec4899', icon: <Package size={20} />, sub: `${items.filter(i => i.stock < 10).length} Items low stock` }
+                    { label: isAdmin ? 'TOTAL REVENUE' : 'MY REVENUE', value: `Rs ${totalSales.toLocaleString()}`, color: '#6366f1', icon: <DollarSign size={20} />, sub: 'Gross billing' },
+                    ...(isAdmin ? [{ label: 'NET PROFIT', value: `Rs ${totalProfit.toLocaleString()}`, color: '#059669', icon: <TrendingUp size={20} />, sub: 'After cost/discounts' }] : []),
+                    { label: "TODAY'S TURNOVER", value: `Rs ${todayRevenue.toLocaleString()}`, color: '#10b981', icon: <BarChart3 size={20} />, sub: `${todaySales.length} Invoices` },
+                    { label: 'ACTIVE UDHAAR', value: `Rs ${totalReceivables.toLocaleString()}`, color: '#f59e0b', icon: <Users size={20} />, sub: 'Patient balance' },
+                    { label: 'STOCK HEALTH', value: `${items.length} SKUs`, color: '#ec4899', icon: <Package size={20} />, sub: `${items.filter(i => i.stock < 10).length} Low stock` }
                 ].map((stat, i) => (
                     <motion.div 
                         key={i}
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ delay: i * 0.05 }}
-                        whileHover={{ y: -5 }}
-                        style={{ background: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)', position: 'relative', overflow: 'hidden' }}
+                        style={{ 
+                            background: 'white', 
+                            padding: '20px', 
+                            borderRadius: '20px', 
+                            border: '1px solid #e2e8f0', 
+                            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)',
+                            position: 'relative'
+                        }}
                     >
-                        <div style={{ position: 'absolute', right: '-10px', top: '-10px', opacity: 0.1, color: stat.color }}>{stat.icon}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-                            <div style={{ background: `${stat.color}15`, padding: '8px', borderRadius: '10px' }}>{React.cloneElement(stat.icon, { color: stat.color, size: 18 })}</div>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                            <div style={{ background: `${stat.color}15`, padding: '6px', borderRadius: '8px' }}>{React.cloneElement(stat.icon, { color: stat.color, size: 16 })}</div>
+                            <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#64748b', textTransform: 'uppercase' }}>{stat.label}</span>
                         </div>
-                        <h3 style={{ fontSize: '1.65rem', fontWeight: 950, color: '#0f172a' }}>{stat.value}</h3>
-                        <p style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: '5px', fontWeight: 700 }}>{stat.sub}</p>
+                        <h3 style={{ fontSize: '1.4rem', fontWeight: 950, color: '#0f172a' }}>{stat.value}</h3>
+                        <p style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '4px', fontWeight: 700 }}>{stat.sub}</p>
                     </motion.div>
                 ))}
             </div>
 
             {/* 3. CHARTING SECTION */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1.2fr', gap: '25px', marginBottom: '30px' }}>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: window.innerWidth <= 1024 ? '1fr' : '1.8fr 1.2fr', 
+                gap: '20px', 
+                marginBottom: '30px' 
+            }}>
                 
                 {/* REVENUE BAR CHART */}
                 <motion.div 
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    style={{ background: 'white', borderRadius: '24px', padding: '30px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)', position: 'relative' }}
+                    style={{ background: 'white', borderRadius: '24px', padding: window.innerWidth <= 480 ? '20px' : '30px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}
                 >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                         <div>
-                            <h4 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <TrendingUp size={20} color="#6366f1" /> Revenue Volatility Trend
+                            <h4 style={{ fontSize: '1.1rem', fontWeight: 950, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <TrendingUp size={18} color="#6366f1" /> Revenue Trend
                             </h4>
-                            <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>Interactive performance monitoring for last 7 days</p>
+                            <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Daily performance monitor</p>
                         </div>
-                        <div style={{ background: '#f8fafc', padding: '8px 15px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 900, color: '#6366f1', border: '1px solid #e2e8f0' }}>7-DAY PULSE</div>
                     </div>
 
-                    <div style={{ height: '240px', display: 'flex', alignItems: 'flex-end', gap: '20px', paddingBottom: '30px', position: 'relative' }}>
-                        {/* Grid Lines */}
-                        {[0, 1, 2, 3].map((_, i) => (
-                            <div key={i} style={{ position: 'absolute', bottom: `${(i + 1) * 25}%`, left: 0, right: 0, borderTop: '1px dashed #f1f5f9', zIndex: 0 }}></div>
-                        ))}
-
+                    <div style={{ height: '220px', display: 'flex', alignItems: 'flex-end', gap: window.innerWidth <= 480 ? '8px' : '15px', paddingBottom: '20px', position: 'relative' }}>
                         {revenueTrend.map((data, i) => {
                             const isToday = i === 6;
                             return (
-                                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: '15px', position: 'relative', zIndex: 1 }}>
+                                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: '10px' }}>
                                     <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', height: '100%', alignItems: 'flex-end' }}>
                                         <motion.div 
                                             initial={{ height: 0 }}
                                             animate={{ height: `${(data.revenue / maxRevenue) * 100}%` }}
-                                            transition={{ duration: 1, delay: i * 0.1, ease: "circOut" }}
-                                            whileHover={{ scaleX: 1.1, filter: 'brightness(1.1)' }}
                                             style={{ 
-                                                width: '65%', 
-                                                maxWidth: '50px',
-                                                background: isToday 
-                                                    ? 'linear-gradient(180deg, #10b981 0%, #059669 100%)' 
-                                                    : 'linear-gradient(180deg, #6366f1 0%, #4f46e5 100%)', 
-                                                borderRadius: '10px 10px 6px 6px',
-                                                boxShadow: isToday 
-                                                    ? '0 10px 15px -3px rgba(16, 185, 129, 0.3)' 
-                                                    : '0 10px 15px -3px rgba(99, 102, 241, 0.2)',
-                                                position: 'relative',
-                                                cursor: 'pointer'
+                                                width: '100%', 
+                                                maxWidth: '35px',
+                                                background: isToday ? '#10b981' : '#6366f1', 
+                                                borderRadius: '6px 6px 4px 4px',
+                                                boxShadow: isToday ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none'
                                             }}
-                                        >
-                                            {/* Tooltip on Hover */}
-                                            <motion.div 
-                                                initial={{ opacity: 0, y: 10 }}
-                                                whileHover={{ opacity: 1, y: -5 }}
-                                                style={{ 
-                                                    position: 'absolute', 
-                                                    top: '-45px', 
-                                                    left: '50%', 
-                                                    transform: 'translateX(-50%)', 
-                                                    background: '#1e293b', 
-                                                    color: 'white', 
-                                                    padding: '6px 12px', 
-                                                    borderRadius: '8px', 
-                                                    fontSize: '0.75rem', 
-                                                    fontWeight: 900,
-                                                    whiteSpace: 'nowrap',
-                                                    pointerEvents: 'none',
-                                                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.2)',
-                                                    zIndex: 10
-                                                }}
-                                            >
-                                                Rs {data.revenue.toLocaleString()}
-                                                <div style={{ position: 'absolute', bottom: '-4px', left: '50%', width: '8px', height: '8px', background: '#1e293b', transform: 'translateX(-50%) rotate(45deg)' }}></div>
-                                            </motion.div>
-
-                                            {/* Glow effect for today */}
-                                            {isToday && (
-                                                <div style={{ position: 'absolute', inset: 0, background: 'inherit', borderRadius: 'inherit', filter: 'blur(10px)', opacity: 0.4, zIndex: -1 }}></div>
-                                            )}
-                                        </motion.div>
+                                        />
                                     </div>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 900, color: isToday ? '#10b981' : '#64748b', textTransform: 'uppercase' }}>{data.day}</span>
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 900, color: isToday ? '#10b981' : '#64748b' }}>{data.day}</span>
                                 </div>
                             );
                         })}
                     </div>
                 </motion.div>
 
-                {/* PAYMENT DISTRIBUTION DONUT */}
+                {/* PAYMENT DISTRIBUTION */}
                 <motion.div 
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    style={{ background: 'white', borderRadius: '24px', padding: '30px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}
+                    style={{ background: 'white', borderRadius: '24px', padding: window.innerWidth <= 480 ? '20px' : '30px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}
                 >
-                    <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0f172a', marginBottom: '5px' }}>Settlement Distribution</h4>
-                    <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginBottom: '30px' }}>Breakdown of transaction channels</p>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: 950, color: '#0f172a', marginBottom: '4px' }}>Settlement Distribution</h4>
+                    <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginBottom: '20px' }}>Revenue channels</p>
 
-                    <div style={{ position: 'relative', width: '180px', height: '180px', margin: '0 auto 30px' }}>
-                        <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
-                            {paymentStats.map((stat, i) => {
-                                let offset = 0;
-                                for(let j=0; j<i; j++) offset += paymentStats[j].percent;
-                                return (
-                                    <motion.circle
-                                        key={i}
-                                        cx="50" cy="50" r="40"
-                                        fill="transparent"
-                                        stroke={stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : stat.label === 'Card' ? '#6366f1' : '#0ea5e9'}
-                                        strokeWidth="10"
-                                        strokeDasharray={`${stat.percent} 100`}
-                                        strokeDashoffset={-offset}
-                                        initial={{ pathLength: 0 }}
-                                        animate={{ pathLength: 1 }}
-                                        transition={{ duration: 1.5, ease: "easeOut" }}
-                                    />
-                                );
-                            })}
-                        </svg>
-                        <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                            <span style={{ fontSize: '1.5rem', fontWeight: 950, color: '#1e293b' }}>{filteredHistory.length}</span>
-                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748b' }}>TOTAL TX</span>
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {paymentStats.map((stat, i) => (
-                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : stat.label === 'Card' ? '#6366f1' : '#0ea5e9' }}></div>
-                                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>{stat.label} Settlement</span>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <div style={{ fontSize: '0.85rem', fontWeight: 900, color: '#1e293b' }}>Rs {stat.value.toLocaleString()}</div>
-                                    <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>{stat.percent.toFixed(1)}%</div>
-                                </div>
+                    <div style={{ display: 'flex', flexDirection: window.innerWidth <= 480 ? 'column' : 'row', gap: '20px', alignItems: 'center' }}>
+                        <div style={{ position: 'relative', width: '140px', height: '140px', flexShrink: 0 }}>
+                            <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                                {paymentStats.map((stat, i) => {
+                                    let offset = 0;
+                                    for(let j=0; j<i; j++) offset += paymentStats[j].percent;
+                                    return (
+                                        <circle
+                                            key={i}
+                                            cx="50" cy="50" r="40"
+                                            fill="transparent"
+                                            stroke={stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : stat.label === 'Card' ? '#6366f1' : '#0ea5e9'}
+                                            strokeWidth="12"
+                                            strokeDasharray={`${stat.percent} 100`}
+                                            strokeDashoffset={-offset}
+                                        />
+                                    );
+                                })}
+                            </svg>
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                                <span style={{ fontSize: '1.2rem', fontWeight: 950 }}>{filteredHistory.length}</span>
+                                <span style={{ fontSize: '0.5rem', fontWeight: 900, color: '#64748b' }}>TOTAL TX</span>
                             </div>
-                        ))}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, width: '100%' }}>
+                            {paymentStats.map((stat, i) => (
+                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f8fafc', borderRadius: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : stat.label === 'Card' ? '#6366f1' : '#0ea5e9' }}></div>
+                                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569' }}>{stat.label}</span>
+                                    </div>
+                                    <span style={{ fontSize: '0.8rem', fontWeight: 950, color: '#0f172a' }}>{stat.percent.toFixed(0)}%</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </motion.div>
             </div>
 
             {/* 4. MODULAR FEED SECTION */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 350px', gap: '25px' }}>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: window.innerWidth <= 1024 ? '1fr' : '1fr 350px', 
+                gap: '20px' 
+            }}>
                 
                 {/* RECENT SETTLEMENTS */}
                 <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '24px', overflow: 'hidden' }}>
-                    <div style={{ padding: '20px 25px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h5 style={{ fontWeight: 950, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <ClipboardList size={20} color="#6366f1" /> RECENT SETTLEMENTS
-                        </h5>
-                        <button 
-                            onClick={() => navigate('/history')}
-                            style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
-                        >
-                            VIEW ALL <ChevronRight size={14} />
-                        </button>
+                    <div style={{ padding: '15px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h5 style={{ fontWeight: 950, fontSize: '0.9rem', color: '#0f172a' }}>RECENT SETTLEMENTS</h5>
+                        <button onClick={() => navigate('/history')} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}>ALL <ChevronRight size={14} /></button>
                     </div>
-                    <div style={{ padding: '10px' }}>
-                        <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <tbody>
                                 {filteredHistory.slice(0, 6).map((sale, i) => (
-                                    <motion.tr 
-                                        key={sale.id}
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: i * 0.05 }}
-                                        style={{ background: '#fcfdfe' }}
-                                    >
-                                        <td style={{ padding: '15px', borderRadius: '12px 0 0 12px', fontWeight: 900, fontSize: '0.7rem', color: '#6366f1', verticalAlign: 'middle' }}>
-                                            <div style={{ background: '#eef2ff', padding: '4px 8px', borderRadius: '6px', display: 'inline-block' }}>
-                                                {sale.seller_name ? sale.seller_name.split(' ')[0].toUpperCase() : 'SALE'}
-                                            </div>
+                                    <tr key={sale.id} style={{ borderBottom: i === 5 ? 'none' : '1px solid #f1f5f9' }}>
+                                        <td style={{ padding: '15px 20px' }}>
+                                            <div style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.85rem' }}>{sale.customer_name || 'WALK-IN'}</div>
+                                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>{sale.payment_method} Settlement</div>
                                         </td>
-                                        <td style={{ padding: '12px 15px' }}>
-                                            <div style={{ fontWeight: 900, color: '#1e293b', fontSize: '0.9rem' }}>{sale.customer_name || 'CASH PATIENT'}</div>
-                                            <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>{sale.payment_method || 'Cash'} Settlement</div>
+                                        <td style={{ padding: '15px 20px', fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
+                                            {new Date(sale.created_at).toLocaleDateString()}
                                         </td>
-                                        <td style={{ padding: '15px' }}>
-                                            <div style={{ fontSize: '0.65rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                <Calendar size={10} />
-                                                {new Date(sale.created_at).toLocaleDateString()} {new Date(sale.created_at).toLocaleTimeString()}
-                                            </div>
+                                        <td style={{ padding: '15px 20px', textAlign: 'right', fontWeight: 950, color: '#0f172a' }}>
+                                            Rs {sale.total.toLocaleString()}
                                         </td>
-                                        <td style={{ padding: '15px', textAlign: 'right', borderRadius: '0 12px 12px 0', fontWeight: 950, fontSize: '1rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '15px' }}>
-                                                Rs {sale.total.toLocaleString()}
-                                                {isAdmin && (
-                                                    <button 
-                                                        onClick={async (e) => {
-                                                            e.stopPropagation();
-                                                            if (window.confirm('Delete this transaction permanently?')) {
-                                                                const { deleteSale } = await import('../store/slices/salesSlice');
-                                                                
-                                                                dispatch(deleteSale(sale.id));
-                                                                if (navigator.onLine) {
-                                                                    try {
-                                                                        await supabase.from('sales').delete().eq('id', sale.id);
-                                                                        toast.success('Transaction Purged');
-                                                                    } catch (err) { console.error(err); }
-                                                                }
-                                                            }
-                                                        }}
-                                                        style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '5px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                                        onMouseOver={e => e.currentTarget.style.background = '#fee2e2'}
-                                                        onMouseOut={e => e.currentTarget.style.background = 'none'}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </motion.tr>
+                                    </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
                 </div>
 
-                {/* ALERTS & INVENTORY PULSE */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-                    <div style={{ background: '#fff1f1', borderRadius: '24px', padding: '25px', border: '1px solid #fee2e2' }}>
-                        <h5 style={{ color: '#991b1b', fontWeight: 950, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                            <AlertCircle size={20} /> DEPLETION ALERTS
+                {/* ALERTS & NODE STATUS */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ background: '#fff1f1', borderRadius: '24px', padding: '20px', border: '1px solid #fee2e2' }}>
+                        <h5 style={{ color: '#991b1b', fontWeight: 950, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px' }}>
+                            <AlertCircle size={18} /> STOCK ALERTS
                         </h5>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {items.filter(i => i.stock <= (i.min_stock || 5)).slice(0, 6).map((item, i) => (
-                                <div key={i} style={{ background: 'white', padding: '12px 15px', borderRadius: '14px', border: '1px solid #fee2e2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                        <span style={{ fontWeight: 800, fontSize: '0.8rem', color: '#1e293b' }}>{item.name}</span>
-                                        <span style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 700 }}>Limit: {item.min_stock || 5} {item.unit}</span>
-                                    </div>
-                                    <span style={{ fontSize: '0.9rem', fontWeight: 950, color: '#ef4444' }}>{item.stock}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {items.filter(i => i.stock <= (i.min_stock || 5)).slice(0, 4).map((item, i) => (
+                                <div key={i} style={{ background: 'white', padding: '12px', borderRadius: '12px', border: '1px solid #fee2e2', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontWeight: 800, fontSize: '0.75rem', color: '#1e293b' }}>{item.name}</span>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 950, color: '#ef4444' }}>{item.stock}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
 
-                    <div style={{ background: '#1e293b', borderRadius: '24px', padding: '25px', color: 'white', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '25px' }}>
-                            <div style={{ background: 'rgba(56, 189, 248, 0.2)', padding: '10px', borderRadius: '12px' }}><Package size={22} color="#38bdf8" /></div>
+                    <div style={{ background: '#0f172a', borderRadius: '24px', padding: '20px', color: 'white' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+                            <div style={{ background: 'rgba(56, 189, 248, 0.2)', padding: '8px', borderRadius: '10px' }}><Package size={20} color="#38bdf8" /></div>
                             <div>
-                                <h6 style={{ fontWeight: 950, fontSize: '0.9rem', letterSpacing: '0.5px' }}>PLATFORM NODE</h6>
-                                <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 800 }}>BILAL VET MEDICAL RMS v2.4</p>
+                                <h6 style={{ fontWeight: 950, fontSize: '0.8rem' }}>NODE STATUS</h6>
+                                <p style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 800 }}>BILAL VET MEDICAL v2.4</p>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                                <span style={{ opacity: 0.6 }}>Active SKUs</span>
-                                <span style={{ fontWeight: 800 }}>{items.length} Registered</span>
-                             </div>
-                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                                <span style={{ opacity: 0.6 }}>System Uptime</span>
-                                <span style={{ fontWeight: 800, color: '#10b981' }}>99.9% ONLINE</span>
-                             </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.75rem' }}>
+                             <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ opacity: 0.6 }}>Active SKUs</span><span style={{ fontWeight: 800 }}>{items.length}</span></div>
+                             <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ opacity: 0.6 }}>Platform</span><span style={{ fontWeight: 800, color: '#10b981' }}>ONLINE</span></div>
                         </div>
                     </div>
                 </div>

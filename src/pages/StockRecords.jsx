@@ -83,28 +83,46 @@ const StockRecords = () => {
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '20px', padding: '25px', backgroundColor: '#f8fafc' }}>
             
             {/* HEADER */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '20px 25px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+            <header style={{ 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                justifyContent: 'space-between', 
+                alignItems: window.innerWidth <= 768 ? 'flex-start' : 'center', 
+                background: 'white', 
+                padding: window.innerWidth <= 480 ? '15px' : '20px 25px', 
+                borderRadius: '16px', 
+                border: '1px solid #e2e8f0',
+                gap: '20px'
+            }}>
                 <div>
-                    <h2 style={{ fontSize: '1.6rem', fontWeight: 950, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <Database size={28} color="#6366f1" /> STOCK RECORDS & AUDIT
+                    <h2 style={{ fontSize: window.innerWidth <= 480 ? '1.2rem' : '1.6rem', fontWeight: 950, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Database size={window.innerWidth <= 480 ? 24 : 28} color="#6366f1" /> STOCK RECORDS & AUDIT
                     </h2>
-                    <p style={{ color: '#64748b', fontWeight: 600, fontSize: '0.9rem' }}>Comprehensive tracking of stock movements and daily sales</p>
+                    <p style={{ color: '#64748b', fontWeight: 600, fontSize: '0.8rem' }}>Comprehensive tracking of stock movements and daily sales</p>
                 </div>
                 
-                <div style={{ display: 'flex', gap: '15px' }}>
-                    <div style={{ textAlign: 'right', paddingRight: '15px', borderRight: '1px solid #e2e8f0' }}>
-                        <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8' }}>TOTAL INVENTORY VALUE</p>
-                        <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#1e293b' }}>Rs {totalStockValue.toLocaleString()}</h4>
+                <div style={{ display: 'flex', gap: '15px', width: window.innerWidth <= 768 ? '100%' : 'auto', justifyContent: 'space-between' }}>
+                    <div style={{ textAlign: 'left', paddingRight: '15px', borderRight: window.innerWidth <= 768 ? 'none' : '1px solid #e2e8f0' }}>
+                        <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>TOTAL INVENTORY VALUE</p>
+                        <h4 style={{ fontSize: '1rem', fontWeight: 900, color: '#1e293b' }}>Rs {totalStockValue.toLocaleString()}</h4>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                        <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8' }}>{timeRange.toUpperCase()} SOLD</p>
-                        <h4 style={{ fontSize: '1.1rem', fontWeight: 900, color: '#6366f1' }}>{totalFilteredUnitsSold.toLocaleString()} Units</h4>
+                        <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8' }}>{timeRange.toUpperCase()} SOLD</p>
+                        <h4 style={{ fontSize: '1rem', fontWeight: 900, color: '#6366f1' }}>{totalFilteredUnitsSold.toLocaleString()} Units</h4>
                     </div>
                 </div>
             </header>
 
             {/* FILTERS */}
-            <div style={{ display: 'flex', gap: '15px', background: 'white', padding: '15px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                gap: '15px', 
+                background: 'white', 
+                padding: '15px', 
+                borderRadius: '16px', 
+                border: '1px solid #e2e8f0' 
+            }}>
                 <div style={{ position: 'relative', flex: 1 }}>
                     <Search size={18} style={{ position: 'absolute', left: '15px', top: '12px', color: '#94a3b8' }} />
                     <input 
@@ -115,34 +133,37 @@ const StockRecords = () => {
                         onChange={e => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <select 
-                    style={{ padding: '0 20px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, background: '#f8fafc', color: '#475569' }}
-                    value={selectedCategory}
-                    onChange={e => setSelectedCategory(e.target.value)}
-                >
-                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 15px', border: '1px solid #e2e8f0', borderRadius: '10px', background: '#eef2ff' }}>
-                    <Calendar size={18} color="#6366f1" />
+                
+                <div style={{ display: 'flex', gap: '10px' }}>
                     <select 
-                        style={{ border: 'none', background: 'transparent', height: '100%', fontWeight: 700, color: '#4338ca', outline: 'none', padding: '10px 0' }}
-                        value={timeRange}
-                        onChange={e => setTimeRange(e.target.value)}
+                        style={{ flex: 1, padding: '10px 15px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, background: '#f8fafc', color: '#475569' }}
+                        value={selectedCategory}
+                        onChange={e => setSelectedCategory(e.target.value)}
                     >
-                        <option value="All Time">All Time</option>
-                        <option value="Today">Today</option>
-                        <option value="Yesterday">Yesterday</option>
-                        <option value="This Week">Last 7 Days</option>
-                        <option value="This Month">This Month</option>
+                        {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
+
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', padding: '0 15px', border: '1px solid #e2e8f0', borderRadius: '10px', background: '#eef2ff' }}>
+                        <Calendar size={18} color="#6366f1" />
+                        <select 
+                            style={{ width: '100%', border: 'none', background: 'transparent', height: '100%', fontWeight: 700, color: '#4338ca', outline: 'none', padding: '10px 0' }}
+                            value={timeRange}
+                            onChange={e => setTimeRange(e.target.value)}
+                        >
+                            <option value="All Time">All Time</option>
+                            <option value="Today">Today</option>
+                            <option value="Yesterday">Yesterday</option>
+                            <option value="This Week">Last 7 Days</option>
+                            <option value="This Month">This Month</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
             {/* DATA TABLE */}
             <div style={{ flex: 1, background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ overflowY: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                <div style={{ overflowX: 'auto', flex: 1 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '800px' }}>
                         <thead style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 10 }}>
                             <tr>
                                 <th style={{ padding: '15px 25px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b' }}>PRODUCT DETAILS</th>
@@ -190,7 +211,7 @@ const StockRecords = () => {
                                         {isExpanded && (
                                             <tr>
                                                 <td colSpan="6" style={{ padding: '0', background: '#f8fafc' }}>
-                                                    <div style={{ padding: '25px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
+                                                    <div style={{ padding: '25px', display: window.innerWidth <= 1024 ? 'flex' : 'grid', flexDirection: 'column', gridTemplateColumns: window.innerWidth <= 1024 ? 'none' : '1fr 1fr', gap: '25px' }}>
                                                         
                                                         {/* LEFT: DAILY SALES LOG */}
                                                         <div style={{ background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '15px' }}>

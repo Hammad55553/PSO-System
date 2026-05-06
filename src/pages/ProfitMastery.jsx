@@ -129,8 +129,8 @@ const ProfitMastery = () => {
             
             {/* PRODUCT DETAIL MODAL */}
             {selectedProduct && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(5px)' }}>
-                    <div style={{ background: 'white', width: '100%', maxWidth: '600px', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: window.innerWidth <= 480 ? '0' : '20px', backdropFilter: 'blur(5px)' }}>
+                    <div style={{ background: 'white', width: '100%', maxWidth: '600px', height: window.innerWidth <= 480 ? '100%' : 'auto', borderRadius: window.innerWidth <= 480 ? '0' : '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ background: '#0f172a', padding: '25px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div>
                                 <h3 style={{ fontSize: '1.4rem', fontWeight: 900 }}>{selectedProduct.name}</h3>
@@ -168,8 +168,8 @@ const ProfitMastery = () => {
                             </div>
                             <button onClick={() => setSelectedProduct(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '10px', borderRadius: '50%', cursor: 'pointer' }}>✕</button>
                         </div>
-                        <div style={{ padding: '30px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
+                        <div style={{ padding: window.innerWidth <= 480 ? '20px' : '30px', flex: 1, overflowY: 'auto' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : 'repeat(3, 1fr)', gap: '15px', marginBottom: '25px' }}>
                                 <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                                     <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748b', display: 'block' }}>TOTAL SOLD</span>
                                     <span style={{ fontSize: '1.2rem', fontWeight: 950 }}>{selectedProduct.qty} Units</span>
@@ -215,20 +215,31 @@ const ProfitMastery = () => {
             )}
 
             {/* HEADER */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0f172a', padding: '30px', borderRadius: '24px', color: 'white', boxShadow: '0 15px 30px -10px rgba(15, 23, 42, 0.3)' }}>
+            <header style={{ 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                justifyContent: 'space-between', 
+                alignItems: window.innerWidth <= 768 ? 'flex-start' : 'center', 
+                background: '#0f172a', 
+                padding: window.innerWidth <= 480 ? '20px' : '30px', 
+                borderRadius: '24px', 
+                color: 'white', 
+                boxShadow: '0 15px 30px -10px rgba(15, 23, 42, 0.3)',
+                gap: '20px'
+            }}>
                 <div>
-                    <h2 style={{ fontSize: '2rem', fontWeight: 950, display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <Zap size={32} color="#34d399" /> Profit Mastery Analytics
+                    <h2 style={{ fontSize: window.innerWidth <= 480 ? '1.4rem' : '2rem', fontWeight: 950, display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <Zap size={window.innerWidth <= 480 ? 24 : 32} color="#34d399" /> Profit Mastery Analytics
                     </h2>
-                    <p style={{ color: '#94a3b8', fontWeight: 600, marginTop: '5px' }}>Deep-dive into your margins and product-level profitability.</p>
+                    <p style={{ color: '#94a3b8', fontWeight: 600, marginTop: '5px', fontSize: window.innerWidth <= 480 ? '0.8rem' : '1rem' }}>Deep-dive into your margins and product-level profitability.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                     <div style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center', width: window.innerWidth <= 768 ? '100%' : 'auto' }}>
+                     <div style={{ position: 'relative', width: '100%' }}>
                         <Calendar size={18} style={{ position: 'absolute', left: '15px', top: '15px', color: '#34d399' }} />
                         <input
                             type="date"
                             className="erp-input"
-                            style={{ paddingLeft: '45px', fontWeight: 800, border: 'none', borderRadius: '12px', height: '48px', width: '220px', background: 'rgba(255,255,255,0.1)', color: 'white' }}
+                            style={{ paddingLeft: '45px', fontWeight: 800, border: 'none', borderRadius: '12px', height: '48px', width: '100%', background: 'rgba(255,255,255,0.1)', color: 'white' }}
                             value={dateFilter}
                             onChange={(e) => setDateFilter(e.target.value)}
                         />
@@ -237,76 +248,86 @@ const ProfitMastery = () => {
             </header>
 
             {/* TOP STATS CARDS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '25px' }}>
-                <div style={{ background: 'white', padding: '30px', borderRadius: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: window.innerWidth <= 1024 ? (window.innerWidth <= 600 ? '1fr' : '1fr 1fr') : 'repeat(4, 1fr)', 
+                gap: '25px' 
+            }}>
+                <div style={{ background: 'white', padding: '25px', borderRadius: '24px', boxShadow: '0 4px 6px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 900, color: '#64748b' }}>GROSS REVENUE</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#0f172a', margin: '10px 0' }}>Rs {totalRevenue.toLocaleString()}</h3>
+                    <h3 style={{ fontSize: window.innerWidth <= 480 ? '1.5rem' : '1.8rem', fontWeight: 950, color: '#0f172a', margin: '10px 0' }}>Rs {totalRevenue.toLocaleString()}</h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#10b981', fontSize: '0.8rem', fontWeight: 800 }}>
                         <TrendingUp size={14} /> Total Value Sold
                     </div>
                 </div>
 
-                <div style={{ background: 'white', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0' }}>
+                <div style={{ background: 'white', padding: '25px', borderRadius: '24px', border: '1px solid #e2e8f0' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 900, color: '#64748b' }}>TOTAL COST (CP)</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#ef4444', margin: '10px 0' }}>Rs {totalCost.toLocaleString()}</h3>
+                    <h3 style={{ fontSize: window.innerWidth <= 480 ? '1.5rem' : '1.8rem', fontWeight: 950, color: '#ef4444', margin: '10px 0' }}>Rs {totalCost.toLocaleString()}</h3>
                     <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>Inventory investment</p>
                 </div>
 
-                <div style={{ background: '#ecfdf5', padding: '30px', borderRadius: '24px', border: '1px solid #34d399' }}>
+                <div style={{ background: '#ecfdf5', padding: '25px', borderRadius: '24px', border: '1px solid #34d399' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 900, color: '#047857' }}>NET PROFIT</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#064e3b', margin: '10px 0' }}>Rs {totalNetProfit.toLocaleString()}</h3>
+                    <h3 style={{ fontSize: window.innerWidth <= 480 ? '1.5rem' : '1.8rem', fontWeight: 950, color: '#064e3b', margin: '10px 0' }}>Rs {totalNetProfit.toLocaleString()}</h3>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#059669', fontSize: '0.8rem', fontWeight: 800 }}>
                         <CheckCircle2 size={14} /> After Discounts
                     </div>
                 </div>
 
-                <div style={{ background: '#064e3b', padding: '30px', borderRadius: '24px', color: 'white' }}>
+                <div style={{ background: '#064e3b', padding: '25px', borderRadius: '24px', color: 'white' }}>
                     <span style={{ fontSize: '0.8rem', fontWeight: 900, color: '#a7f3d0' }}>PROFIT MARGIN</span>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 950, margin: '10px 0' }}>{profitMargin}%</h3>
+                    <h3 style={{ fontSize: window.innerWidth <= 480 ? '1.5rem' : '1.8rem', fontWeight: 950, margin: '10px 0' }}>{profitMargin}%</h3>
                     <p style={{ fontSize: '0.8rem', color: '#a7f3d0', fontWeight: 700 }}>Efficiency of sales</p>
                 </div>
             </div>
 
             {/* MAIN ANALYSIS CONTENT */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '30px' }}>
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 1024 ? 'column' : 'row', 
+                gap: '30px' 
+            }}>
                 
                  {/* PRODUCT-WISE PROFIT TABLE */}
-                 <div style={{ background: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '400px' }}>
-                     <div style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
+                 <div style={{ flex: 1, background: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '400px' }}>
+                     <div style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                          <h4 style={{ fontSize: '1.1rem', fontWeight: 950 }}>Unit-Level Profitability</h4>
-                         {loading && <div style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 800 }}>SYNCING DATA...</div>}
+                         {loading && <div style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 800 }}>SYNCING...</div>}
                      </div>
-                     <table className="erp-table">
-                        <thead>
-                            <tr style={{ background: '#f8fafc' }}>
-                                <th style={{ padding: '20px' }}>PRODUCT NAME</th>
-                                <th style={{ textAlign: 'right' }}>UNITS SOLD</th>
-                                <th style={{ textAlign: 'right' }}>TOTAL PROFIT</th>
-                                <th style={{ textAlign: 'center' }}>HEALTH</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {topProfitableProducts.map((p, idx) => (
-                                <tr key={idx} onClick={() => setSelectedProduct(p)} style={{ cursor: 'pointer', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f1f5f9'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
-                                    <td style={{ padding: '18px 20px', fontWeight: 800 }}>{p.name}</td>
-                                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{p.qty}</td>
-                                    <td style={{ textAlign: 'right', fontWeight: 950, color: '#059669' }}>Rs {p.profit.toLocaleString()}</td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <div style={{ padding: '5px 10px', borderRadius: '6px', background: '#ecfdf5', color: '#059669', fontSize: '0.7rem', fontWeight: 900, display: 'inline-block' }}>GOOD</div>
-                                    </td>
+                     <div style={{ overflowX: 'auto' }}>
+                        <table className="erp-table">
+                            <thead>
+                                <tr style={{ background: '#f8fafc' }}>
+                                    <th style={{ padding: '20px' }}>PRODUCT NAME</th>
+                                    <th style={{ textAlign: 'right' }}>UNITS SOLD</th>
+                                    <th style={{ textAlign: 'right' }}>TOTAL PROFIT</th>
+                                    <th style={{ textAlign: 'center' }}>HEALTH</th>
                                 </tr>
-                            ))}
-                            {topProfitableProducts.length === 0 && (
-                                <tr>
-                                    <td colSpan="4" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8', fontStyle: 'italic' }}>No sales data available for this date.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {topProfitableProducts.map((p, idx) => (
+                                    <tr key={idx} onClick={() => setSelectedProduct(p)} style={{ cursor: 'pointer', transition: 'background 0.2s' }} onMouseOver={e => e.currentTarget.style.background = '#f1f5f9'} onMouseOut={e => e.currentTarget.style.background = 'transparent'}>
+                                        <td style={{ padding: '18px 20px', fontWeight: 800, whiteSpace: 'nowrap' }}>{p.name}</td>
+                                        <td style={{ textAlign: 'right', fontWeight: 700 }}>{p.qty}</td>
+                                        <td style={{ textAlign: 'right', fontWeight: 950, color: '#059669' }}>Rs {p.profit.toLocaleString()}</td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <div style={{ padding: '5px 10px', borderRadius: '6px', background: '#ecfdf5', color: '#059669', fontSize: '0.7rem', fontWeight: 900, display: 'inline-block' }}>GOOD</div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {topProfitableProducts.length === 0 && (
+                                    <tr>
+                                        <td colSpan="4" style={{ textAlign: 'center', padding: '100px', color: '#94a3b8', fontStyle: 'italic' }}>No sales data available for this date.</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                     </div>
                 </div>
 
                 {/* VISUAL MARGIN INDICATOR */}
-                <div style={{ background: 'white', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ background: 'white', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', width: window.innerWidth <= 1024 ? '100%' : '400px' }}>
                     <h4 style={{ fontWeight: 950, marginBottom: '30px', width: '100%' }}>Margin Breakdown</h4>
                     <div style={{ 
                         width: '240px', 

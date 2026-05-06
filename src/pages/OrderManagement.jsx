@@ -191,56 +191,113 @@ const OrderManagement = () => {
     );
 
     return (
-        <div style={{ height: '100%', overflowY: 'auto', padding: '25px', backgroundColor: '#f8fafc' }}>
+        <div style={{ 
+            height: '100%', 
+            overflowY: 'auto', 
+            padding: window.innerWidth <= 480 ? '15px' : '25px', 
+            backgroundColor: '#f8fafc',
+            boxSizing: 'border-box'
+        }}>
             
             {/* 1. PREMIUM HEADER */}
             <motion.header 
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}
+                style={{ 
+                    display: 'flex', 
+                    flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                    justifyContent: 'space-between', 
+                    alignItems: window.innerWidth <= 768 ? 'stretch' : 'center', 
+                    marginBottom: '30px',
+                    gap: '20px'
+                }}
             >
                 <div>
-                    <h2 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '15px' }}>
-                        <div style={{ background: '#6366f1', padding: '10px', borderRadius: '12px', color: 'white' }}><Truck size={24} /></div>
+                    <h2 style={{ 
+                        fontSize: window.innerWidth <= 480 ? '1.4rem' : '1.8rem', 
+                        fontWeight: 950, 
+                        color: '#0f172a', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '12px' 
+                    }}>
+                        <div style={{ background: '#6366f1', padding: '10px', borderRadius: '12px', color: 'white' }}><Truck size={window.innerWidth <= 480 ? 20 : 24} /></div>
                         Supply Order Hub
                     </h2>
-                    <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600, marginTop: '8px' }}>Manage supplier bookings and automate inventory restocking.</p>
+                    <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600, marginTop: '8px' }}>Manage supplier bookings and inventory restocking.</p>
                 </div>
-                <div style={{ display: 'flex', gap: '15px' }}>
-                    <div style={{ position: 'relative' }}>
-                        <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} size={18} />
+                <div style={{ 
+                    display: 'flex', 
+                    flexDirection: window.innerWidth <= 600 ? 'column' : 'row',
+                    gap: '12px',
+                    alignItems: 'stretch'
+                }}>
+                    <div style={{ position: 'relative', flex: 1 }}>
+                        <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} size={16} />
                         <input 
                             placeholder="Find company or drug..." 
-                            style={{ padding: '12px 12px 12px 40px', border: '1px solid #e2e8f0', borderRadius: '12px', width: '300px', fontSize: '0.9rem', fontWeight: 600, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }} 
+                            style={{ 
+                                padding: '12px 12px 12px 40px', 
+                                border: '1px solid #e2e8f0', 
+                                borderRadius: '12px', 
+                                width: '100%', 
+                                fontSize: '0.85rem', 
+                                fontWeight: 600, 
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                                outline: 'none'
+                            }} 
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
                     <button 
                         onClick={() => setIsModalOpen(true)}
-                        style={{ background: '#6366f1', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.4)' }}
+                        style={{ 
+                            background: '#6366f1', 
+                            color: 'white', 
+                            border: 'none', 
+                            padding: '12px 20px', 
+                            borderRadius: '12px', 
+                            fontWeight: 800, 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center',
+                            gap: '8px', 
+                            cursor: 'pointer', 
+                            boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.3)',
+                            fontSize: '0.85rem'
+                        }}
                     >
-                        <Plus size={20} /> BOOK NEW ORDER
+                        <Plus size={18} /> NEW ORDER
                     </button>
                 </div>
             </motion.header>
 
             {/* 2. TAB NAVIGATION */}
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
+            <div style={{ 
+                display: 'flex', 
+                gap: '8px', 
+                marginBottom: '25px', 
+                overflowX: 'auto', 
+                paddingBottom: '5px',
+                msOverflowStyle: 'none',
+                scrollbarWidth: 'none'
+            }}>
                 {['All', 'Pending', 'Received'].map(tab => (
                     <button 
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         style={{ 
-                            padding: '10px 20px', 
+                            padding: '8px 16px', 
                             borderRadius: '10px', 
                             border: 'none', 
                             fontWeight: 800, 
-                            fontSize: '0.85rem',
+                            fontSize: '0.75rem',
                             cursor: 'pointer',
                             backgroundColor: activeTab === tab ? '#1e293b' : 'white',
                             color: activeTab === tab ? 'white' : '#64748b',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
+                            whiteSpace: 'nowrap'
                         }}
                     >
                         {tab} Orders
@@ -249,74 +306,84 @@ const OrderManagement = () => {
             </div>
 
             {/* 3. ORDERS GRID */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
-                <AnimatePresence>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: window.innerWidth <= 640 ? '1fr' : 'repeat(auto-fill, minmax(360px, 1fr))', 
+                gap: '20px' 
+            }}>
+                <AnimatePresence mode="popLayout">
                     {filteredOrders.map((order, idx) => (
                         <motion.div 
                             key={order.id}
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
                             transition={{ delay: idx * 0.05 }}
-                            style={{ background: 'white', borderRadius: '20px', padding: '25px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)', position: 'relative' }}
+                            style={{ 
+                                background: 'white', 
+                                borderRadius: '20px', 
+                                padding: window.innerWidth <= 480 ? '20px' : '25px', 
+                                border: '1px solid #e2e8f0', 
+                                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)', 
+                                position: 'relative' 
+                            }}
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                                 <div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>{order.id}</span>
-                                        {order.type === 'Outgoing' ? <ArrowUpCircle size={14} color="#6366f1" /> : <ArrowDownCircle size={14} color="#10b981" />}
+                                        <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>{order.id}</span>
+                                        {order.type === 'Outgoing' ? <ArrowUpCircle size={12} color="#6366f1" /> : <ArrowDownCircle size={12} color="#10b981" />}
                                     </div>
-                                    <h4 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#0f172a', marginTop: '4px' }}>{order.supplier}</h4>
+                                    <h4 style={{ fontSize: '1.1rem', fontWeight: 950, color: '#0f172a', marginTop: '4px', lineHeight: 1.2 }}>{order.supplier}</h4>
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '6px' }}>
                                         <button 
                                             onClick={() => openEditOrder(order)} 
-                                            title="Edit Booking"
-                                            style={{ background: '#eef2ff', border: '1px solid #c7d2fe', color: '#4f46e5', padding: '10px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s' }}
+                                            style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}
                                         >
-                                            <Edit3 size={18} />
+                                            <Edit3 size={14} />
                                         </button>
                                         <button 
                                             onClick={() => handleDeleteOrder(order.id)} 
-                                            title="Delete Booking"
-                                            style={{ background: '#fff1f1', border: '1px solid #fee2e2', color: '#ef4444', padding: '10px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', transition: 'all 0.2s' }}
+                                            style={{ background: '#fff1f1', border: '1px solid #fee2e2', color: '#ef4444', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}
                                         >
-                                            <Trash2 size={18} />
+                                            <Trash2 size={14} />
                                         </button>
                                     </div>
                                     <span style={{ 
-                                        padding: '5px 12px', 
-                                        borderRadius: '8px', 
-                                        fontSize: '0.7rem', 
+                                        padding: '4px 10px', 
+                                        borderRadius: '20px', 
+                                        fontSize: '0.6rem', 
                                         fontWeight: 900,
                                         backgroundColor: order.status === 'Received' ? '#ecfdf5' : '#fff7ed',
                                         color: order.status === 'Received' ? '#059669' : '#c2410c',
-                                        border: `1px solid ${order.status === 'Received' ? '#bbf7d0' : '#ffedd5'}`
+                                        border: `1px solid ${order.status === 'Received' ? '#bbf7d0' : '#ffedd5'}`,
+                                        letterSpacing: '0.5px'
                                     }}>
                                         {order.status.toUpperCase()}
                                     </span>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '15px', marginBottom: '20px' }}>
+                            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
                                 <div style={{ flex: 1, background: '#f8fafc', padding: '10px', borderRadius: '12px' }}>
-                                    <p style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 800 }}>BOOKING DATE</p>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={14} /> {order.bookingDate}</p>
+                                    <p style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: 800 }}>BOOKING</p>
+                                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>{order.bookingDate}</p>
                                 </div>
                                 <div style={{ flex: 1, background: '#f8fafc', padding: '10px', borderRadius: '12px' }}>
-                                    <p style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 800 }}>{order.type === 'Outgoing' ? 'DELIVERY DATE' : 'EXP. DELIVERY'}</p>
-                                    <p style={{ fontSize: '0.85rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '6px' }}><Clock size={14} /> {order.deliveryDate || 'N/A'}</p>
+                                    <p style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: 800 }}>{order.type === 'Outgoing' ? 'DELIVERY' : 'EXPECTED'}</p>
+                                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>{order.deliveryDate || 'N/A'}</p>
                                 </div>
                             </div>
 
                             <div style={{ marginBottom: '20px' }}>
-                                <p style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', marginBottom: '10px' }}>{order.type === 'Outgoing' ? 'SENDING ITEMS:' : 'ORDERED ITEMS:'}</p>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8', marginBottom: '10px', letterSpacing: '0.5px' }}>{order.type === 'Outgoing' ? 'SUPPLY ITEMS:' : 'ORDERED ITEMS:'}</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                     {order.items.map((item, i) => (
-                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f8fafc', borderRadius: '10px' }}>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>{item.name}</span>
-                                            <span style={{ fontSize: '0.85rem', fontWeight: 950, color: '#6366f1' }}>{item.qty} units</span>
+                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>{item.name}</span>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 950, color: '#6366f1' }}>{item.qty} <span style={{ fontSize: '0.65rem' }}>PCS</span></span>
                                         </div>
                                     ))}
                                 </div>
@@ -329,18 +396,19 @@ const OrderManagement = () => {
                                         onClick={() => handleMarkReceived(order, true)}
                                         style={{ 
                                             width: '100%', 
-                                            padding: '12px', 
-                                            background: processingOrderId === order.id ? '#94a3b8' : 'linear-gradient(45deg, #10b981, #059669)', 
+                                            padding: '14px', 
+                                            background: processingOrderId === order.id ? '#94a3b8' : 'linear-gradient(135deg, #10b981, #059669)', 
                                             color: 'white', 
                                             border: 'none', 
                                             borderRadius: '12px', 
                                             fontWeight: 900, 
-                                            fontSize: '0.9rem', 
+                                            fontSize: '0.85rem', 
                                             cursor: processingOrderId === order.id ? 'not-allowed' : 'pointer', 
                                             display: 'flex', 
                                             alignItems: 'center', 
                                             justifyContent: 'center', 
-                                            gap: '10px'
+                                            gap: '10px',
+                                            boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
                                         }}
                                     >
                                         {processingOrderId === order.id ? <RefreshCw size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
@@ -351,17 +419,17 @@ const OrderManagement = () => {
                                         onClick={() => handleMarkReceived(order, false)}
                                         style={{ 
                                             width: '100%', 
-                                            padding: '10px', 
+                                            padding: '12px', 
                                             background: 'white', 
                                             color: '#64748b', 
                                             border: '1px solid #e2e8f0', 
                                             borderRadius: '12px', 
                                             fontWeight: 800, 
-                                            fontSize: '0.8rem', 
+                                            fontSize: '0.75rem', 
                                             cursor: 'pointer' 
                                         }}
                                     >
-                                        MARK COMPLETED ONLY (No Stock Change)
+                                        MARK COMPLETED ONLY
                                     </button>
                                 </div>
                             )}
@@ -373,61 +441,91 @@ const OrderManagement = () => {
             {/* 4. BOOKING MODAL */}
             <AnimatePresence>
                 {isModalOpen && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ 
+                        position: 'fixed', 
+                        inset: 0, 
+                        background: 'rgba(15, 23, 42, 0.7)', 
+                        backdropFilter: 'blur(4px)',
+                        zIndex: 1000, 
+                        display: 'flex', 
+                        alignItems: window.innerWidth <= 600 ? 'flex-end' : 'center', 
+                        justifyContent: 'center', 
+                        padding: window.innerWidth <= 600 ? '0' : '20px' 
+                    }}>
                         <motion.div 
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            style={{ background: 'white', width: '100%', maxWidth: '600px', borderRadius: '24px', overflow: 'hidden' }}
+                            initial={window.innerWidth <= 600 ? { y: '100%' } : { scale: 0.9, opacity: 0 }}
+                            animate={{ y: 0, scale: 1, opacity: 1 }}
+                            exit={window.innerWidth <= 600 ? { y: '100%' } : { scale: 0.9, opacity: 0 }}
+                            style={{ 
+                                background: 'white', 
+                                width: '100%', 
+                                maxWidth: '600px', 
+                                borderRadius: window.innerWidth <= 600 ? '24px 24px 0 0' : '24px', 
+                                overflow: 'hidden',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                            }}
                         >
-                            <div style={{ background: '#6366f1', padding: '25px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h3 style={{ fontSize: '1.2rem', fontWeight: 950 }}>Create New Supply Booking</h3>
-                                <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><X size={24} /></button>
+                            <div style={{ background: '#6366f1', padding: '20px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h3 style={{ fontSize: '1rem', fontWeight: 950 }}>Create Supply Booking</h3>
+                                <button onClick={() => setIsModalOpen(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', padding: '5px', borderRadius: '8px' }}><X size={20} /></button>
                             </div>
 
-                            <form onSubmit={handleSubmit} style={{ padding: '30px', maxHeight: '70vh', overflowY: 'auto' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                            <form onSubmit={handleSubmit} style={{ padding: '25px', maxHeight: '80vh', overflowY: 'auto' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
                                     <div>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b' }}>ORDER TYPE</label>
-                                        <select style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700 }} value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
-                                            <option value="Incoming">Incoming (From Supplier)</option>
-                                            <option value="Outgoing">Outgoing (To Client)</option>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>ORDER TYPE</label>
+                                        <select style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700, background: '#f8fafc', outline: 'none' }} value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
+                                            <option value="Incoming">Incoming (Restock)</option>
+                                            <option value="Outgoing">Outgoing (Supply)</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b' }}>PARTY / CLIENT NAME</label>
-                                        <input required style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700 }} value={formData.supplier} onChange={e => setFormData({...formData, supplier: e.target.value})} />
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>PARTY / CLIENT</label>
+                                        <input required style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700, outline: 'none' }} value={formData.supplier} onChange={e => setFormData({...formData, supplier: e.target.value})} placeholder="Name" />
                                     </div>
                                 </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b' }}>CONTACT INFO (Optional)</label>
-                                        <input style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700 }} value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} />
-                                    </div>
 
-                                <div style={{ marginBottom: '20px' }}>
-                                    <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b' }}>EXPECTED DELIVERY DATE</label>
-                                    <input type="date" style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700 }} value={formData.deliveryDate} onChange={e => setFormData({...formData, deliveryDate: e.target.value})} />
+                                <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>CONTACT (OPTIONAL)</label>
+                                        <input style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700, outline: 'none' }} value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} placeholder="Phone" />
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>DELIVERY DATE</label>
+                                        <input type="date" style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700, outline: 'none' }} value={formData.deliveryDate} onChange={e => setFormData({...formData, deliveryDate: e.target.value})} />
+                                    </div>
                                 </div>
 
                                 <div style={{ marginBottom: '20px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                        <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b' }}>ORDERED ITEMS</label>
-                                        <button type="button" onClick={handleAddItem} style={{ fontSize: '0.7rem', fontWeight: 900, color: '#6366f1', background: 'none', border: 'none', cursor: 'pointer' }}>+ ADD ANOTHER ITEM</button>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>ORDERED ITEMS</label>
+                                        <button type="button" onClick={handleAddItem} style={{ fontSize: '0.7rem', fontWeight: 900, color: '#6366f1', background: '#eef2ff', padding: '5px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>+ ADD ITEM</button>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         {formData.items.map((item, idx) => (
-                                            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '10px' }}>
-                                                <input placeholder="Medicine Name" required style={{ padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700 }} value={item.name} onChange={e => handleItemChange(idx, 'name', e.target.value)} />
-                                                <input placeholder="Qty" type="number" required style={{ padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700 }} value={item.qty} onChange={e => handleItemChange(idx, 'qty', e.target.value)} />
-                                                <input placeholder="Est. Price" type="number" style={{ padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700 }} value={item.price} onChange={e => handleItemChange(idx, 'price', e.target.value)} />
+                                            <div key={idx} style={{ 
+                                                display: 'grid', 
+                                                gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : '2fr 1fr 1fr', 
+                                                gap: '10px',
+                                                padding: '15px',
+                                                background: '#f8fafc',
+                                                borderRadius: '12px',
+                                                border: '1px solid #f1f5f9'
+                                            }}>
+                                                <input placeholder="Drug Name" required style={{ padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700, outline: 'none' }} value={item.name} onChange={e => handleItemChange(idx, 'name', e.target.value)} />
+                                                <div style={{ display: 'flex', gap: '10px' }}>
+                                                    <input placeholder="Qty" type="number" required style={{ flex: 1, padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700, outline: 'none' }} value={item.qty} onChange={e => handleItemChange(idx, 'qty', e.target.value)} />
+                                                    <input placeholder="Price" type="number" style={{ flex: 1, padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700, outline: 'none' }} value={item.price} onChange={e => handleItemChange(idx, 'price', e.target.value)} />
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
 
-                                <button type="submit" style={{ width: '100%', padding: '15px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 900, fontSize: '1rem', cursor: 'pointer', marginTop: '10px' }}>
+                                <button type="submit" style={{ width: '100%', padding: '16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 900, fontSize: '1rem', cursor: 'pointer', marginTop: '10px', boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)' }}>
                                     CONFIRM BOOKING
                                 </button>
+                                {window.innerWidth <= 600 && <div style={{ height: '20px' }} />}
                             </form>
                         </motion.div>
                     </div>

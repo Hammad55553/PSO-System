@@ -61,6 +61,7 @@ function AppContent() {
   const [pinError, setPinError] = useState(false);
   const [attempts, setAttempts] = useState(10);
   const isCalculatorOpen = useSelector(state => state.ui.isCalculatorOpen);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleProtectedNavigation = (e, path) => {
     // Only ask for PIN if we are currently in billing mode (POS/Returns)
@@ -240,11 +241,28 @@ function AppContent() {
         }}
       />
 
-      {!isBillingMode && <Sidebar />}
+      {!isBillingMode && (
+        <>
+          <div 
+            className={`sidebar-overlay ${isSidebarOpen ? 'visible' : ''}`} 
+            onClick={() => setIsSidebarOpen(false)}
+          ></div>
+          <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+        </>
+      )}
 
       <main className="main-area">
         <header className="app-header no-print">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            {!isBillingMode && (
+              <button 
+                className="erp-btn-icon"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                style={{ border: 'none', background: '#f1f5f9', color: '#1e293b' }}
+              >
+                <Menu size={20} />
+              </button>
+            )}
             {isBillingMode && (
               <div 
                 onClick={(e) => handleProtectedNavigation(e, '/')}
@@ -255,13 +273,13 @@ function AppContent() {
             )}
 
             {/* HYBRID CONNECTION STATUS */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isOnline ? '#dcfce7' : '#fee2e2', padding: '6px 12px', borderRadius: '4px', border: `1px solid ${isOnline ? '#166534' : '#991b1b'}` }}>
+            <div className="header-status-badges" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isOnline ? '#dcfce7' : '#fee2e2', padding: '6px 12px', borderRadius: '4px', border: `1px solid ${isOnline ? '#166534' : '#991b1b'}` }}>
               {isOnline ? <Wifi size={14} color="#166534" /> : <WifiOff size={14} color="#991b1b" />}
               <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#166534' }}>{isOnline ? 'CLOUD SYNC: ACTIVE' : 'OFFLINE MODE: LOCAL SAVE'}</span>
             </div>
 
             {isOnline && (
-              <div style={{ background: '#0ea5e9', border: 'none', borderRadius: '4px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', color: 'white' }}>
+              <div className="header-status-badges" style={{ background: '#0ea5e9', border: 'none', borderRadius: '4px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', color: 'white' }}>
                 <div style={{ width: '8px', height: '8px', background: '#fff', borderRadius: '50%', animation: 'pulse 1.5s infinite' }}></div>
                 <span style={{ fontSize: '0.65rem', fontWeight: 900 }}>LIVE CLOUD SYNC: ACTIVE</span>
               </div>
@@ -289,7 +307,7 @@ function AppContent() {
           </div>
 
           <div className="flex items-center gap-6" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <div className="text-right">
+            <div className="text-right header-user-info">
               <p className="text-[10px] font-800 text-slate-500" style={{ marginBottom: '2px' }}>OPERATOR: {user?.role?.toUpperCase()}</p>
               <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1e293b', textTransform: 'capitalize' }}>{user?.name}</p>
             </div>

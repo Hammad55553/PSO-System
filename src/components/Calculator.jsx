@@ -6,7 +6,14 @@ const Calculator = ({ isOpen, onClose }) => {
     const [equation, setEquation] = useState('');
     const [history, setHistory] = useState([]);
     const [shouldResetDisplay, setShouldResetDisplay] = useState(false);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
     const equationRef = useRef(null);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 1024);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         if (equationRef.current) {
@@ -24,11 +31,9 @@ const Calculator = ({ isOpen, onClose }) => {
     }, [display, shouldResetDisplay]);
 
     const handleOperator = useCallback((op) => {
-        // If we just finished a calculation, use the result as the start of a new chain
         if (shouldResetDisplay && !equation) {
             setEquation(display + ' ' + op + ' ');
         } else {
-            // Append the current number and operator to the chain
             setEquation(prev => prev + display + ' ' + op + ' ');
         }
         setShouldResetDisplay(true);
@@ -38,12 +43,10 @@ const Calculator = ({ isOpen, onClose }) => {
         if (!equation) return;
         try {
             const finalEquation = equation + display;
-            // Clean up the equation for eval (remove extra spaces)
             const cleanEquation = finalEquation.replace(/\s+/g, '');
             const result = eval(cleanEquation);
             const formattedResult = String(Number(result.toFixed(8)));
             
-            // Add to history
             setHistory(prev => [{
                 eq: finalEquation,
                 res: formattedResult,
@@ -109,8 +112,8 @@ const Calculator = ({ isOpen, onClose }) => {
 
     const Button = ({ children, onClick, variant = 'default', wide = false }) => {
         const baseStyle = {
-            padding: '15px',
-            fontSize: '1.2rem',
+            padding: isMobile ? '12px' : '15px',
+            fontSize: isMobile ? '1rem' : '1.2rem',
             fontWeight: '800',
             border: 'none',
             borderRadius: '12px',
@@ -154,36 +157,45 @@ const Calculator = ({ isOpen, onClose }) => {
             alignItems: 'center',
             justifyContent: 'center',
             background: 'rgba(15, 23, 42, 0.6)',
-            backdropFilter: 'blur(8px)'
+            backdropFilter: 'blur(8px)',
+            padding: isMobile ? '10px' : '0'
         }}>
             <div style={{
                 background: '#f1f5f9',
-                padding: '30px',
-                borderRadius: '32px',
-                width: '700px', // Wider to accommodate history
+                padding: isMobile ? '20px' : '30px',
+                borderRadius: isMobile ? '24px' : '32px',
+                width: isMobile ? '100%' : '700px',
+                maxWidth: '700px',
+                maxHeight: isMobile ? '95vh' : 'auto',
+                overflowY: isMobile ? 'auto' : 'visible',
                 display: 'grid',
-                gridTemplateColumns: '1.2fr 0.8fr',
-                gap: '30px',
+                gridTemplateColumns: isMobile ? '1fr' : '1.2fr 0.8fr',
+                gap: isMobile ? '20px' : '30px',
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
                 border: '1px solid rgba(255, 255, 255, 0.5)'
             }}>
                 {/* Left Side: Calculator */}
                 <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <div style={{ background: '#059669', padding: '8px', borderRadius: '10px' }}>
-                                <Hash size={20} color="white" />
+                                <Hash size={18} color="white" />
                             </div>
-                            <span style={{ fontWeight: 900, fontSize: '1.1rem', color: '#0f172a' }}>FAST CALCULATOR</span>
+                            <span style={{ fontWeight: 900, fontSize: isMobile ? '0.9rem' : '1.1rem', color: '#0f172a' }}>FAST CALCULATOR</span>
                         </div>
+                        {isMobile && (
+                            <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}>
+                                <X size={24} />
+                            </button>
+                        )}
                     </div>
 
                     {/* Display Area */}
                     <div style={{
                         background: '#0f172a',
-                        padding: '20px',
+                        padding: '15px',
                         borderRadius: '20px',
-                        marginBottom: '20px',
+                        marginBottom: '15px',
                         textAlign: 'right',
                         boxShadow: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
                         overflow: 'hidden'
@@ -192,8 +204,8 @@ const Calculator = ({ isOpen, onClose }) => {
                             ref={equationRef}
                             style={{ 
                                 color: '#94a3b8', 
-                                fontSize: '0.9rem', 
-                                minHeight: '1.2rem', 
+                                fontSize: '0.8rem', 
+                                minHeight: '1.1rem', 
                                 fontWeight: 700, 
                                 marginBottom: '5px',
                                 overflowX: 'auto',
@@ -203,17 +215,17 @@ const Calculator = ({ isOpen, onClose }) => {
                             }} className="hide-scrollbar">
                             {equation}
                         </div>
-                        <div style={{ color: 'white', fontSize: '2rem', fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ color: 'white', fontSize: isMobile ? '1.5rem' : '2rem', fontWeight: 900, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                             {display}
                         </div>
                     </div>
 
                     {/* Buttons Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: isMobile ? '8px' : '10px' }}>
                         <Button onClick={clear} variant="clear">AC</Button>
-                        <Button onClick={backspace} variant="operator"><Delete size={20} /></Button>
+                        <Button onClick={backspace} variant="operator"><Delete size={18} /></Button>
                         <Button onClick={() => handleOperator('%')} variant="operator">%</Button>
-                        <Button onClick={() => handleOperator('/')} variant="operator"><Divide size={20} /></Button>
+                        <Button onClick={() => handleOperator('/')} variant="operator"><Divide size={18} /></Button>
 
                         <Button onClick={() => handleNumber('7')}>7</Button>
                         <Button onClick={() => handleNumber('8')}>8</Button>
@@ -223,39 +235,41 @@ const Calculator = ({ isOpen, onClose }) => {
                         <Button onClick={() => handleNumber('4')}>4</Button>
                         <Button onClick={() => handleNumber('5')}>5</Button>
                         <Button onClick={() => handleNumber('6')}>6</Button>
-                        <Button onClick={() => handleOperator('-')} variant="operator"><Minus size={20} /></Button>
+                        <Button onClick={() => handleOperator('-')} variant="operator"><Minus size={18} /></Button>
 
                         <Button onClick={() => handleNumber('1')}>1</Button>
                         <Button onClick={() => handleNumber('2')}>2</Button>
                         <Button onClick={() => handleNumber('3')}>3</Button>
-                        <Button onClick={() => handleOperator('+')} variant="operator"><Plus size={20} /></Button>
+                        <Button onClick={() => handleOperator('+')} variant="operator"><Plus size={18} /></Button>
 
                         <Button onClick={() => handleNumber('0')} wide>0</Button>
                         <Button onClick={() => handleNumber('.')}>.</Button>
-                        <Button onClick={calculate} variant="equal"><Equal size={20} /></Button>
+                        <Button onClick={calculate} variant="equal"><Equal size={18} /></Button>
                     </div>
                 </div>
 
                 {/* Right Side: History/Tally */}
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', borderTop: isMobile ? '1px solid #e2e8f0' : 'none', paddingTop: isMobile ? '15px' : '0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <RotateCcw size={16} color="#64748b" />
-                            <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#475569' }}>CALCULATION TALLY</span>
+                            <RotateCcw size={14} color="#64748b" />
+                            <span style={{ fontWeight: 800, fontSize: '0.8rem', color: '#475569' }}>CALCULATION TALLY</span>
                         </div>
                         <div style={{ display: 'flex', gap: '10px' }}>
                             <button 
                                 onClick={clearHistory}
-                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '0.7rem', fontWeight: 800 }}
+                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '0.65rem', fontWeight: 800 }}
                             >
                                 CLEAR
                             </button>
-                            <button 
-                                onClick={onClose}
-                                style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
-                            >
-                                <X size={24} />
-                            </button>
+                            {!isMobile && (
+                                <button 
+                                    onClick={onClose}
+                                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                                >
+                                    <X size={24} />
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -263,36 +277,37 @@ const Calculator = ({ isOpen, onClose }) => {
                         background: 'white', 
                         flex: 1, 
                         borderRadius: '20px', 
-                        padding: '15px', 
+                        padding: '12px', 
                         overflowY: 'auto',
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '12px',
+                        gap: '10px',
                         boxShadow: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)',
-                        maxHeight: '400px'
+                        maxHeight: isMobile ? '200px' : '400px',
+                        minHeight: isMobile ? '100px' : 'auto'
                     }}>
                         {history.length === 0 ? (
-                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', fontSize: '0.8rem', fontWeight: 700, textAlign: 'center', padding: '20px' }}>
-                                No history yet. Results will appear here for your confirmation.
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#cbd5e1', fontSize: '0.75rem', fontWeight: 700, textAlign: 'center', padding: '15px' }}>
+                                No history yet.
                             </div>
                         ) : (
                             history.map((item, idx) => (
                                 <div key={idx} style={{ 
-                                    padding: '10px', 
+                                    padding: '8px', 
                                     borderBottom: '1px solid #f1f5f9',
                                     animation: 'slideIn 0.2s ease-out'
                                 }}>
-                                    <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700, marginBottom: '2px' }}>{item.time}</div>
-                                    <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>{item.eq} =</div>
-                                    <div style={{ fontSize: '1.1rem', color: '#059669', fontWeight: 900 }}>Rs {item.res}</div>
+                                    <div style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 700, marginBottom: '2px' }}>{item.time}</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>{item.eq} =</div>
+                                    <div style={{ fontSize: '1rem', color: '#059669', fontWeight: 900 }}>Rs {item.res}</div>
                                 </div>
                             ))
                         )}
                     </div>
                     
-                    <div style={{ marginTop: '20px', padding: '15px', background: '#ecfdf5', borderRadius: '12px', border: '1px solid #d1fae5' }}>
-                        <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#059669', marginBottom: '5px' }}>TALLY SUM (TOTAL)</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#065f46' }}>
+                    <div style={{ marginTop: '15px', padding: '12px', background: '#ecfdf5', borderRadius: '12px', border: '1px solid #d1fae5' }}>
+                        <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#059669', marginBottom: '2px' }}>TALLY SUM (TOTAL)</div>
+                        <div style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 900, color: '#065f46' }}>
                             Rs {history.reduce((acc, curr) => acc + Number(curr.res), 0).toLocaleString()}
                         </div>
                     </div>

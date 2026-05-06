@@ -20,12 +20,14 @@ import {
     Wallet,
     Lock,
     Trash2,
-    Layers
+    Layers,
+    X,
+    Menu
 } from 'lucide-react';
 import { logout } from '../store/slices/authSlice';
 import toast from 'react-hot-toast';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose }) => {
     const { user } = useSelector(state => state.auth);
     const location = useLocation();
     const navigate = useNavigate();
@@ -49,6 +51,11 @@ const Sidebar = () => {
             setShowPinModal(true);
         } else {
             navigate(path);
+        }
+        
+        // Auto-close sidebar on mobile/tablet after selection
+        if (window.innerWidth <= 1024) {
+            onClose();
         }
     };
 
@@ -104,9 +111,24 @@ const Sidebar = () => {
                     40%, 60% { transform: translate3d(4px, 0, 0); }
                 }
             `}</style>
-            <aside className="desktop-sidebar no-print">
-                <div className="brand-section">
+            <aside className={`desktop-sidebar no-print ${isOpen ? 'open' : ''}`}>
+                <div className="brand-section" style={{ position: 'relative' }}>
                     <span className="brand-name">BILAL VETERINARY CLINIC</span>
+                    <button 
+                        onClick={onClose}
+                        style={{ 
+                            position: 'absolute', 
+                            right: '10px', 
+                            top: '20px', 
+                            background: 'transparent', 
+                            border: 'none', 
+                            color: '#94a3b8', 
+                            cursor: 'pointer',
+                            display: window.innerWidth <= 1024 ? 'block' : 'none'
+                        }}
+                    >
+                        <X size={24} />
+                    </button>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{ fontSize: '0.6rem', color: '#64748b', fontWeight: 800 }}>PROFESSIONAL RMS v1.0.2</span>
                         <span style={{ background: '#10b981', color: 'white', fontSize: '0.5rem', padding: '2px 6px', borderRadius: '4px', fontWeight: 900 }}>LIVE</span>

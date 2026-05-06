@@ -121,22 +121,115 @@ const UserManagement = () => {
     };
 
     return (
-        <div style={{ height: '100%', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '20px', padding: '10px' }}>
-            <header style={{ background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+        <div style={{ height: '100%', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '20px', padding: window.innerWidth <= 768 ? '10px' : '20px' }}>
+            <header style={{ 
+                background: 'white', 
+                padding: '20px', 
+                borderRadius: '16px', 
+                border: '1px solid #e2e8f0', 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 600 ? 'column' : 'row',
+                justifyContent: 'space-between', 
+                alignItems: window.innerWidth <= 600 ? 'flex-start' : 'center', 
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                gap: '15px'
+            }}>
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
                         <Shield size={24} color="#6366f1" />
-                        <h2 style={{ fontSize: '1.5rem', fontWeight: 950, color: '#1e293b' }}>TEAM ACCESS CONTROL</h2>
+                        <h2 style={{ fontSize: window.innerWidth <= 480 ? '1.2rem' : '1.5rem', fontWeight: 950, color: '#1e293b' }}>TEAM ACCESS CONTROL</h2>
                     </div>
                     <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600 }}>Manage operator privileges and feature restrictions.</p>
                 </div>
-                <div style={{ background: '#f8fafc', padding: '10px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ background: '#f8fafc', padding: '10px 20px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '10px', width: window.innerWidth <= 600 ? '100%' : 'auto', justifyContent: 'center' }}>
                     <Users size={20} color="#6366f1" />
                     <span style={{ fontWeight: 900, fontSize: '0.9rem', color: '#1e293b' }}>{users.length} STAFF MEMBERS</span>
                 </div>
             </header>
 
-            <div style={{ flex: 1, background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            {window.innerWidth <= 1024 ? (
+                /* Mobile/Tablet Card View */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                    {isLoading ? (
+                        <div style={{ textAlign: 'center', padding: '50px' }}>
+                            <Loader2 size={40} className="animate-spin" style={{ margin: '0 auto', color: '#6366f1' }} />
+                        </div>
+                    ) : users.map(u => (
+                        <div key={u.id} className="pos-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                <div>
+                                    <div style={{ fontWeight: 900, color: '#1e293b', fontSize: '1.1rem' }}>{u.name}</div>
+                                    <div style={{ color: '#64748b', fontWeight: 600, fontSize: '0.85rem' }}>{u.email}</div>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                                    <span style={{ padding: '4px 10px', borderRadius: '6px', background: u.role === 'admin' ? '#eef2ff' : '#f8fafc', color: u.role === 'admin' ? '#4f46e5' : '#64748b', fontSize: '0.7rem', fontWeight: 900, border: '1px solid currentColor' }}>
+                                        {u.role.toUpperCase()}
+                                    </span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: u.status === 'active' ? '#10b981' : '#f59e0b' }}></div>
+                                        <span style={{ fontWeight: 800, fontSize: '0.7rem', color: u.status === 'active' ? '#059669' : '#d97706' }}>
+                                            {u.status?.toUpperCase() || 'PENDING'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8', marginBottom: '10px', textTransform: 'uppercase' }}>Feature Permissions</div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                                    {PERMISSIONS.map(p => {
+                                        const isActive = (u.permissions || []).includes(p.id);
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                disabled={u.role === 'admin'}
+                                                onClick={() => handleTogglePermission(u, p.id)}
+                                                style={{ 
+                                                    padding: '8px 12px', 
+                                                    borderRadius: '8px', 
+                                                    fontSize: '0.65rem', 
+                                                    fontWeight: 900, 
+                                                    cursor: u.role === 'admin' ? 'default' : 'pointer',
+                                                    background: isActive ? '#eef2ff' : '#f8fafc',
+                                                    color: isActive ? '#6366f1' : '#94a3b8',
+                                                    border: `1px solid ${isActive ? '#6366f1' : '#e2e8f0'}`,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px'
+                                                }}
+                                            >
+                                                {isActive ? <CheckCircle size={12} /> : <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: '1px solid #cbd5e1' }}></div>}
+                                                {p.label.toUpperCase()}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px', pt: '15px', borderTop: '1px solid #f1f5f9', justifyContent: 'flex-end' }}>
+                                {u.status === 'pending' && (
+                                    <button onClick={() => handleUpdateStatus(u.id, 'active')} style={{ flex: 1, padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', fontSize: '0.75rem' }}>
+                                        APPROVE
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => handleResetPassword(u.email)}
+                                    style={{ padding: '12px', color: '#6366f1', background: '#eef2ff', border: 'none', borderRadius: '10px', cursor: 'pointer' }}
+                                >
+                                    <Key size={18} />
+                                </button>
+                                {isAdmin && u.role !== 'admin' && (
+                                    <button onClick={() => handleDeleteUser(u.id)} style={{ padding: '12px', color: '#ef4444', background: '#fff1f1', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
+                                        <Trash2 size={18} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                /* Desktop Table View */
+                <div style={{ flex: 1, background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
                 <div style={{ flex: 1, overflowY: 'auto' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead style={{ background: '#f8fafc', position: 'sticky', top: 0, zIndex: 10, borderBottom: '2px solid #f1f5f9' }}>
@@ -237,6 +330,7 @@ const UserManagement = () => {
                     </table>
                 </div>
             </div>
+            )}
         </div>
     );
 };

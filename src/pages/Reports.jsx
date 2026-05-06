@@ -140,24 +140,35 @@ const Reports = () => {
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '25px', backgroundColor: '#f8fafc', padding: '15px', overflowY: 'auto' }}>
             
             {/* 1. PROFESSIONAL HEADER */}
-            <header style={{ background: 'white', padding: '25px', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0' }}>
+            <header style={{ 
+                background: 'white', 
+                padding: window.innerWidth <= 480 ? '20px' : '25px', 
+                borderRadius: '16px', 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                justifyContent: 'space-between', 
+                alignItems: window.innerWidth <= 768 ? 'flex-start' : 'center', 
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', 
+                border: '1px solid #e2e8f0',
+                gap: '20px'
+            }}>
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                         <div style={{ background: '#ecfdf5', padding: '8px', borderRadius: '10px' }}>
                             <BarChart3 size={24} color="#10b981" />
                         </div>
-                        <h2 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#1e293b', letterSpacing: '-0.5px' }}>Daily Sales Report</h2>
+                        <h2 style={{ fontSize: window.innerWidth <= 480 ? '1.4rem' : '1.8rem', fontWeight: 950, color: '#1e293b', letterSpacing: '-0.5px' }}>Daily Sales Report</h2>
                     </div>
                     <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>Real-time business intelligence and financial reconciliation.</p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                    <div style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', flexDirection: window.innerWidth <= 480 ? 'column' : 'row', gap: '15px', alignItems: 'center', width: window.innerWidth <= 768 ? '100%' : 'auto' }}>
+                    <div style={{ position: 'relative', width: '100%' }}>
                         <Calendar size={18} style={{ position: 'absolute', left: '15px', top: '15px', color: '#10b981', zIndex: 1 }} />
                         <input
                             type="date"
                             className="erp-input"
-                            style={{ paddingLeft: '45px', fontWeight: 800, border: '2px solid #e2e8f0', borderRadius: '12px', height: '48px', width: '220px', fontSize: '1rem', background: '#f8fafc' }}
+                            style={{ paddingLeft: '45px', fontWeight: 800, border: '2px solid #e2e8f0', borderRadius: '12px', height: '48px', width: '100%', fontSize: '1rem', background: '#f8fafc' }}
                             value={dateFilter}
                             onChange={(e) => setDateFilter(e.target.value)}
                         />
@@ -165,7 +176,7 @@ const Reports = () => {
                     <button
                         onClick={handleSaveReport}
                         disabled={isSaving || filteredSales.length === 0}
-                        style={{ height: '48px', padding: '0 25px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.2)' }}
+                        style={{ height: '48px', width: window.innerWidth <= 480 ? '100%' : 'auto', padding: '0 25px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.2)' }}
                     >
                         {isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
                         ARCHIVE DSR
@@ -174,7 +185,11 @@ const Reports = () => {
             </header>
 
             {/* 2. STATS OVERVIEW CARDS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px' }}>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: window.innerWidth <= 1024 ? (window.innerWidth <= 600 ? '1fr' : '1fr 1fr') : 'repeat(4, 1fr)', 
+                gap: '20px' 
+            }}>
                 
                 {/* REVENUE CARD */}
                 <div style={{ background: 'white', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
@@ -182,7 +197,7 @@ const Reports = () => {
                         <div style={{ background: '#f0f9ff', padding: '10px', borderRadius: '12px' }}><DollarSign size={20} color="#0ea5e9" /></div>
                         <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#0ea5e9', background: '#f0f9ff', padding: '4px 10px', borderRadius: '20px' }}>REVENUE</span>
                     </div>
-                    <h3 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#0f172a', marginBottom: '5px' }}>Rs {totalRevenue.toLocaleString()}</h3>
+                    <h3 style={{ fontSize: window.innerWidth <= 480 ? '1.5rem' : '1.8rem', fontWeight: 950, color: '#0f172a', marginBottom: '5px' }}>Rs {totalRevenue.toLocaleString()}</h3>
                     <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>Total cash & credit inflow</p>
                 </div>
 
@@ -194,7 +209,7 @@ const Reports = () => {
                                 <div style={{ background: 'rgba(255,255,255,0.1)', padding: '10px', borderRadius: '12px' }}><TrendingUp size={20} color="#34d399" /></div>
                                 <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#34d399', background: 'rgba(52, 211, 153, 0.1)', padding: '4px 10px', borderRadius: '20px' }}>NET PROFIT</span>
                             </div>
-                            <h3 style={{ fontSize: '1.8rem', fontWeight: 950, color: 'white', marginBottom: '5px' }}>Rs {totalProfit.toLocaleString()}</h3>
+                            <h3 style={{ fontSize: window.innerWidth <= 480 ? '1.5rem' : '1.8rem', fontWeight: 950, color: 'white', marginBottom: '5px' }}>Rs {totalProfit.toLocaleString()}</h3>
                             <p style={{ fontSize: '0.8rem', color: '#a7f3d0', fontWeight: 700 }}>Click for detailed analysis</p>
                         </div>
                     </Link>
@@ -204,7 +219,7 @@ const Reports = () => {
                             <div style={{ background: '#f5f3ff', padding: '10px', borderRadius: '12px' }}><ShoppingBag size={20} color="#8b5cf6" /></div>
                             <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#8b5cf6', background: '#f5f3ff', padding: '4px 10px', borderRadius: '20px' }}>SALES</span>
                         </div>
-                        <h3 style={{ fontSize: '1.8rem', fontWeight: 950, color: '#0f172a', marginBottom: '5px' }}>{totalTransactions}</h3>
+                        <h3 style={{ fontSize: window.innerWidth <= 480 ? '1.5rem' : '1.8rem', fontWeight: 950, color: '#0f172a', marginBottom: '5px' }}>{totalTransactions}</h3>
                         <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>Total success invoices</p>
                     </div>
                 )}
@@ -215,7 +230,7 @@ const Reports = () => {
                         <div style={{ background: '#fff7ed', padding: '10px', borderRadius: '12px' }}><Wallet size={20} color="#f59e0b" /></div>
                         <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#f59e0b', background: '#fff7ed', padding: '4px 10px', borderRadius: '20px' }}>CASH FLOW</span>
                     </div>
-                    <h3 style={{ fontSize: '1.4rem', fontWeight: 950, color: '#0f172a', marginBottom: '5px' }}>Rs {paymentStats.Cash.toLocaleString()}</h3>
+                    <h3 style={{ fontSize: window.innerWidth <= 480 ? '1.3rem' : '1.4rem', fontWeight: 950, color: '#0f172a', marginBottom: '5px' }}>Rs {paymentStats.Cash.toLocaleString()}</h3>
                     <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>Pure cash collections</p>
                 </div>
 
@@ -225,13 +240,18 @@ const Reports = () => {
                         <div style={{ background: '#fef2f2', padding: '10px', borderRadius: '12px' }}><Users size={20} color="#ef4444" /></div>
                         <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#ef4444', background: '#fef2f2', padding: '4px 10px', borderRadius: '20px' }}>CREDIT SALES</span>
                     </div>
-                    <h3 style={{ fontSize: '1.4rem', fontWeight: 950, color: '#0f172a', marginBottom: '5px' }}>Rs {paymentStats.Credit.toLocaleString()}</h3>
+                    <h3 style={{ fontSize: window.innerWidth <= 480 ? '1.3rem' : '1.4rem', fontWeight: 950, color: '#0f172a', marginBottom: '5px' }}>Rs {paymentStats.Credit.toLocaleString()}</h3>
                     <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>Added to customer accounts</p>
                 </div>
             </div>
 
             {/* 3. DETAILED CONTENT AREA */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '25px', flex: 1 }}>
+            <div style={{ 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 1024 ? 'column' : 'row', 
+                gap: '25px', 
+                flex: 1 
+            }}>
                 
                 {/* BILLS TABLE */}
                 <div style={{ background: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
@@ -245,7 +265,8 @@ const Reports = () => {
                     </div>
 
                     <div style={{ flex: 1, overflowY: 'auto', padding: '0 10px' }}>
-                        <table className="erp-table" style={{ border: 'none' }}>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="erp-table" style={{ border: 'none' }}>
                             <thead style={{ position: 'sticky', top: 0, zIndex: 10, background: 'white' }}>
                                 <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
                                     <th style={{ padding: '15px 20px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 900, color: '#64748b' }}>ID</th>
@@ -303,7 +324,8 @@ const Reports = () => {
                                     );
                                 })}
                             </tbody>
-                        </table>
+                            </table>
+                        </div>
                         {filteredSales.length === 0 && (
                             <div style={{ textAlign: 'center', padding: '100px 0' }}>
                                 <div style={{ background: '#f8fafc', width: '80px', height: '80px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
@@ -316,7 +338,12 @@ const Reports = () => {
                 </div>
 
                 {/* RIGHT SIDEBAR: ANALYTICS */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+                <div style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '25px',
+                    width: window.innerWidth <= 1024 ? '100%' : '380px'
+                }}>
                     
                     {/* TOP PRODUCTS */}
                     <div style={{ background: 'white', padding: '30px', borderRadius: '24px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
@@ -484,8 +511,8 @@ const Reports = () => {
 
             {/* INVOICE PREVIEW MODAL */}
             {selectedSale && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
-                    <div style={{ background: 'white', borderRadius: '28px', position: 'relative', width: '380px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', overflow: 'hidden', animation: 'modalIn 0.3s ease-out' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: window.innerWidth <= 480 ? '0' : '20px' }}>
+                    <div style={{ background: 'white', borderRadius: window.innerWidth <= 480 ? '0' : '28px', position: 'relative', width: '380px', height: window.innerWidth <= 480 ? '100%' : 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', overflow: 'hidden', animation: 'modalIn 0.3s ease-out', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ padding: '20px 25px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontWeight: 950, fontSize: '0.9rem', color: '#1e293b' }}>INVOICE AUDIT DATA</span>
                             <button 
@@ -494,7 +521,7 @@ const Reports = () => {
                             >✕</button>
                         </div>
                         
-                        <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ padding: '20px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0', flex: 1, overflowY: 'auto' }}>
                             <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: '2px solid #e2e8f0', paddingBottom: '15px' }}>
                                 <img src={logo} alt="Clinic Logo" style={{ height: '50px', marginBottom: '10px', filter: 'grayscale(1)' }} />
                                 <h2 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#0f172a', marginBottom: '5px' }}>INVOICE DETAILS</h2>

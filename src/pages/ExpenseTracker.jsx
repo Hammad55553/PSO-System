@@ -95,34 +95,49 @@ const ExpenseTracker = () => {
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '20px', padding: '25px', backgroundColor: '#f8fafc' }}>
             
             {/* HEADER */}
-            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '20px 25px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
+            <header style={{ 
+                display: 'flex', 
+                flexDirection: window.innerWidth <= 600 ? 'column' : 'row',
+                justifyContent: 'space-between', 
+                alignItems: window.innerWidth <= 600 ? 'stretch' : 'center', 
+                background: 'white', 
+                padding: window.innerWidth <= 480 ? '15px' : '20px 25px', 
+                borderRadius: '16px', 
+                border: '1px solid #e2e8f0', 
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+                gap: '15px'
+            }}>
                 <div>
-                    <h2 style={{ fontSize: '1.6rem', fontWeight: 950, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <Wallet size={28} color="#ef4444" /> EXPENSE TRACKER (KHARCHA)
+                    <h2 style={{ fontSize: window.innerWidth <= 480 ? '1.2rem' : '1.6rem', fontWeight: 950, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Wallet size={window.innerWidth <= 480 ? 24 : 28} color="#ef4444" /> EXPENSE TRACKER
                     </h2>
-                    <p style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 600, marginTop: '5px' }}>Manage clinic overheads and daily operational costs.</p>
+                    <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600, marginTop: '5px' }}>Manage clinic overheads and daily operational costs.</p>
                 </div>
                 <button 
                     onClick={() => setIsModalOpen(true)}
-                    style={{ background: '#0f172a', color: 'white', border: 'none', padding: '12px 25px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                    style={{ background: '#0f172a', color: 'white', border: 'none', padding: '12px 20px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                 >
                     <Plus size={18} /> LOG NEW EXPENSE
                 </button>
             </header>
 
             {/* STATS CARDS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
+            <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : window.innerWidth <= 900 ? '1fr 1fr' : 'repeat(3, 1fr)', 
+                gap: '15px' 
+            }}>
                 <div style={{ background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', marginBottom: '5px' }}>TODAY'S OUTFLOW</p>
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: 950, color: '#ef4444' }}>Rs {stats.today.toLocaleString()}</h3>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748b', marginBottom: '5px' }}>TODAY'S OUTFLOW</p>
+                    <h3 style={{ fontSize: '1.3rem', fontWeight: 950, color: '#ef4444' }}>Rs {stats.today.toLocaleString()}</h3>
                 </div>
                 <div style={{ background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', marginBottom: '5px' }}>MONTHLY TOTAL</p>
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: 950, color: '#1e293b' }}>Rs {stats.thisMonth.toLocaleString()}</h3>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748b', marginBottom: '5px' }}>MONTHLY TOTAL</p>
+                    <h3 style={{ fontSize: '1.3rem', fontWeight: 950, color: '#1e293b' }}>Rs {stats.thisMonth.toLocaleString()}</h3>
                 </div>
-                <div style={{ background: '#0f172a', padding: '20px', borderRadius: '16px', color: 'white' }}>
-                    <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', marginBottom: '5px' }}>CUMULATIVE EXPENSES</p>
-                    <h3 style={{ fontSize: '1.5rem', fontWeight: 950, color: '#34d399' }}>Rs {stats.total.toLocaleString()}</h3>
+                <div style={{ background: '#0f172a', padding: '20px', borderRadius: '16px', color: 'white', gridColumn: window.innerWidth <= 900 && window.innerWidth > 480 ? 'span 2' : 'auto' }}>
+                    <p style={{ fontSize: '0.65rem', fontWeight: 800, color: '#94a3b8', marginBottom: '5px' }}>CUMULATIVE EXPENSES</p>
+                    <h3 style={{ fontSize: '1.3rem', fontWeight: 950, color: '#34d399' }}>Rs {stats.total.toLocaleString()}</h3>
                 </div>
             </div>
 
@@ -141,9 +156,9 @@ const ExpenseTracker = () => {
             </div>
 
             {/* EXPENSE TABLE */}
-            <div style={{ flex: 1, background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                <div style={{ overflowY: 'auto', height: '100%' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div style={{ flex: 1, background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ overflowX: 'auto', flex: 1 }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
                         <thead style={{ position: 'sticky', top: 0, background: '#f8fafc', zIndex: 10 }}>
                             <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                                 <th style={{ padding: '15px 20px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 900, color: '#64748b' }}>DATE</th>
@@ -163,7 +178,7 @@ const ExpenseTracker = () => {
                                     transition={{ delay: idx * 0.03 }}
                                     style={{ borderBottom: '1px solid #f1f5f9' }}
                                 >
-                                    <td style={{ padding: '15px 20px', fontSize: '0.85rem', fontWeight: 700, color: '#475569' }}>
+                                    <td style={{ padding: '15px 20px', fontSize: '0.8rem', fontWeight: 700, color: '#475569' }}>
                                         {new Date(expense.created_at).toLocaleDateString()}
                                     </td>
                                     <td style={{ padding: '15px 20px' }}>
@@ -179,13 +194,13 @@ const ExpenseTracker = () => {
                                             {expense.category}
                                         </span>
                                     </td>
-                                    <td style={{ padding: '15px 20px', fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>
+                                    <td style={{ padding: '15px 20px', fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>
                                         {expense.description}
                                     </td>
                                     <td style={{ padding: '15px 20px', fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>
                                         {expense.added_by?.toUpperCase() || 'SYSTEM'}
                                     </td>
-                                    <td style={{ padding: '15px 20px', textAlign: 'right', fontWeight: 950, color: '#ef4444', fontSize: '1rem' }}>
+                                    <td style={{ padding: '15px 20px', textAlign: 'right', fontWeight: 950, color: '#ef4444', fontSize: '0.9rem' }}>
                                         - Rs {expense.amount.toLocaleString()}
                                     </td>
                                     <td style={{ padding: '15px 20px', textAlign: 'right' }}>
@@ -202,15 +217,21 @@ const ExpenseTracker = () => {
 
             {/* ADD EXPENSE MODAL */}
             {isModalOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ background: 'white', width: '450px', borderRadius: '16px', overflow: 'hidden' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', alignItems: window.innerWidth <= 480 ? 'flex-end' : 'center', justifyContent: 'center' }}>
+                    <div style={{ 
+                        background: 'white', 
+                        width: window.innerWidth <= 480 ? '100%' : '450px', 
+                        maxHeight: window.innerWidth <= 480 ? '90vh' : 'auto',
+                        borderRadius: window.innerWidth <= 480 ? '24px 24px 0 0' : '16px', 
+                        overflow: 'hidden' 
+                    }}>
                         <div style={{ background: '#0f172a', padding: '20px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ fontWeight: 900 }}>LOG NEW EXPENSE</h3>
+                            <h3 style={{ fontWeight: 900, fontSize: '1rem' }}>LOG NEW EXPENSE</h3>
                             <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><X size={24} /></button>
                         </div>
-                        <form onSubmit={handleAdd} style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <form onSubmit={handleAdd} style={{ padding: '25px', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto' }}>
                             <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>EXPENSE CATEGORY</label>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>EXPENSE CATEGORY</label>
                                 <select 
                                     style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 700 }}
                                     value={formData.category}
@@ -220,7 +241,7 @@ const ExpenseTracker = () => {
                                 </select>
                             </div>
                             <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>AMOUNT (Rs)</label>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>AMOUNT (Rs)</label>
                                 <input 
                                     type="number"
                                     placeholder="0.00" 
@@ -230,7 +251,7 @@ const ExpenseTracker = () => {
                                 />
                             </div>
                             <div>
-                                <label style={{ fontSize: '0.75rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>DESCRIPTION / NOTES</label>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>DESCRIPTION / NOTES</label>
                                 <textarea 
                                     placeholder="e.g. Electricity bill for March" 
                                     style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 700, minHeight: '100px' }}
