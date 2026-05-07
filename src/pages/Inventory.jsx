@@ -7,9 +7,15 @@ import { addItem, editItem, deleteItem } from '../store/slices/inventorySlice';
 import Barcode from 'react-barcode';
 import toast from 'react-hot-toast';
 import { addToSyncQueue } from '../utils/offlineSync';
-
+import doneSound from '../assets/Done.ogg';
 
 const Inventory = () => {
+    const playDone = () => {
+        try {
+            const audio = new Audio(doneSound);
+            audio.play().catch(e => console.log("Audio blocked"));
+        } catch (e) { console.error(e); }
+    };
     const dispatch = useDispatch();
     const { user } = useSelector(state => state.auth);
     const inventory = useSelector(state => state.inventory.items);
@@ -114,6 +120,7 @@ const Inventory = () => {
                 else toast.success('Synced to Cloud');
             }
 
+            playDone();
             setIsModalOpen(false);
             setEditingItem(null);
             setFormData({ name: '', price: '', doctor_price: '', buy_price: '', stock: '', unit: 'Units', category: 'Medicine', min_stock: '5', expiry: '', tax_percent: '0', barcode: '', critical_days: '60', manufacturer: '', batch_no: '' });
@@ -193,6 +200,7 @@ const Inventory = () => {
         try {
             const { error } = await supabase.from('inventory').update(updatedData).eq('id', restockItem.id);
             if (error) throw error;
+            playDone();
             toast.success(`Restocked! New Avg Cost: Rs ${averageBuyPrice.toFixed(2)}`);
         } catch (err) {
             addToSyncQueue('inventory', 'update', updatedData, restockItem.id);

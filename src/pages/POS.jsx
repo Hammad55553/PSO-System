@@ -37,6 +37,7 @@ import { updateShiftStats } from '../store/slices/shiftSlice';
 import { updateBalance } from '../store/slices/customerSlice';
 import { addToShortage } from '../store/slices/shortageSlice';
 import toast from 'react-hot-toast';
+import doneSound from '../assets/Done.ogg';
 
 import { supabase } from '../supabase';
 
@@ -55,6 +56,13 @@ const POS = () => {
     const activeShift = useSelector(state => state.shift.activeShift);
     const customers = useSelector(state => state.customers.list);
     const user = useSelector(state => state.auth.user);
+
+    const playDone = () => {
+        try {
+            const audio = new Audio(doneSound);
+            audio.play().catch(e => console.log("Audio blocked"));
+        } catch (e) { console.error(e); }
+    };
 
     const [cart, setCart] = useState([]);
     const [parkedBills, setParkedBills] = useState([]);
@@ -398,12 +406,14 @@ const POS = () => {
 
             if (shouldPrint) {
                 setCheckoutStage('printing');
+                playDone();
                 toast.success('Sale Processed Locally (Offline Ready)');
                 setTimeout(() => {
                     window.print();
                 }, 300);
             } else {
                 setCheckoutStage('printed');
+                playDone();
                 toast.success('Sale Processed Successfully!');
             }
 
