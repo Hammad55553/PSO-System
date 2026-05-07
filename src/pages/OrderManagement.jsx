@@ -234,7 +234,7 @@ const OrderManagement = () => {
             finalPhone = '92' + finalPhone.slice(1);
         }
 
-        window.open(`https://wa.me/${finalPhone}?text=${text}`);
+        window.open(`https://wa.me/${finalPhone}?text=${encodeURIComponent(text)}`);
     };
 
     const exportToCSV = (order) => {
