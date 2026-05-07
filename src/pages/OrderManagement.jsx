@@ -46,6 +46,7 @@ const OrderManagement = () => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('All');
+    const [confirmDelete, setConfirmDelete] = useState({ show: false, type: '', id: null, index: null, title: '', message: '' });
     const [processingOrderId, setProcessingOrderId] = useState(null);
 
     const [formData, setFormData] = useState({
@@ -65,9 +66,17 @@ const OrderManagement = () => {
     };
 
     const handleRemoveItem = (index) => {
-        if (formData.items.length === 1) return;
-        const newItems = formData.items.filter((_, i) => i !== index);
-        setFormData({ ...formData, items: newItems });
+        if (formData.items.length === 1) {
+            toast.error("At least one item is required");
+            return;
+        }
+        setConfirmDelete({
+            show: true,
+            type: 'item',
+            index,
+            title: 'Remove Item?',
+            message: 'Are you sure you want to remove this item from the list?'
+        });
     };
 
     const handleItemChange = (index, field, value) => {
@@ -117,18 +126,37 @@ const OrderManagement = () => {
     };
 
     const handleDeleteOrder = async (id) => {
-        if (!window.confirm('Move this order record to Trash?')) return;
-        try {
-            const { error } = await supabase
-                .from('orders')
-                .update({ deleted_at: new Date().toISOString() })
-                .eq('id', id);
+        setConfirmDelete({
+            show: true,
+            type: 'order',
+            id,
+            title: 'Move to Trash?',
+            message: 'Are you sure you want to move this order record to the Trash? You can restore it within 30 days.'
+        });
+    };
 
-            if (error) throw error;
-            toast.success("Order record moved to Trash");
-        } catch (err) {
-            toast.error('Action failed');
+    const confirmAction = async () => {
+        const { type, id, index } = confirmDelete;
+        
+        if (type === 'order') {
+            try {
+                const { error } = await supabase
+                    .from('orders')
+                    .update({ deleted_at: new Date().toISOString() })
+                    .eq('id', id);
+
+                if (error) throw error;
+                toast.success("Order record moved to Trash");
+            } catch (err) {
+                toast.error('Action failed');
+            }
+        } else if (type === 'item') {
+            const newItems = formData.items.filter((_, i) => i !== index);
+            setFormData({ ...formData, items: newItems });
+            toast.success("Item removed");
         }
+        
+        setConfirmDelete({ show: false, type: '', id: null, index: null, title: '', message: '' });
     };
 
     const openEditOrder = (order) => {
@@ -575,7 +603,19 @@ const OrderManagement = () => {
                                     <h3 style={{ fontSize: '1.1rem', fontWeight: 950 }}>{editingOrder ? 'Update Booking' : 'New Supply Booking'}</h3>
                                     <p style={{ fontSize: '0.7rem', fontWeight: 700, opacity: 0.8 }}>Enter order details below</p>
                                 </div>
-                                <button onClick={() => setIsModalOpen(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', padding: '8px', borderRadius: '12px' }}><X size={20} /></button>
+                                <button 
+                                    onClick={() => setIsModalOpen(false)} 
+                                    style={{ 
+                                        background: 'rgba(255,255,255,0.15)', 
+                                        border: 'none', 
+                                        color: 'white', 
+                                        cursor: 'pointer', 
+                                        padding: window.innerWidth <= 600 ? '6px' : '8px', 
+                                        borderRadius: '10px' 
+                                    }}
+                                >
+                                    <X size={window.innerWidth <= 600 ? 14 : 18} />
+                                </button>
                             </div>
 
                             <form onSubmit={handleSubmit} style={{ padding: '25px', maxHeight: '80vh', overflowY: 'auto' }}>
@@ -640,15 +680,37 @@ const OrderManagement = () => {
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         {formData.items.map((item, idx) => (
                                             <div key={idx} style={{
+                                                position: 'relative',
                                                 display: 'grid',
-                                                gridTemplateColumns: window.innerWidth <= 600 ? '1fr' : '2fr 1.2fr 0.8fr 40px',
+                                                gridTemplateColumns: window.innerWidth <= 600 ? '1fr' : '2fr 1.2fr 0.8fr',
                                                 gap: '10px',
-                                                padding: '15px',
+                                                padding: '35px 15px 15px',
                                                 background: '#f8fafc',
                                                 borderRadius: '16px',
-                                                border: '1px solid #f1f5f9',
-                                                alignItems: 'center'
+                                                border: '1px solid #e2e8f0',
+                                                marginBottom: '10px'
                                             }}>
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => handleRemoveItem(idx)} 
+                                                    style={{ 
+                                                        position: 'absolute',
+                                                        top: '8px',
+                                                        right: '8px',
+                                                        background: '#fff1f1', 
+                                                        border: 'none', 
+                                                        color: '#ef4444', 
+                                                        padding: '4px', 
+                                                        borderRadius: '8px', 
+                                                        cursor: 'pointer', 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        justifyContent: 'center',
+                                                        zIndex: 2
+                                                    }}
+                                                >
+                                                    <X size={14} />
+                                                </button>
                                                 <div style={{ position: 'relative' }}>
                                                     <input
                                                         list="drug-list"
@@ -675,7 +737,6 @@ const OrderManagement = () => {
                                                     </select>
                                                 </div>
                                                 <input placeholder="Price" type="number" style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, outline: 'none' }} value={item.price} onChange={e => handleItemChange(idx, 'price', e.target.value)} />
-                                                <button type="button" onClick={() => handleRemoveItem(idx)} style={{ background: '#fff1f1', border: 'none', color: '#ef4444', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={18} /></button>
                                             </div>
                                         ))}
                                     </div>
@@ -742,8 +803,18 @@ const OrderManagement = () => {
                                     <button onClick={printOrder} style={{ background: '#6366f1', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <Printer size={16} /> Print / Save PDF
                                     </button>
-                                    <button onClick={() => setIsPreviewOpen(false)} style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}>
-                                        <X size={20} />
+                                    <button 
+                                        onClick={() => setIsPreviewOpen(false)} 
+                                        style={{ 
+                                            background: 'rgba(255,255,255,0.15)', 
+                                            color: 'white', 
+                                            border: 'none', 
+                                            padding: window.innerWidth <= 600 ? '6px' : '8px', 
+                                            borderRadius: '10px', 
+                                            cursor: 'pointer' 
+                                        }}
+                                    >
+                                        <X size={window.innerWidth <= 600 ? 14 : 18} />
                                     </button>
                                 </div>
                             </div>
@@ -870,6 +941,88 @@ const OrderManagement = () => {
                     }
                 }
             `}</style>
+
+            {/* 6. BEAUTIFUL CONFIRMATION MODAL */}
+            <AnimatePresence>
+                {confirmDelete.show && (
+                    <div style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(15, 23, 42, 0.7)',
+                        backdropFilter: 'blur(10px)',
+                        zIndex: 3000,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '20px'
+                    }}>
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            style={{
+                                background: 'white',
+                                width: '100%',
+                                maxWidth: '400px',
+                                borderRadius: '24px',
+                                padding: '30px',
+                                textAlign: 'center',
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                            }}
+                        >
+                            <div style={{
+                                width: '60px',
+                                height: '60px',
+                                background: '#fee2e2',
+                                borderRadius: '20px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                margin: '0 auto 20px',
+                                color: '#ef4444'
+                            }}>
+                                <Trash2 size={30} />
+                            </div>
+                            <h3 style={{ fontSize: '1.4rem', fontWeight: 950, color: '#1e293b', marginBottom: '10px' }}>{confirmDelete.title}</h3>
+                            <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600, lineHeight: '1.5', marginBottom: '30px' }}>{confirmDelete.message}</p>
+                            
+                            <div style={{ display: 'flex', gap: '12px' }}>
+                                <button
+                                    onClick={() => setConfirmDelete({ show: false, type: '', id: null, index: null, title: '', message: '' })}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        background: '#f1f5f9',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        fontWeight: 800,
+                                        color: '#475569',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={confirmAction}
+                                    style={{
+                                        flex: 1,
+                                        padding: '12px',
+                                        background: '#ef4444',
+                                        border: 'none',
+                                        borderRadius: '12px',
+                                        fontWeight: 800,
+                                        color: 'white',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)'
+                                    }}
+                                >
+                                    Yes, Remove
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
         </div>
     );
