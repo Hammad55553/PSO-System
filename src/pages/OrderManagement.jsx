@@ -73,7 +73,7 @@ const OrderManagement = () => {
         setConfirmDelete({
             show: true,
             type: 'item',
-            index,
+            index: index,
             title: 'Remove Item?',
             message: 'Are you sure you want to remove this item from the list?'
         });

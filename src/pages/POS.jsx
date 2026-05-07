@@ -304,7 +304,6 @@ const POS = () => {
             const saleItemsData = cart.map(item => ({
                 sale_id: finalSaleId,
                 product_id: item.id,
-                product_name: item.name,
                 quantity: item.quantity,
                 price: isDoctorMode ? (item.doctor_price || item.price) : item.price,
                 buy_price: item.buy_price || 0,

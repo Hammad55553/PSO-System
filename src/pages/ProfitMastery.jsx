@@ -304,10 +304,9 @@ const ProfitMastery = () => {
                 
                  {/* PRODUCT-WISE PROFIT TABLE */}
                  <div style={{ flex: 1, background: 'white', borderRadius: '24px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '400px' }}>
-                     <div style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ padding: '20px 30px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                          <h4 style={{ fontSize: '1.1rem', fontWeight: 950 }}>Unit-Level Profitability</h4>
-                         {loading && <div style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 800 }}>SYNCING...</div>}
-                     </div>
+                      </div>
                      <div style={{ overflowX: 'auto' }}>
                         <table className="erp-table">
                             <thead>
