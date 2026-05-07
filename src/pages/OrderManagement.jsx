@@ -263,6 +263,7 @@ const OrderManagement = () => {
 
     const filteredOrders = orders.filter(o =>
         (o.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            o.id?.toLowerCase().includes(searchTerm.toLowerCase().replace('#', '').replace('ord-', '')) ||
             o.items?.some(i => i.name?.toLowerCase().includes(searchTerm.toLowerCase()))) &&
         (activeTab === 'All' || o.status === activeTab)
     );
