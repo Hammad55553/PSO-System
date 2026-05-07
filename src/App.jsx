@@ -45,6 +45,8 @@ import Register from './pages/Register';
 import UserManagement from './pages/UserManagement';
 import { toggleCalculator, openCalculator, closeCalculator } from './store/slices/uiSlice';
 
+import welcomeSound from './assets/Welcome.mp3';
+
 function AppContent() {
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector(state => state.auth);
@@ -108,13 +110,30 @@ function AppContent() {
 
   // WELCOME AUDIO LOGIC
   const playWelcome = () => {
+    console.log("Attempting to play welcome sound...");
     try {
-      const audio = new Audio('/src/assets/Welcome.mp3');
-      audio.play().catch(e => console.log("Audio play blocked by browser policy"));
+      const audio = new Audio(welcomeSound);
+      audio.volume = 0.8;
+      audio.play().catch(e => {
+        console.warn("Audio play blocked: User must interact with the page first.", e);
+        // Fallback: Play on next click if blocked
+        const playOnClick = () => {
+          audio.play();
+          window.removeEventListener('click', playOnClick);
+        };
+        window.addEventListener('click', playOnClick);
+      });
     } catch (e) {
       console.error("Audio error", e);
     }
   };
+
+  // Play on LOGIN
+  useEffect(() => {
+    if (isAuthenticated) {
+      playWelcome();
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -157,16 +176,6 @@ function AppContent() {
             if (exp.data) dispatch(setExpenses(exp.data));
             if (sup.data) dispatch(setSuppliers(sup.data));
             if (typeof ord !== 'undefined' && ord.data) dispatch(setOrders(ord.data.sort((a,b) => new Date(b.created_at)-new Date(a.created_at))));
-
-            // LOGIN / STARTUP AUDIO LOGIC
-            const now = Date.now();
-            const lastSeen = parseInt(localStorage.getItem('terminal_last_active') || '0');
-            const twoHours = 2 * 60 * 60 * 1000;
-            
-            if (now - lastSeen > twoHours || lastSeen === 0) {
-                playWelcome(); // Play on Login after long time or first time
-            }
-            localStorage.setItem('terminal_last_active', now.toString());
 
         } catch (err) {
             console.error(err);
