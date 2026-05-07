@@ -110,21 +110,30 @@ function AppContent() {
 
   // WELCOME AUDIO LOGIC
   const playWelcome = () => {
-    console.log("Attempting to play welcome sound...");
     try {
       const audio = new Audio(welcomeSound);
       audio.volume = 0.8;
-      audio.play().catch(e => {
-        console.warn("Audio play blocked: User must interact with the page first.", e);
-        // Fallback: Play on next click if blocked
-        const playOnClick = () => {
-          audio.play();
-          window.removeEventListener('click', playOnClick);
-        };
-        window.addEventListener('click', playOnClick);
-      });
+      
+      const startPlay = () => {
+        audio.play().then(() => {
+          console.log("Welcome sound played successfully.");
+        }).catch(e => {
+          // If still blocked, wait for first real interaction
+          const playOnInteraction = () => {
+            audio.play().catch(() => {});
+            window.removeEventListener('mousedown', playOnInteraction);
+            window.removeEventListener('keydown', playOnInteraction);
+            window.removeEventListener('touchstart', playOnInteraction);
+          };
+          window.addEventListener('mousedown', playOnInteraction);
+          window.addEventListener('keydown', playOnInteraction);
+          window.addEventListener('touchstart', playOnInteraction);
+        });
+      };
+
+      startPlay();
     } catch (e) {
-      console.error("Audio error", e);
+      // Silent fail
     }
   };
 

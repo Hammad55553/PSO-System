@@ -30,10 +30,9 @@ const ProfitMastery = () => {
         }
     `;
 
-    const { history } = useSelector(state => state.sales);
+    const { history: allSales } = useSelector(state => state.sales);
     const { user } = useSelector(state => state.auth);
     const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
-
     const [selectedProduct, setSelectedProduct] = useState(null);
 
     if (user?.role !== 'admin') {
@@ -47,81 +46,73 @@ const ProfitMastery = () => {
         );
     }
 
-    const [sales, setSales] = useState([]);
-    const [loading, setLoading] = useState(false);
+    // Filter sales locally from Redux history
+    const [showAllHistory, setShowAllHistory] = useState(false);
 
-    // Fetch Sales for Selected Date
-    useEffect(() => {
-        const fetchSales = async () => {
-            setLoading(true);
-            try {
-                // Fetch for the entire day using a more flexible range
-                const { data, error } = await supabase
-                    .from('sales')
-                    .select('*, sale_items(*)')
-                    .gte('created_at', `${dateFilter}T00:00:00`)
-                    .lte('created_at', `${dateFilter}T23:59:59`)
-                    .order('created_at', { ascending: false });
+    const filteredSales = React.useMemo(() => {
+        if (!allSales) return [];
+        if (showAllHistory) return allSales;
+        return allSales.filter(sale => {
+            if (!sale.created_at) return false;
+            const saleDate = new Date(sale.created_at).toISOString().split('T')[0];
+            return saleDate === dateFilter;
+        });
+    }, [allSales, dateFilter, showAllHistory]);
 
-                if (error) throw error;
-                setSales(data || []);
-            } catch (err) {
-                console.error("Profit Fetch Error:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchSales();
-    }, [dateFilter]);
-
-    const filteredSales = sales;
-
-    const totalRevenue = filteredSales.reduce((acc, s) => acc + (Number(s.total) || 0), 0);
+    const totalRevenue = React.useMemo(() => filteredSales.reduce((acc, s) => acc + (Number(s.total) || 0), 0), [filteredSales]);
     
     // Detailed Profit Calculation
-    const productProfitStats = {};
-    let totalNetProfit = 0;
-    let totalCost = 0;
+    const { productProfitStats, totalNetProfit, totalCost } = React.useMemo(() => {
+        const stats = {};
+        let netProfit = 0;
+        let cost = 0;
 
-    filteredSales.forEach(sale => {
-        let saleProfit = 0;
-        const items = sale.sale_items || sale.items || [];
-        items.forEach(item => {
-            const buyPrice = item.buy_price || item.buyPrice || 0;
-            const profitPerUnit = (item.price || 0) - buyPrice;
-            const itemTotalProfit = profitPerUnit * (item.quantity || 0);
-            
-            saleProfit += itemTotalProfit;
-            totalCost += (buyPrice * (item.quantity || 0));
+        filteredSales.forEach(sale => {
+            let saleProfit = 0;
+            const items = sale.sale_items || sale.items || [];
+            items.forEach(item => {
+                const buyPrice = item.buy_price || item.buyPrice || 0;
+                const profitPerUnit = (item.price || 0) - buyPrice;
+                const itemTotalProfit = profitPerUnit * (item.quantity || 0);
+                
+                saleProfit += itemTotalProfit;
+                cost += (buyPrice * (item.quantity || 0));
 
-            if (!productProfitStats[item.name]) {
-                productProfitStats[item.name] = {
-                    name: item.name,
-                    profit: 0,
-                    qty: 0,
-                    buyPrice: buyPrice,
-                    salePrice: item.price,
-                    category: item.category,
-                    sales: []
-                };
-            }
-            productProfitStats[item.name].profit += itemTotalProfit;
-            productProfitStats[item.name].qty += (item.quantity || 0);
-            productProfitStats[item.name].sales.push({
-                billId: sale.id,
-                qty: item.quantity,
-                customer: sale.customer_name || sale.customerName,
-                total: (item.price * item.quantity)
+                if (!stats[item.product_name || item.name]) {
+                    stats[item.product_name || item.name] = {
+                        name: item.product_name || item.name,
+                        profit: 0,
+                        qty: 0,
+                        buyPrice: buyPrice,
+                        salePrice: item.price,
+                        category: item.category,
+                        sales: []
+                    };
+                }
+                const pName = item.product_name || item.name;
+                stats[pName].profit += itemTotalProfit;
+                stats[pName].qty += (item.quantity || 0);
+                stats[pName].sales.push({
+                    billId: sale.id?.toString().slice(-6) || 'N/A',
+                    qty: item.quantity,
+                    customer: sale.customer_name || sale.customerName || 'Walk-in',
+                    total: (item.price * item.quantity)
+                });
             });
+            netProfit += (saleProfit - (sale.discount || 0));
         });
-        totalNetProfit += (saleProfit - (sale.discount || 0));
-    });
+
+        return { 
+            productProfitStats: stats, 
+            totalNetProfit: netProfit, 
+            totalCost: cost 
+        };
+    }, [filteredSales]);
 
     const profitMargin = totalRevenue ? ((totalNetProfit / totalRevenue) * 100).toFixed(1) : 0;
     const topProfitableProducts = Object.values(productProfitStats)
         .sort((a, b) => b.profit - a.profit)
-        .slice(0, 15);
+        .slice(0, 50);
 
     return (
         <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '30px', background: '#f8fafc', padding: '20px', overflowY: 'auto' }}>
@@ -231,19 +222,41 @@ const ProfitMastery = () => {
                     <h2 style={{ fontSize: window.innerWidth <= 480 ? '1.4rem' : '2rem', fontWeight: 950, display: 'flex', alignItems: 'center', gap: '15px' }}>
                         <Zap size={window.innerWidth <= 480 ? 24 : 32} color="#34d399" /> Profit Mastery Analytics
                     </h2>
-                    <p style={{ color: '#94a3b8', fontWeight: 600, marginTop: '5px', fontSize: window.innerWidth <= 480 ? '0.8rem' : '1rem' }}>Deep-dive into your margins and product-level profitability.</p>
-                </div>
-                <div style={{ display: 'flex', gap: '15px', alignItems: 'center', width: window.innerWidth <= 768 ? '100%' : 'auto' }}>
-                     <div style={{ position: 'relative', width: '100%' }}>
-                        <Calendar size={18} style={{ position: 'absolute', left: '15px', top: '15px', color: '#34d399' }} />
-                        <input
-                            type="date"
-                            className="erp-input"
-                            style={{ paddingLeft: '45px', fontWeight: 800, border: 'none', borderRadius: '12px', height: '48px', width: '100%', background: 'rgba(255,255,255,0.1)', color: 'white' }}
-                            value={dateFilter}
-                            onChange={(e) => setDateFilter(e.target.value)}
-                        />
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '5px' }}>
+                        <p style={{ color: '#94a3b8', fontWeight: 600, fontSize: window.innerWidth <= 480 ? '0.8rem' : '1rem' }}>Deep-dive into your margins.</p>
+                        <span style={{ background: '#334155', color: '#34d399', padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 900 }}>{allSales?.length || 0} TOTAL SALES</span>
                     </div>
+                </div>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center', width: window.innerWidth <= 768 ? '100%' : 'auto', flexDirection: window.innerWidth <= 480 ? 'column' : 'row' }}>
+                    <button 
+                        onClick={() => setShowAllHistory(!showAllHistory)}
+                        style={{
+                            background: showAllHistory ? '#10b981' : 'rgba(255,255,255,0.1)',
+                            color: 'white',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            padding: '12px 20px',
+                            borderRadius: '12px',
+                            fontWeight: 900,
+                            fontSize: '0.8rem',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            width: window.innerWidth <= 480 ? '100%' : 'auto'
+                        }}
+                    >
+                        {showAllHistory ? 'BACK TO TODAY' : 'SHOW ALL HISTORY'}
+                    </button>
+                    {!showAllHistory && (
+                        <div style={{ position: 'relative', width: '100%' }}>
+                            <Calendar size={18} style={{ position: 'absolute', left: '15px', top: '15px', color: '#34d399' }} />
+                            <input
+                                type="date"
+                                className="erp-input"
+                                style={{ paddingLeft: '45px', fontWeight: 800, border: 'none', borderRadius: '12px', height: '48px', width: '100%', background: 'rgba(255,255,255,0.1)', color: 'white' }}
+                                value={dateFilter}
+                                onChange={(e) => setDateFilter(e.target.value)}
+                            />
+                        </div>
+                    )}
                 </div>
             </header>
 
