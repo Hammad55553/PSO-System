@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -18,7 +18,16 @@ import {
     Trash2,
     Edit3,
     ArrowUpCircle,
-    ArrowDownCircle
+    ArrowDownCircle,
+    Share2,
+    FileText,
+    Download,
+    Eye,
+    Printer,
+    MessageCircle,
+    Building2,
+    Check,
+    Phone
 } from 'lucide-react';
 import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
@@ -27,10 +36,13 @@ const OrderManagement = () => {
     const dispatch = useDispatch();
     const orders = useSelector(state => state.orders.list);
     const inventory = useSelector(state => state.inventory.items);
+    const suppliers = useSelector(state => state.suppliers.list);
     const { user } = useSelector(state => state.auth);
     const isAdmin = user?.role === 'admin';
 
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [selectedOrder, setSelectedOrder] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('All');
     const [processingOrderId, setProcessingOrderId] = useState(null);
@@ -38,17 +50,23 @@ const OrderManagement = () => {
     const [formData, setFormData] = useState({
         supplier: '',
         contact: '',
-        type: 'Incoming', // New: Incoming or Outgoing
-        items: [{ name: '', qty: '', price: '' }],
-        bookingDate: new Date().toISOString().split('T')[0],
-        deliveryDate: '',
+        type: 'Incoming', 
+        items: [{ name: '', qty: '', unit: 'PCS', price: '' }],
+        booking_date: new Date().toISOString().split('T')[0],
+        delivery_date: '',
         notes: ''
     });
 
     const [editingOrder, setEditingOrder] = useState(null);
 
     const handleAddItem = () => {
-        setFormData({ ...formData, items: [...formData.items, { name: '', qty: '', price: '' }] });
+        setFormData({ ...formData, items: [...formData.items, { name: '', qty: '', unit: 'PCS', price: '' }] });
+    };
+
+    const handleRemoveItem = (index) => {
+        if (formData.items.length === 1) return;
+        const newItems = formData.items.filter((_, i) => i !== index);
+        setFormData({ ...formData, items: newItems });
     };
 
     const handleItemChange = (index, field, value) => {
@@ -60,45 +78,46 @@ const OrderManagement = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (editingOrder) {
-            const updated = { ...formData, id: editingOrder.id, status: editingOrder.status };
-            try {
-                const { error } = await supabase
-                    .from('orders')
-                    .update(updated)
-                    .eq('id', updated.id);
-                
-                if (error) throw error;
-                toast.success('Order Booking Updated in Supabase!');
-            } catch (err) {
-                toast.error('Update failed');
-            }
-        } else {
-            const newOrder = {
-                ...formData,
-                status: 'Pending'
-            };
-            try {
-                const { error } = await supabase
-                    .from('orders')
-                    .insert([newOrder]);
-                
-                if (error) throw error;
-                toast.success('Order booked in Supabase successfully!');
-            } catch (err) {
-                toast.error('Booking failed');
-            }
-        }
+        const payload = {
+            supplier: formData.supplier,
+            contact: formData.contact,
+            type: formData.type,
+            items: formData.items.filter(item => item.name.trim() !== ''),
+            booking_date: formData.booking_date,
+            delivery_date: formData.delivery_date || null,
+            notes: formData.notes,
+            status: editingOrder ? editingOrder.status : 'Pending'
+        };
 
-        setIsModalOpen(false);
-        setEditingOrder(null);
-        setFormData({ supplier: '', contact: '', type: 'Incoming', items: [{ name: '', qty: '', price: '' }], bookingDate: new Date().toISOString().split('T')[0], deliveryDate: '', notes: '' });
+        try {
+            if (editingOrder) {
+                const { error } = await supabase
+                    .from('orders')
+                    .update(payload)
+                    .eq('id', editingOrder.id);
+                
+                if (error) throw error;
+                toast.success('Order Booking Updated!');
+            } else {
+                const { error } = await supabase
+                    .from('orders')
+                    .insert([payload]);
+                
+                if (error) throw error;
+                toast.success('Order booked successfully!');
+            }
+            setIsModalOpen(false);
+            setEditingOrder(null);
+            setFormData({ supplier: '', contact: '', type: 'Incoming', items: [{ name: '', qty: '', unit: 'PCS', price: '' }], booking_date: new Date().toISOString().split('T')[0], delivery_date: '', notes: '' });
+        } catch (err) {
+            console.error("Supabase Error:", err);
+            toast.error(err.message || 'Action failed');
+        }
     };
 
     const handleDeleteOrder = async (id) => {
         if (!window.confirm('Move this order record to Trash?')) return;
         try {
-            // Soft Delete
             const { error } = await supabase
                 .from('orders')
                 .update({ deleted_at: new Date().toISOString() })
@@ -117,9 +136,9 @@ const OrderManagement = () => {
             supplier: order.supplier,
             contact: order.contact || '',
             type: order.type || 'Incoming',
-            items: order.items,
-            bookingDate: order.bookingDate,
-            deliveryDate: order.deliveryDate || '',
+            items: order.items || [{ name: '', qty: '', unit: 'PCS', price: '' }],
+            booking_date: order.booking_date || order.bookingDate || new Date().toISOString().split('T')[0],
+            delivery_date: order.delivery_date || order.deliveryDate || '',
             notes: order.notes || ''
         });
         setIsModalOpen(true);
@@ -132,7 +151,6 @@ const OrderManagement = () => {
         setProcessingOrderId(order.id);
         
         try {
-            // 1. Update Order Status
             const { error: orderError } = await supabase
                 .from('orders')
                 .update({ status: 'Received' })
@@ -140,8 +158,7 @@ const OrderManagement = () => {
 
             if (orderError) throw orderError;
 
-            // 2. Add/Deduct Inventory (Optional)
-            if (pushToStock) {
+            if (pushToStock && order.items) {
                 for (const item of order.items) {
                     const existing = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
                     if (existing) {
@@ -150,14 +167,12 @@ const OrderManagement = () => {
                         
                         let updatedInv;
                         if (order.type === 'Outgoing') {
-                            updatedInv = {
-                                stock: currentStock - incomingQty
-                            };
+                            updatedInv = { stock: currentStock - incomingQty };
                         } else {
                             const currentBuyPrice = parseFloat(existing.buy_price || 0);
                             const incomingBuyPrice = parseFloat(item.price || existing.buy_price);
                             const totalStock = currentStock + incomingQty;
-                            const averageBuyPrice = ((currentStock * currentBuyPrice) + (incomingQty * incomingBuyPrice)) / totalStock;
+                            const averageBuyPrice = ((currentStock * currentBuyPrice) + (incomingQty * incomingBuyPrice)) / (totalStock || 1);
 
                             updatedInv = {
                                 stock: totalStock,
@@ -185,8 +200,53 @@ const OrderManagement = () => {
         }
     };
 
+    // --- SHARING FUNCTIONS ---
+    const shareToWhatsApp = (order) => {
+        const date = new Date(order.booking_date || order.bookingDate).toLocaleDateString();
+        let message = `*📦 SUPPLY ORDER HUB - BILAL VET CLINIC*\n\n`;
+        message += `*Type:* ${order.type === 'Incoming' ? '📥 RESTOCK' : '📤 SUPPLY'}\n`;
+        message += `*Party:* ${order.supplier}\n`;
+        message += `*Date:* ${date}\n`;
+        message += `------------------------------------\n`;
+        
+        order.items.forEach((item, index) => {
+            message += `${index + 1}. *${item.name}* - ${item.qty} ${item.unit || 'PCS'}\n`;
+        });
+        
+        message += `------------------------------------\n`;
+        if (order.notes) message += `*Notes:* ${order.notes}\n`;
+        message += `\n_Generated via Bilal Vet POS System_`;
+
+        const encodedMessage = encodeURIComponent(message);
+        const whatsappUrl = `https://wa.me/${order.contact?.replace(/[^0-9]/g, '') || ''}?text=${encodedMessage}`;
+        window.open(whatsappUrl, '_blank');
+    };
+
+    const exportToCSV = (order) => {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Item Name,Quantity,Unit,Price\r\n";
+        
+        order.items.forEach(item => {
+            csvContent += `${item.name},${item.qty},${item.unit || 'PCS'},${item.price || 0}\r\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `Order_${order.supplier}_${order.booking_date || order.bookingDate}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast.success("Excel/CSV Exported!");
+    };
+
+    const printOrder = () => {
+        window.print();
+    };
+
     const filteredOrders = orders.filter(o => 
-        (o.supplier.toLowerCase().includes(searchTerm.toLowerCase()) || o.items.some(i => i.name.toLowerCase().includes(searchTerm.toLowerCase()))) &&
+        (o.supplier?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+         o.items?.some(i => i.name?.toLowerCase().includes(searchTerm.toLowerCase()))) &&
         (activeTab === 'All' || o.status === activeTab)
     );
 
@@ -203,6 +263,7 @@ const OrderManagement = () => {
             <motion.header 
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
+                className="no-print"
                 style={{ 
                     display: 'flex', 
                     flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
@@ -221,7 +282,9 @@ const OrderManagement = () => {
                         alignItems: 'center', 
                         gap: '12px' 
                     }}>
-                        <div style={{ background: '#6366f1', padding: '10px', borderRadius: '12px', color: 'white' }}><Truck size={window.innerWidth <= 480 ? 20 : 24} /></div>
+                        <div style={{ background: 'linear-gradient(135deg, #6366f1, #4f46e5)', padding: '10px', borderRadius: '12px', color: 'white', boxShadow: '0 4px 12px rgba(99, 102, 241, 0.3)' }}>
+                            <Truck size={window.innerWidth <= 480 ? 20 : 24} />
+                        </div>
                         Supply Order Hub
                     </h2>
                     <p style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600, marginTop: '8px' }}>Manage supplier bookings and inventory restocking.</p>
@@ -244,16 +307,23 @@ const OrderManagement = () => {
                                 fontSize: '0.85rem', 
                                 fontWeight: 600, 
                                 boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                                outline: 'none'
+                                outline: 'none',
+                                transition: 'all 0.2s'
                             }} 
+                            onFocus={(e) => e.target.style.borderColor = '#6366f1'}
+                            onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
                     <button 
-                        onClick={() => setIsModalOpen(true)}
+                        onClick={() => {
+                            setEditingOrder(null);
+                            setFormData({ supplier: '', contact: '', type: 'Incoming', items: [{ name: '', qty: '', unit: 'PCS', price: '' }], booking_date: new Date().toISOString().split('T')[0], delivery_date: '', notes: '' });
+                            setIsModalOpen(true);
+                        }}
                         style={{ 
-                            background: '#6366f1', 
+                            background: 'linear-gradient(135deg, #6366f1, #4f46e5)', 
                             color: 'white', 
                             border: 'none', 
                             padding: '12px 20px', 
@@ -264,7 +334,7 @@ const OrderManagement = () => {
                             justifyContent: 'center',
                             gap: '8px', 
                             cursor: 'pointer', 
-                            boxShadow: '0 4px 6px -1px rgba(99, 102, 241, 0.3)',
+                            boxShadow: '0 4px 10px rgba(99, 102, 241, 0.3)',
                             fontSize: '0.85rem'
                         }}
                     >
@@ -274,7 +344,7 @@ const OrderManagement = () => {
             </motion.header>
 
             {/* 2. TAB NAVIGATION */}
-            <div style={{ 
+            <div className="no-print" style={{ 
                 display: 'flex', 
                 gap: '8px', 
                 marginBottom: '25px', 
@@ -288,8 +358,8 @@ const OrderManagement = () => {
                         key={tab}
                         onClick={() => setActiveTab(tab)}
                         style={{ 
-                            padding: '8px 16px', 
-                            borderRadius: '10px', 
+                            padding: '8px 18px', 
+                            borderRadius: '12px', 
                             border: 'none', 
                             fontWeight: 800, 
                             fontSize: '0.75rem',
@@ -297,7 +367,9 @@ const OrderManagement = () => {
                             backgroundColor: activeTab === tab ? '#1e293b' : 'white',
                             color: activeTab === tab ? 'white' : '#64748b',
                             boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s',
+                            border: activeTab === tab ? '1px solid #1e293b' : '1px solid transparent'
                         }}
                     >
                         {tab} Orders
@@ -306,55 +378,46 @@ const OrderManagement = () => {
             </div>
 
             {/* 3. ORDERS GRID */}
-            <div style={{ 
+            <div className="no-print" style={{ 
                 display: 'grid', 
-                gridTemplateColumns: window.innerWidth <= 640 ? '1fr' : 'repeat(auto-fill, minmax(360px, 1fr))', 
+                gridTemplateColumns: window.innerWidth <= 640 ? '1fr' : 'repeat(auto-fill, minmax(380px, 1fr))', 
                 gap: '20px' 
             }}>
                 <AnimatePresence mode="popLayout">
                     {filteredOrders.map((order, idx) => (
                         <motion.div 
                             key={order.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.95 }}
-                            transition={{ delay: idx * 0.05 }}
+                            transition={{ delay: idx * 0.03 }}
                             style={{ 
                                 background: 'white', 
-                                borderRadius: '20px', 
-                                padding: window.innerWidth <= 480 ? '20px' : '25px', 
+                                borderRadius: '24px', 
+                                padding: '25px', 
                                 border: '1px solid #e2e8f0', 
                                 boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)', 
-                                position: 'relative' 
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column'
                             }}
                         >
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
                                 <div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase' }}>{order.id}</span>
-                                        {order.type === 'Outgoing' ? <ArrowUpCircle size={12} color="#6366f1" /> : <ArrowDownCircle size={12} color="#10b981" />}
+                                        <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>#{order.id?.slice(-6) || 'ORDER'}</span>
+                                        {order.type === 'Outgoing' ? <ArrowUpCircle size={14} color="#6366f1" /> : <ArrowDownCircle size={14} color="#10b981" />}
                                     </div>
-                                    <h4 style={{ fontSize: '1.1rem', fontWeight: 950, color: '#0f172a', marginTop: '4px', lineHeight: 1.2 }}>{order.supplier}</h4>
+                                    <h4 style={{ fontSize: '1.2rem', fontWeight: 950, color: '#0f172a', marginTop: '6px', lineHeight: 1.2 }}>{order.supplier}</h4>
+                                    <p style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
+                                        <Building2 size={12} /> {order.type === 'Incoming' ? 'Supplier' : 'Client/Party'}
+                                    </p>
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
-                                    <div style={{ display: 'flex', gap: '6px' }}>
-                                        <button 
-                                            onClick={() => openEditOrder(order)} 
-                                            style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}
-                                        >
-                                            <Edit3 size={14} />
-                                        </button>
-                                        <button 
-                                            onClick={() => handleDeleteOrder(order.id)} 
-                                            style={{ background: '#fff1f1', border: '1px solid #fee2e2', color: '#ef4444', padding: '8px', borderRadius: '8px', cursor: 'pointer' }}
-                                        >
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
                                     <span style={{ 
-                                        padding: '4px 10px', 
-                                        borderRadius: '20px', 
-                                        fontSize: '0.6rem', 
+                                        padding: '5px 12px', 
+                                        borderRadius: '12px', 
+                                        fontSize: '0.65rem', 
                                         fontWeight: 900,
                                         backgroundColor: order.status === 'Received' ? '#ecfdf5' : '#fff7ed',
                                         color: order.status === 'Received' ? '#059669' : '#c2410c',
@@ -363,30 +426,69 @@ const OrderManagement = () => {
                                     }}>
                                         {order.status.toUpperCase()}
                                     </span>
+                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                        <button 
+                                            onClick={() => { setSelectedOrder(order); setIsPreviewOpen(true); }} 
+                                            title="Preview Document"
+                                            style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#64748b', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}
+                                        >
+                                            <Eye size={16} />
+                                        </button>
+                                        <button 
+                                            onClick={() => openEditOrder(order)} 
+                                            style={{ background: '#f0f9ff', border: '1px solid #bae6fd', color: '#0284c7', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}
+                                        >
+                                            <Edit3 size={16} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDeleteOrder(order.id)} 
+                                            style={{ background: '#fff1f1', border: '1px solid #fee2e2', color: '#ef4444', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-                                <div style={{ flex: 1, background: '#f8fafc', padding: '10px', borderRadius: '12px' }}>
-                                    <p style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: 800 }}>BOOKING</p>
-                                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>{order.bookingDate}</p>
+                            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+                                <div style={{ flex: 1, background: '#f8fafc', padding: '12px', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                                    <p style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 800, marginBottom: '4px' }}>BOOKING DATE</p>
+                                    <p style={{ fontSize: '0.8rem', fontWeight: 900, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}><Calendar size={12} /> {order.booking_date || order.bookingDate}</p>
                                 </div>
-                                <div style={{ flex: 1, background: '#f8fafc', padding: '10px', borderRadius: '12px' }}>
-                                    <p style={{ fontSize: '0.55rem', color: '#94a3b8', fontWeight: 800 }}>{order.type === 'Outgoing' ? 'DELIVERY' : 'EXPECTED'}</p>
-                                    <p style={{ fontSize: '0.75rem', fontWeight: 900, color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>{order.deliveryDate || 'N/A'}</p>
+                                <div style={{ flex: 1, background: '#f8fafc', padding: '12px', borderRadius: '16px', border: '1px solid #f1f5f9' }}>
+                                    <p style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 800, marginBottom: '4px' }}>{order.type === 'Outgoing' ? 'DELIVERY BY' : 'EXPECTED'}</p>
+                                    <p style={{ fontSize: '0.8rem', fontWeight: 900, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}><Clock size={12} /> {order.delivery_date || order.deliveryDate || 'ASAP'}</p>
                                 </div>
                             </div>
 
-                            <div style={{ marginBottom: '20px' }}>
-                                <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8', marginBottom: '10px', letterSpacing: '0.5px' }}>{order.type === 'Outgoing' ? 'SUPPLY ITEMS:' : 'ORDERED ITEMS:'}</p>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                    {order.items.map((item, i) => (
-                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>{item.name}</span>
-                                            <span style={{ fontSize: '0.8rem', fontWeight: 950, color: '#6366f1' }}>{item.qty} <span style={{ fontSize: '0.65rem' }}>PCS</span></span>
+                            <div style={{ marginBottom: '20px', flex: 1 }}>
+                                <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8', marginBottom: '12px', letterSpacing: '0.5px' }}>{order.type === 'Outgoing' ? 'SUPPLY ITEMS:' : 'ORDERED ITEMS:'}</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {order.items?.slice(0, 3).map((item, i) => (
+                                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>{item.name}</span>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 950, color: '#6366f1' }}>{item.qty} <span style={{ fontSize: '0.65rem', fontWeight: 800 }}>{item.unit || 'PCS'}</span></span>
                                         </div>
                                     ))}
+                                    {order.items?.length > 3 && (
+                                        <p style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 800, textAlign: 'center', marginTop: '5px' }}>+ {order.items.length - 3} more items</p>
+                                    )}
                                 </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '15px' }}>
+                                <button 
+                                    onClick={() => shareToWhatsApp(order)}
+                                    style={{ flex: 1, padding: '10px', background: '#25d366', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                    <MessageCircle size={16} /> WHATSAPP
+                                </button>
+                                <button 
+                                    onClick={() => exportToCSV(order)}
+                                    style={{ flex: 1, padding: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569', borderRadius: '12px', fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                    <Download size={16} /> EXCEL
+                                </button>
                             </div>
 
                             {order.status === 'Pending' && (
@@ -400,7 +502,7 @@ const OrderManagement = () => {
                                             background: processingOrderId === order.id ? '#94a3b8' : 'linear-gradient(135deg, #10b981, #059669)', 
                                             color: 'white', 
                                             border: 'none', 
-                                            borderRadius: '12px', 
+                                            borderRadius: '14px', 
                                             fontWeight: 900, 
                                             fontSize: '0.85rem', 
                                             cursor: processingOrderId === order.id ? 'not-allowed' : 'pointer', 
@@ -408,28 +510,11 @@ const OrderManagement = () => {
                                             alignItems: 'center', 
                                             justifyContent: 'center', 
                                             gap: '10px',
-                                            boxShadow: '0 4px 10px rgba(16, 185, 129, 0.2)'
+                                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.2)'
                                         }}
                                     >
                                         {processingOrderId === order.id ? <RefreshCw size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-                                        {order.type === 'Outgoing' ? 'DELIVER & DEDUCT STOCK' : 'RECEIVE & MERGE STOCK'}
-                                    </button>
-                                    <button 
-                                        disabled={processingOrderId === order.id}
-                                        onClick={() => handleMarkReceived(order, false)}
-                                        style={{ 
-                                            width: '100%', 
-                                            padding: '12px', 
-                                            background: 'white', 
-                                            color: '#64748b', 
-                                            border: '1px solid #e2e8f0', 
-                                            borderRadius: '12px', 
-                                            fontWeight: 800, 
-                                            fontSize: '0.75rem', 
-                                            cursor: 'pointer' 
-                                        }}
-                                    >
-                                        MARK COMPLETED ONLY
+                                        {order.type === 'Outgoing' ? 'DELIVER & DEDUCT' : 'RECEIVE & MERGE'}
                                     </button>
                                 </div>
                             )}
@@ -445,7 +530,7 @@ const OrderManagement = () => {
                         position: 'fixed', 
                         inset: 0, 
                         background: 'rgba(15, 23, 42, 0.7)', 
-                        backdropFilter: 'blur(4px)',
+                        backdropFilter: 'blur(8px)',
                         zIndex: 1000, 
                         display: 'flex', 
                         alignItems: window.innerWidth <= 600 ? 'flex-end' : 'center', 
@@ -459,78 +544,284 @@ const OrderManagement = () => {
                             style={{ 
                                 background: 'white', 
                                 width: '100%', 
-                                maxWidth: '600px', 
-                                borderRadius: window.innerWidth <= 600 ? '24px 24px 0 0' : '24px', 
+                                maxWidth: '700px', 
+                                borderRadius: window.innerWidth <= 600 ? '30px 30px 0 0' : '24px', 
                                 overflow: 'hidden',
-                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+                                display: 'flex',
+                                flexDirection: 'column'
                             }}
                         >
-                            <div style={{ background: '#6366f1', padding: '20px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h3 style={{ fontSize: '1rem', fontWeight: 950 }}>Create Supply Booking</h3>
-                                <button onClick={() => setIsModalOpen(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', padding: '5px', borderRadius: '8px' }}><X size={20} /></button>
+                            <div style={{ background: '#6366f1', padding: '20px 25px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <h3 style={{ fontSize: '1.1rem', fontWeight: 950 }}>{editingOrder ? 'Update Booking' : 'New Supply Booking'}</h3>
+                                    <p style={{ fontSize: '0.7rem', fontWeight: 700, opacity: 0.8 }}>Enter order details below</p>
+                                </div>
+                                <button onClick={() => setIsModalOpen(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', cursor: 'pointer', padding: '8px', borderRadius: '12px' }}><X size={20} /></button>
                             </div>
 
                             <form onSubmit={handleSubmit} style={{ padding: '25px', maxHeight: '80vh', overflowY: 'auto' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 500 ? '1fr' : '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
                                     <div>
-                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>ORDER TYPE</label>
-                                        <select style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700, background: '#f8fafc', outline: 'none' }} value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
-                                            <option value="Incoming">Incoming (Restock)</option>
-                                            <option value="Outgoing">Outgoing (Supply)</option>
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>ORDER TYPE</label>
+                                        <select 
+                                            style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 700, background: '#f8fafc', outline: 'none' }} 
+                                            value={formData.type} 
+                                            onChange={e => setFormData({...formData, type: e.target.value})}
+                                        >
+                                            <option value="Incoming">📥 Incoming (Restock/Purchase)</option>
+                                            <option value="Outgoing">📤 Outgoing (Client Supply)</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>PARTY / CLIENT</label>
-                                        <input required style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700, outline: 'none' }} value={formData.supplier} onChange={e => setFormData({...formData, supplier: e.target.value})} placeholder="Name" />
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>PARTY / COMPANY NAME</label>
+                                        <input 
+                                            list="suppliers-list"
+                                            required 
+                                            style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 700, outline: 'none' }} 
+                                            value={formData.supplier} 
+                                            onChange={e => {
+                                                const val = e.target.value;
+                                                // Find supplier by company or name
+                                                const found = suppliers.find(s => s.company === val || s.name === val);
+                                                setFormData(prev => ({
+                                                    ...prev, 
+                                                    supplier: val,
+                                                    contact: found ? found.contact : prev.contact
+                                                }));
+                                            }} 
+                                            placeholder="Search Supplier or Company..." 
+                                        />
+                                        <datalist id="suppliers-list">
+                                            {suppliers.map((s, i) => (
+                                                <React.Fragment key={i}>
+                                                    <option value={s.company} />
+                                                    {s.name && s.name !== s.company && <option value={s.name} />}
+                                                </React.Fragment>
+                                            ))}
+                                        </datalist>
                                     </div>
                                 </div>
 
-                                <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 500 ? '1fr' : '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
                                     <div>
-                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>CONTACT (OPTIONAL)</label>
-                                        <input style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700, outline: 'none' }} value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} placeholder="Phone" />
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>WHATSAPP / CONTACT</label>
+                                        <input style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 700, outline: 'none' }} value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value})} placeholder="Phone (e.g. 92300...)" />
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>DELIVERY DATE</label>
-                                        <input type="date" style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '10px', marginTop: '5px', fontWeight: 700, outline: 'none' }} value={formData.deliveryDate} onChange={e => setFormData({...formData, deliveryDate: e.target.value})} />
+                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>DELIVERY DEADLINE</label>
+                                        <input type="date" style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 700, outline: 'none' }} value={formData.delivery_date} onChange={e => setFormData({...formData, delivery_date: e.target.value})} />
                                     </div>
                                 </div>
 
                                 <div style={{ marginBottom: '20px' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                                        <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>ORDERED ITEMS</label>
-                                        <button type="button" onClick={handleAddItem} style={{ fontSize: '0.7rem', fontWeight: 900, color: '#6366f1', background: '#eef2ff', padding: '5px 12px', borderRadius: '8px', border: 'none', cursor: 'pointer' }}>+ ADD ITEM</button>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                        <label style={{ fontSize: '0.8rem', fontWeight: 950, color: '#1e293b' }}>ITEMIZED LIST</label>
+                                        <button type="button" onClick={handleAddItem} style={{ fontSize: '0.7rem', fontWeight: 900, color: 'white', background: '#6366f1', padding: '6px 14px', borderRadius: '10px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 6px rgba(99, 102, 241, 0.2)' }}>+ ADD PRODUCT</button>
                                     </div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                         {formData.items.map((item, idx) => (
                                             <div key={idx} style={{ 
                                                 display: 'grid', 
-                                                gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : '2fr 1fr 1fr', 
+                                                gridTemplateColumns: window.innerWidth <= 600 ? '1fr' : '2fr 1.2fr 0.8fr 40px', 
                                                 gap: '10px',
                                                 padding: '15px',
                                                 background: '#f8fafc',
-                                                borderRadius: '12px',
-                                                border: '1px solid #f1f5f9'
+                                                borderRadius: '16px',
+                                                border: '1px solid #f1f5f9',
+                                                alignItems: 'center'
                                             }}>
-                                                <input placeholder="Drug Name" required style={{ padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700, outline: 'none' }} value={item.name} onChange={e => handleItemChange(idx, 'name', e.target.value)} />
-                                                <div style={{ display: 'flex', gap: '10px' }}>
-                                                    <input placeholder="Qty" type="number" required style={{ flex: 1, padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700, outline: 'none' }} value={item.qty} onChange={e => handleItemChange(idx, 'qty', e.target.value)} />
-                                                    <input placeholder="Price" type="number" style={{ flex: 1, padding: '10px', border: '1px solid #e2e8f0', borderRadius: '8px', fontWeight: 700, outline: 'none' }} value={item.price} onChange={e => handleItemChange(idx, 'price', e.target.value)} />
+                                                <div style={{ position: 'relative' }}>
+                                                    <input 
+                                                        list="drug-list"
+                                                        placeholder="Drug Name" 
+                                                        required 
+                                                        style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, outline: 'none' }} 
+                                                        value={item.name} 
+                                                        onChange={e => handleItemChange(idx, 'name', e.target.value)} 
+                                                    />
                                                 </div>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <input placeholder="Qty" type="number" required style={{ flex: 1, padding: '10px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, outline: 'none' }} value={item.qty} onChange={e => handleItemChange(idx, 'qty', e.target.value)} />
+                                                    <select 
+                                                        style={{ width: '70px', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, outline: 'none', background: 'white' }} 
+                                                        value={item.unit} 
+                                                        onChange={e => handleItemChange(idx, 'unit', e.target.value)}
+                                                    >
+                                                        <option value="PCS">PCS</option>
+                                                        <option value="ML">ML</option>
+                                                        <option value="LTR">LTR</option>
+                                                        <option value="KG">KG</option>
+                                                        <option value="PACK">PACK</option>
+                                                        <option value="VIAL">VIAL</option>
+                                                    </select>
+                                                </div>
+                                                <input placeholder="Price" type="number" style={{ width: '100%', padding: '10px', border: '1px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, outline: 'none' }} value={item.price} onChange={e => handleItemChange(idx, 'price', e.target.value)} />
+                                                <button type="button" onClick={() => handleRemoveItem(idx)} style={{ background: '#fff1f1', border: 'none', color: '#ef4444', padding: '8px', borderRadius: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={18} /></button>
                                             </div>
                                         ))}
                                     </div>
+                                    <datalist id="drug-list">
+                                        {inventory.map((i, idx) => <option key={idx} value={i.name} />)}
+                                    </datalist>
                                 </div>
 
-                                <button type="submit" style={{ width: '100%', padding: '16px', background: '#6366f1', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 900, fontSize: '1rem', cursor: 'pointer', marginTop: '10px', boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)' }}>
-                                    CONFIRM BOOKING
+                                <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '6px' }}>REMARKS / SPECIAL INSTRUCTIONS</label>
+                                    <textarea 
+                                        rows={3} 
+                                        style={{ width: '100%', padding: '12px', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 600, outline: 'none', resize: 'none' }} 
+                                        value={formData.notes} 
+                                        onChange={e => setFormData({...formData, notes: e.target.value})}
+                                        placeholder="Any additional notes..."
+                                    />
+                                </div>
+
+                                <button type="submit" style={{ width: '100%', padding: '18px', background: 'linear-gradient(135deg, #6366f1, #4f46e5)', color: 'white', border: 'none', borderRadius: '16px', fontWeight: 950, fontSize: '1rem', cursor: 'pointer', marginTop: '10px', boxShadow: '0 10px 15px -3px rgba(99, 102, 241, 0.3)', letterSpacing: '0.5px' }}>
+                                    {editingOrder ? 'UPDATE BOOKING' : 'CONFIRM & SAVE BOOKING'}
                                 </button>
-                                {window.innerWidth <= 600 && <div style={{ height: '20px' }} />}
                             </form>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* 5. PROFESSIONAL DOCUMENT PREVIEW MODAL */}
+            <AnimatePresence>
+                {isPreviewOpen && selectedOrder && (
+                    <div style={{ 
+                        position: 'fixed', 
+                        inset: 0, 
+                        background: 'rgba(0, 0, 0, 0.8)', 
+                        backdropFilter: 'blur(10px)',
+                        zIndex: 2000, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        padding: '20px' 
+                    }}>
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            style={{ 
+                                background: 'white', 
+                                width: '100%', 
+                                maxWidth: '800px', 
+                                borderRadius: '24px', 
+                                overflow: 'hidden',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                height: '90vh'
+                            }}
+                        >
+                            <div className="no-print" style={{ background: '#1e293b', padding: '15px 25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'white' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    <FileText size={20} />
+                                    <h3 style={{ fontSize: '1rem', fontWeight: 900 }}>Order Document Preview</h3>
+                                </div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <button onClick={printOrder} style={{ background: '#6366f1', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Printer size={16} /> Print / Save PDF
+                                    </button>
+                                    <button onClick={() => setIsPreviewOpen(false)} style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: 'none', padding: '8px', borderRadius: '10px', cursor: 'pointer' }}>
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="printable-order" style={{ flex: 1, overflowY: 'auto', padding: '50px', background: 'white', color: '#1e293b' }}>
+                                {/* DOCUMENT HEADER */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '3px solid #1e293b', paddingBottom: '20px', marginBottom: '30px' }}>
+                                    <div>
+                                        <h1 style={{ fontSize: '2.2rem', fontWeight: 950, letterSpacing: '-1px', color: '#6366f1' }}>BILAL VET CLINIC</h1>
+                                        <p style={{ fontSize: '0.9rem', fontWeight: 800, color: '#64748b' }}>Veterinary Medicines & Consultants</p>
+                                        <p style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94a3b8', marginTop: '5px' }}>Address: Chak 234/RB, Faisalabad</p>
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                        <div style={{ padding: '10px 20px', background: '#1e293b', color: 'white', borderRadius: '12px', display: 'inline-block' }}>
+                                            <h2 style={{ fontSize: '1.2rem', fontWeight: 900 }}>SUPPLY ORDER</h2>
+                                        </div>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 800, marginTop: '10px' }}>No: #ORD-{selectedOrder.id?.slice(-6).toUpperCase() || 'NEW'}</p>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 800 }}>Date: {new Date(selectedOrder.booking_date || selectedOrder.bookingDate).toLocaleDateString('en-GB')}</p>
+                                    </div>
+                                </div>
+
+                                {/* PARTY DETAILS */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px', marginBottom: '40px' }}>
+                                    <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                                        <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8', marginBottom: '8px' }}>BILLING TO / FROM</p>
+                                        <h4 style={{ fontSize: '1.1rem', fontWeight: 950, color: '#1e293b' }}>{selectedOrder.supplier}</h4>
+                                        <p style={{ fontSize: '0.85rem', fontWeight: 700, color: '#475569', marginTop: '4px' }}>Contact: {selectedOrder.contact || 'N/A'}</p>
+                                    </div>
+                                    <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                                        <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8', marginBottom: '8px' }}>ORDER DETAILS</p>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>Type:</span>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 950 }}>{selectedOrder.type === 'Incoming' ? 'Incoming Restock' : 'Outgoing Supply'}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '5px' }}>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>Expected:</span>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 950 }}>{selectedOrder.delivery_date || selectedOrder.deliveryDate || 'ASAP'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* ITEMS TABLE */}
+                                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '30px' }}>
+                                    <thead>
+                                        <tr style={{ background: '#1e293b', color: 'white' }}>
+                                            <th style={{ padding: '15px', textAlign: 'left', borderRadius: '12px 0 0 12px' }}>#</th>
+                                            <th style={{ padding: '15px', textAlign: 'left' }}>Product Description</th>
+                                            <th style={{ padding: '15px', textAlign: 'center' }}>Quantity</th>
+                                            <th style={{ padding: '15px', textAlign: 'right', borderRadius: '0 12px 12px 0' }}>Est. Price</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {selectedOrder.items?.map((item, i) => (
+                                            <tr key={i} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                                <td style={{ padding: '15px', fontSize: '0.9rem', fontWeight: 800 }}>{i + 1}</td>
+                                                <td style={{ padding: '15px', fontSize: '1rem', fontWeight: 900 }}>{item.name}</td>
+                                                <td style={{ padding: '15px', textAlign: 'center', fontSize: '1rem', fontWeight: 950, color: '#6366f1' }}>{item.qty} {item.unit || 'PCS'}</td>
+                                                <td style={{ padding: '15px', textAlign: 'right', fontSize: '0.9rem', fontWeight: 800 }}>Rs {item.price || '0.00'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+
+                                {/* NOTES & FOOTER */}
+                                {selectedOrder.notes && (
+                                    <div style={{ marginTop: '20px', padding: '15px', borderLeft: '4px solid #6366f1', background: '#f5f7ff', borderRadius: '0 12px 12px 0' }}>
+                                        <p style={{ fontSize: '0.75rem', fontWeight: 900, color: '#6366f1' }}>REMARKS:</p>
+                                        <p style={{ fontSize: '0.9rem', fontWeight: 700, color: '#475569' }}>{selectedOrder.notes}</p>
+                                    </div>
+                                )}
+
+                                <div style={{ marginTop: '80px', display: 'flex', justifyContent: 'space-between' }}>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ width: '150px', borderBottom: '1px solid #cbd5e1', marginBottom: '8px' }}></div>
+                                        <p style={{ fontSize: '0.75rem', fontWeight: 800 }}>Supplier Signature</p>
+                                    </div>
+                                    <div style={{ textAlign: 'center' }}>
+                                        <div style={{ width: '150px', borderBottom: '1px solid #1e293b', marginBottom: '8px' }}></div>
+                                        <p style={{ fontSize: '0.75rem', fontWeight: 950 }}>Authorized Signature</p>
+                                        <p style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8' }}>Bilal Vet Clinic</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            <style>{`
+                @media print {
+                    .no-print { display: none !important; }
+                    body { background: white !important; margin: 0; padding: 0; }
+                    .app-container, .main-area, .view-container { overflow: visible !important; height: auto !important; }
+                    #printable-order { display: block !important; width: 100% !important; margin: 0 !important; padding: 20px !important; }
+                }
+            `}</style>
 
         </div>
     );
