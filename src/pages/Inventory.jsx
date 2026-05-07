@@ -8,6 +8,8 @@ import Barcode from 'react-barcode';
 import toast from 'react-hot-toast';
 import { addToSyncQueue } from '../utils/offlineSync';
 import doneSound from '../assets/Done.ogg';
+import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 const Inventory = () => {
     const playDone = () => {
@@ -28,6 +30,7 @@ const Inventory = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isRestockModalOpen, setIsRestockModalOpen] = useState(false);
     const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [editingItem, setEditingItem] = useState(null);
     const [restockItem, setRestockItem] = useState(null);
     const [auditItem, setAuditItem] = useState(null);
@@ -224,6 +227,342 @@ const Inventory = () => {
         setIsAuditModalOpen(true);
     };
 
+    const handleExport = async () => {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Pharmacy Inventory');
+
+        worksheet.columns = [
+            { header: 'Medicine Name', key: 'name', width: 35 },
+            { header: 'Manufacturer', key: 'manufacturer', width: 25 },
+            { header: 'Batch No', key: 'batch_no', width: 15 },
+            { header: 'Category', key: 'category', width: 20 },
+            { header: 'Unit', key: 'unit', width: 12 },
+            { header: 'Retail Price', key: 'price', width: 15 },
+            { header: 'Doctor Price', key: 'doctor_price', width: 15 },
+            { header: 'Purchase Price', key: 'buy_price', width: 15 },
+            { header: 'Stock', key: 'stock', width: 12 },
+            { header: 'Min Alert Qty', key: 'min_stock', width: 15 },
+            { header: 'Expiry', key: 'expiry', width: 20 },
+            { header: 'Barcode', key: 'barcode', width: 20 },
+            { header: 'Total Value (AUTO)', key: 'total_value', width: 20 }
+        ];
+
+        const headerColors = {
+            'name': 'FF059669', 'manufacturer': 'FF059669', 'batch_no': 'FF059669',
+            'category': 'FF0369A1', 'unit': 'FF0369A1',
+            'price': 'FF0D9488', 'doctor_price': 'FF4F46E5', 'buy_price': 'FFBE123C',
+            'stock': 'FF1E293B', 'min_stock': 'FF1E293B', 'expiry': 'FF1E293B',
+            'barcode': 'FF1E293B', 'total_value': 'FFD97706'
+        };
+
+        const headerRow = worksheet.getRow(1);
+        headerRow.height = 35;
+        headerRow.eachCell((cell, colNumber) => {
+            const key = worksheet.columns[colNumber - 1].key;
+            cell.font = { name: 'Segoe UI', color: { argb: 'FFFFFFFF' }, size: 10, bold: true };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: headerColors[key] || 'FF64748B' } };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+
+        inventory.forEach((item, idx) => {
+            const rowIndex = idx + 2;
+            const row = worksheet.addRow({
+                name: item.name,
+                manufacturer: item.manufacturer || '-',
+                batch_no: item.batch_no || '-',
+                category: item.category?.toUpperCase(),
+                unit: item.unit,
+                price: item.price,
+                doctor_price: item.doctor_price || item.price,
+                buy_price: item.buy_price || 0,
+                stock: item.stock,
+                min_stock: item.min_stock || 5,
+                expiry: item.expiry || '-',
+                barcode: item.barcode || '-'
+            });
+            
+            // Add formula for each row
+            worksheet.getCell(`O${rowIndex}`).value = { formula: `I${rowIndex}*H${rowIndex}` };
+            worksheet.getCell(`O${rowIndex}`).numFmt = '"Rs "#,##0.00';
+            worksheet.getCell(`O${rowIndex}`).font = { bold: true, color: { argb: 'FFB45309' } };
+            
+            row.height = 25;
+            row.eachCell((cell) => {
+                cell.font = { name: 'Segoe UI', size: 10 };
+                cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                cell.border = { bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } } };
+            });
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `Bilal_Vet_Full_Inventory_${new Date().toISOString().split('T')[0]}.xlsx`;
+        anchor.click();
+        window.URL.revokeObjectURL(url);
+        toast.success("Premium Inventory Exported!");
+    };
+
+    const downloadTemplate = async () => {
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Inventory Template');
+
+        // 1. Define Columns with proper widths
+        worksheet.columns = [
+            { header: 'Medicine Name', key: 'name', width: 35 },
+            { header: 'Manufacturer', key: 'manufacturer', width: 25 },
+            { header: 'Batch No', key: 'batch_no', width: 15 },
+            { header: 'Category (Select from Dropdown)', key: 'category', width: 25 },
+            { header: 'Unit', key: 'unit', width: 12 },
+            { header: 'Retail Price', key: 'price', width: 15 },
+            { header: 'Doctor Price', key: 'doctor_price', width: 15 },
+            { header: 'Purchase Price', key: 'buy_price', width: 15 },
+            { header: 'Stock', key: 'stock', width: 12 },
+            { header: 'Min Alert Qty', key: 'min_stock', width: 15 },
+            { header: 'Expiry (YYYY-MM-DD)', key: 'expiry', width: 20 },
+            { header: 'Barcode', key: 'barcode', width: 20 },
+            { header: 'Total Value (AUTO)', key: 'total_value', width: 20 }
+        ];
+
+        // 2. Style Header Row (Multi-Color Branding)
+        const headerRow = worksheet.getRow(1);
+        headerRow.height = 35;
+        
+        const headerColors = {
+            'name': 'FF059669', 'manufacturer': 'FF059669', 'batch_no': 'FF059669',
+            'category': 'FF0369A1', 'unit': 'FF0369A1',
+            'price': 'FF0D9488', 'doctor_price': 'FF4F46E5', 'buy_price': 'FFBE123C',
+            'stock': 'FF1E293B', 'min_stock': 'FF1E293B', 'expiry': 'FF1E293B',
+            'barcode': 'FF1E293B', 'total_value': 'FFD97706'
+        };
+
+        headerRow.eachCell((cell, colNumber) => {
+            const key = worksheet.columns[colNumber - 1].key;
+            cell.font = { name: 'Segoe UI', color: { argb: 'FFFFFFFF' }, size: 10, bold: true };
+            cell.fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: headerColors[key] || 'FF64748B' }
+            };
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+            };
+        });
+
+        // 3. Add Data Validation (Dropdowns)
+        const categoryOptions = ['Medicine', 'Vaccine', 'Syrup', 'Tablet', 'Injection', 'Surgical', 'Pet Food', 'Accessories', 'Feed', 'Other'];
+        const unitOptions = ['PCS', 'Strip', 'Pack', 'Vial', 'Injection', 'Bottle', 'Box', 'Kg', 'Gram', 'ML'];
+        
+        for (let i = 2; i <= 500; i++) {
+            // Category Dropdown
+            worksheet.getCell(`D${i}`).dataValidation = {
+                type: 'list',
+                allowBlank: true,
+                formulae: [`"${categoryOptions.join(',')}"`]
+            };
+
+            // Unit Dropdown
+            worksheet.getCell(`E${i}`).dataValidation = {
+                type: 'list',
+                allowBlank: true,
+                formulae: [`"${unitOptions.join(',')}"`]
+            };
+            
+            // Add Formula for Total Value
+            worksheet.getCell(`O${i}`).value = { formula: `I${i}*H${i}` };
+            worksheet.getCell(`O${i}`).numFmt = '"Rs "#,##0.00';
+            worksheet.getCell(`O${i}`).font = { bold: true, color: { argb: 'FFB45309' } };
+        }
+
+        // 4. Add Sample Rows with formatting
+        const sampleRows = [
+            {
+                name: 'Augmentin 625mg',
+                manufacturer: 'GSK',
+                batch_no: 'AUG-786',
+                category: 'Tablet',
+                unit: 'Pack',
+                price: 1200,
+                doctor_price: 1100,
+                buy_price: 950,
+                stock: 50,
+                min_stock: 5,
+                expiry: '2026-10-15',
+                barcode: '501234567890'
+            },
+            {
+                name: 'Vancept Vaccine',
+                manufacturer: 'Zoetis',
+                batch_no: 'VAC-22',
+                category: 'Vaccine',
+                unit: 'Vial',
+                price: 3500,
+                doctor_price: 3200,
+                buy_price: 2800,
+                stock: 20,
+                min_stock: 2,
+                expiry: '2025-05-20',
+                barcode: '998877665544'
+            }
+        ];
+
+        sampleRows.forEach((row, idx) => {
+            const addedRow = worksheet.addRow(row);
+            addedRow.height = 25;
+            addedRow.eachCell((cell) => {
+                cell.font = { name: 'Segoe UI', size: 10 };
+                cell.alignment = { vertical: 'middle', horizontal: 'left' };
+                cell.border = { bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } } };
+            });
+        });
+
+        // 5. Generate & Download
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'Bilal_Vet_Inventory_Template.xlsx';
+        anchor.click();
+        window.URL.revokeObjectURL(url);
+
+        toast.success("Premium Excel Template Downloaded!");
+    };
+
+    const handleImportFile = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (evt) => {
+            try {
+                const dataArray = new Uint8Array(evt.target.result);
+                const wb = XLSX.read(dataArray, { type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const rawData = XLSX.utils.sheet_to_json(ws, { raw: false, dateNF: 'yyyy-mm-dd' });
+
+                // Filter out empty rows (where name is missing or blank)
+                const data = rawData.filter(row => row['Medicine Name'] && row['Medicine Name'].toString().trim().length > 0);
+
+                if (data.length === 0) {
+                    toast.error("File is empty!");
+                    return;
+                }
+
+                setIsSaving(true);
+                const importToast = toast.loading(`Analyzing ${data.length} products...`);
+
+                const formattedData = data.map(row => {
+                    let rawExpiry = row['Expiry (YYYY-MM-DD)'];
+                    let finalExpiry = null;
+                    
+                    if (rawExpiry) {
+                        const dateObj = new Date(rawExpiry);
+                        if (!isNaN(dateObj.getTime())) {
+                            finalExpiry = dateObj.toISOString().split('T')[0];
+                        }
+                    }
+
+                    return {
+                        name: row['Medicine Name'] || 'Unknown Product',
+                        manufacturer: row['Manufacturer'] || '',
+                        batch_no: row['Batch No'] || '',
+                        category: row['Category (Select from Dropdown)'] || row['Category'] || 'Medicine',
+                        unit: row['Unit'] || 'Units',
+                        price: parseFloat(row['Retail Price'] || 0),
+                        doctor_price: parseFloat(row['Doctor Price'] || row['Retail Price'] || 0),
+                        buy_price: parseFloat(row['Purchase Price'] || 0),
+                        stock: parseInt(row['Stock'] || 0),
+                        min_stock: parseInt(row['Min Alert Qty'] || 5),
+                        expiry: finalExpiry,
+                        barcode: row['Barcode']?.toString() || null,
+                        initial_stock: parseInt(row['Stock'] || 0),
+                        total_sold: 0
+                    };
+                });
+
+                // Smart Upsert Logic: Match by Name and Batch No
+                const { data: existingItems } = await supabase.from('inventory').select('id, name, batch_no, initial_stock, total_sold');
+                
+                const finalUpsertData = formattedData.map(newItem => {
+                    const match = existingItems?.find(old => 
+                        old.name.trim().toLowerCase() === newItem.name.trim().toLowerCase() && 
+                        (old.batch_no || '').trim().toLowerCase() === (newItem.batch_no || '').trim().toLowerCase()
+                    );
+                    
+                    if (match) {
+                        return { 
+                            ...newItem, 
+                            id: match.id,
+                            initial_stock: match.initial_stock || newItem.initial_stock, // Keep old if exists
+                            total_sold: match.total_sold || 0 // Preserve sales history
+                        };
+                    }
+                    return newItem; // Insert new
+                });
+
+                // Hybrid Bulk Smart Save (Bulk with Individual Fallback)
+                let successCount = 0;
+                let failCount = 0;
+                const chunkSize = 50;
+
+                for (let i = 0; i < finalUpsertData.length; i += chunkSize) {
+                    const chunk = finalUpsertData.slice(i, i + chunkSize);
+                    toast.loading(`Importing: ${i} / ${data.length} products...`, { id: importToast });
+                    
+                    // 1. Try Bulk Upsert (Fastest)
+                    const { error: bulkError } = await supabase.from('inventory').upsert(chunk);
+                    
+                    if (!bulkError) {
+                        successCount += chunk.length;
+                    } else {
+                        // 2. Fallback to Individual (Robust) if bulk fails
+                        console.warn("Bulk chunk failed, falling back to individual processing for this chunk...", bulkError);
+                        for (const item of chunk) {
+                            try {
+                                if (item.id) {
+                                    const { error: upError } = await supabase.from('inventory').update(item).eq('id', item.id);
+                                    if (upError) throw upError;
+                                } else {
+                                    const { error: inError } = await supabase.from('inventory').insert([item]);
+                                    if (inError) throw inError;
+                                }
+                                successCount++;
+                            } catch (err) {
+                                console.error(`Individual save failed for: ${item.name}`, err);
+                                failCount++;
+                            }
+                        }
+                    }
+                }
+
+                toast.dismiss(importToast);
+                if (failCount === 0) {
+                    toast.success(`Success! ${successCount} products imported.`);
+                } else {
+                    toast.success(`${successCount} imported, ${failCount} failed. Check console for details.`);
+                }
+                
+                setIsImportModalOpen(false);
+                window.location.reload(); 
+            } catch (err) {
+                console.error("Critical Import Error:", err);
+                toast.error("Critical Error during import processing.");
+            } finally {
+                setIsSaving(false);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    };
+
     return (
         <div style={{ 
             display: 'flex', 
@@ -255,7 +594,12 @@ const Inventory = () => {
                     <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>Real-time stock monitoring & control.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                    <button className="btn-erp" style={{ flex: 1, background: '#f8fafc', color: '#64748b', padding: '10px', fontSize: '0.75rem' }}><Download size={14} /> EXPORT</button>
+                    <button onClick={() => setIsImportModalOpen(true)} className="btn-erp" style={{ flex: 1, background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', padding: '10px', fontSize: '0.75rem', cursor: 'pointer' }}>
+                        <ArrowUpCircle size={14} /> IMPORT
+                    </button>
+                    <button onClick={handleExport} className="btn-erp" style={{ flex: 1, background: '#f8fafc', color: '#64748b', padding: '10px', fontSize: '0.75rem', cursor: 'pointer' }}>
+                        <Download size={14} /> EXPORT
+                    </button>
                     <button className="btn-erp" onClick={() => { setEditingItem(null); setIsModalOpen(true); }} style={{ flex: 2, background: '#10b981', color: 'white', padding: '10px 15px', fontWeight: 800, fontSize: '0.75rem' }}><Plus size={16} /> ADD MEDICINE</button>
                 </div>
             </header>
@@ -601,6 +945,56 @@ const Inventory = () => {
                     </motion.div>
                 </div>
             )}
+            {/* IMPORT MODAL */}
+            <AnimatePresence>
+                {isImportModalOpen && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(10px)' }}>
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} style={{ background: 'white', width: '100%', maxWidth: '450px', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+                            <div style={{ background: '#0369a1', padding: '25px', color: 'white', textAlign: 'center' }}>
+                                <ArrowUpCircle size={40} style={{ marginBottom: '15px' }} />
+                                <h3 style={{ fontSize: '1.4rem', fontWeight: 950 }}>Bulk Import Inventory</h3>
+                                <p style={{ fontSize: '0.8rem', opacity: 0.8, fontWeight: 600 }}>Quickly add hundreds of products via Excel</p>
+                            </div>
+                            
+                            <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                <div style={{ background: '#f0f9ff', border: '2px dashed #0ea5e9', borderRadius: '16px', padding: '20px', textAlign: 'center' }}>
+                                    <p style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0369a1', marginBottom: '12px' }}>Step 1: Download Format</p>
+                                    <button 
+                                        onClick={downloadTemplate}
+                                        style={{ background: '#0ea5e9', color: 'white', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
+                                    >
+                                        DOWNLOAD TEMPLATE
+                                    </button>
+                                </div>
+
+                                <div style={{ background: '#f8fafc', border: '2px solid #e2e8f0', borderRadius: '16px', padding: '20px', textAlign: 'center' }}>
+                                    <p style={{ fontSize: '0.8rem', fontWeight: 800, color: '#475569', marginBottom: '12px' }}>Step 2: Upload Filled File</p>
+                                    <input 
+                                        type="file" 
+                                        accept=".xlsx, .xls" 
+                                        onChange={handleImportFile}
+                                        style={{ display: 'none' }} 
+                                        id="import-file-input" 
+                                    />
+                                    <label 
+                                        htmlFor="import-file-input"
+                                        style={{ display: 'inline-block', background: '#10b981', color: 'white', padding: '12px 25px', borderRadius: '8px', fontWeight: 900, fontSize: '0.75rem', cursor: 'pointer' }}
+                                    >
+                                        SELECT EXCEL FILE
+                                    </label>
+                                </div>
+
+                                <button 
+                                    onClick={() => setIsImportModalOpen(false)}
+                                    style={{ width: '100%', padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '12px', fontWeight: 800, color: '#64748b', cursor: 'pointer' }}
+                                >
+                                    CANCEL
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

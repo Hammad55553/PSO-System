@@ -31,6 +31,7 @@ const ProfitMastery = () => {
     `;
 
     const { history: allSales } = useSelector(state => state.sales);
+    const { items: inventory } = useSelector(state => state.inventory);
     const { user } = useSelector(state => state.auth);
     const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -78,18 +79,20 @@ const ProfitMastery = () => {
                 saleProfit += itemTotalProfit;
                 cost += (buyPrice * (item.quantity || 0));
 
-                if (!stats[item.product_name || item.name]) {
-                    stats[item.product_name || item.name] = {
-                        name: item.product_name || item.name,
+                const invItem = inventory.find(i => i.id === item.product_id);
+                const pName = item.product_name || item.name || invItem?.name || 'Unknown Item';
+
+                if (!stats[pName]) {
+                    stats[pName] = {
+                        name: pName,
                         profit: 0,
                         qty: 0,
                         buyPrice: buyPrice,
                         salePrice: item.price,
-                        category: item.category,
+                        category: item.category || invItem?.category || 'General',
                         sales: []
                     };
                 }
-                const pName = item.product_name || item.name;
                 stats[pName].profit += itemTotalProfit;
                 stats[pName].qty += (item.quantity || 0);
                 stats[pName].sales.push({
@@ -107,7 +110,7 @@ const ProfitMastery = () => {
             totalNetProfit: netProfit, 
             totalCost: cost 
         };
-    }, [filteredSales]);
+    }, [filteredSales, inventory]);
 
     const profitMargin = totalRevenue ? ((totalNetProfit / totalRevenue) * 100).toFixed(1) : 0;
     const topProfitableProducts = Object.values(productProfitStats)
