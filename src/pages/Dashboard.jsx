@@ -403,9 +403,10 @@ const Dashboard = () => {
                     
                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                         {filteredHistory.slice(0, 6).map((sale, i) => {
-                            const items = sale.sale_items || sale.items || [];
-                            const mainItem = items[0]?.name || 'Unknown Item';
-                            const otherCount = items.length - 1;
+                            const productName = sale.product_name || '';
+                            const items = productName ? productName.split(', ') : (sale.sale_items || sale.items || []);
+                            const mainItem = productName ? items[0] : (items[0]?.name || 'Unknown Item');
+                            const otherCount = productName ? items.length - 1 : (items.length > 0 ? items.length - 1 : 0);
                             const method = sale.payment_method || 'Cash';
                             
                             return (

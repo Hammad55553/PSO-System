@@ -281,7 +281,8 @@ const POS = () => {
             } : null,
             status: paymentMethod === 'Credit' ? 'Khatta' : 'Paid',
             seller_name: user?.name || activeShift?.staffName || 'Operator',
-            is_doctor_mode: isDoctorMode
+            is_doctor_mode: isDoctorMode,
+            product_name: cart.map(item => item.name).join(', ')
         };
 
         try {

@@ -251,7 +251,12 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                                         <td style={{ padding: '15px 20px', fontWeight: 900, color: '#3b82f6', fontSize: '0.75rem' }}>
                                             #{sale.invoice_no ? (100000 + parseInt(sale.invoice_no)).toString() : sale.id?.toString().slice(-6).toUpperCase()}
                                         </td>
-                                        <td style={{ padding: '15px 20px', fontWeight: 800, color: '#1e293b' }}>{sale.customer_name || 'WALK-IN'}</td>
+                                        <td style={{ padding: '15px 20px', fontWeight: 800, color: '#1e293b' }}>
+                                            <div>{sale.customer_name || 'WALK-IN'}</div>
+                                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 600, marginTop: '2px', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {sale.product_name || 'No items info'}
+                                            </div>
+                                        </td>
                                         <td style={{ padding: '15px 20px', fontSize: '0.75rem', color: '#64748b', fontWeight: 600 }}>
                                             {new Date(sale.created_at).toLocaleDateString()}
                                         </td>
@@ -310,7 +315,10 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                                             {sale.status.toUpperCase()}
                                         </span>
                                     </div>
-                                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#1e293b', marginBottom: '5px' }}>{sale.customer_name || 'WALK-IN'}</div>
+                                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#1e293b', marginBottom: '2px' }}>{sale.customer_name || 'WALK-IN'}</div>
+                                    <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600, marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {sale.product_name || 'No items info'}
+                                    </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <div style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 600 }}>{new Date(sale.created_at).toLocaleDateString()} • {sale.payment_method?.toUpperCase()}</div>
                                         <div style={{ fontSize: '1rem', fontWeight: 950, color: '#0f172a' }}>Rs {sale.total.toLocaleString()}</div>
@@ -413,17 +421,24 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                             <div style={{ marginBottom: '30px' }}>
                                 <p style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', marginBottom: '12px', letterSpacing: '0.5px' }}>ITEMIZED BREAKDOWN</p>
                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                    {selectedSale.sale_items?.map(item => (
-                                        <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px dashed #f1f5f9' }}>
-                                            <div style={{ flex: 1 }}>
-                                                <p style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>{item.name}</p>
-                                                <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>Qty: {item.quantity} @ Rs {item.price.toLocaleString()}</p>
+                                    {selectedSale.sale_items && selectedSale.sale_items.length > 0 ? (
+                                        selectedSale.sale_items.map(item => (
+                                            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px dashed #f1f5f9' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <p style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e293b' }}>{item.product_name || item.name}</p>
+                                                    <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>Qty: {item.quantity} @ Rs {item.price?.toLocaleString()}</p>
+                                                </div>
+                                                <div style={{ fontSize: '0.9rem', fontWeight: 950, color: '#0f172a' }}>
+                                                    Rs {((item.price || 0) * (item.quantity || 0)).toLocaleString()}
+                                                </div>
                                             </div>
-                                            <div style={{ fontSize: '0.9rem', fontWeight: 950, color: '#0f172a' }}>
-                                                Rs {(item.price * item.quantity).toLocaleString()}
-                                            </div>
+                                        ))
+                                    ) : (
+                                        <div style={{ padding: '15px', background: '#f8fafc', borderRadius: '10px', border: '1px dashed #e2e8f0' }}>
+                                            <p style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569' }}>{selectedSale.product_name || 'No item details available'}</p>
+                                            <p style={{ fontSize: '0.6rem', color: '#94a3b8', fontWeight: 600, marginTop: '4px' }}>Detailed breakdown is only available for full sync records.</p>
                                         </div>
-                                    ))}
+                                    )}
                                  </div>
                             </div>
 
