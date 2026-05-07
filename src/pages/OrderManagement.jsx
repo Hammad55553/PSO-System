@@ -215,10 +215,12 @@ const OrderManagement = () => {
         const items = Array.isArray(order.items) ? order.items : [];
 
         items.forEach((item, index) => {
-            const name = item.name || 'Unknown Item';
+            const name = (item.name || 'Unknown Item').replace(/\*/g, '');
             const qty = item.qty || '0';
             const unit = item.unit || 'PCS';
-            itemsText += `${index + 1}. *${name}* - ${qty} ${unit}${item.price ? ` (@ Rs ${item.price})` : ''}%0A`;
+            const priceText = item.price ? ` (@ Rs ${item.price})` : '';
+            // Using dots to separate name and qty for a cleaner list look
+            itemsText += `${index + 1}. ${name.padEnd(25, '.')} ${qty} ${unit}${priceText}\n`;
         });
 
         if (itemsText === '') itemsText = 'No items listed%0A';
