@@ -30,6 +30,7 @@ const Dashboard = () => {
     const customers = useSelector(state => state.customers.list);
     const user = useSelector(state => state.auth.user);
     const isAdmin = user?.role === 'admin';
+    const [selectedBar, setSelectedBar] = React.useState(null);
 
     // 1. DATA PROCESSING FOR CHARTS
     const filteredHistory = useMemo(() => 
@@ -74,6 +75,8 @@ const Dashboard = () => {
             percent: (value / total) * 100
         }));
     }, [filteredHistory]);
+
+    const [activeSegment, setActiveSegment] = React.useState(null);
 
     // Profit Calculation Logic
     const calculateProfit = (salesList) => {
@@ -203,22 +206,73 @@ const Dashboard = () => {
                     <div style={{ height: '220px', display: 'flex', alignItems: 'flex-end', gap: window.innerWidth <= 480 ? '8px' : '15px', paddingBottom: '20px', position: 'relative' }}>
                         {revenueTrend.map((data, i) => {
                             const isToday = i === 6;
+                            const isSelected = selectedBar === i;
+                            const ratio = data.revenue / maxRevenue;
+                            
+                            // Dynamic color logic based on revenue value
+                            const getBarColor = () => {
+                                if (isToday) return '#10b981'; // Success green for today
+                                if (isSelected) return '#4f46e5'; // Selection purple
+                                if (ratio > 0.8) return '#6366f1'; // High revenue - Indigo
+                                if (ratio > 0.4) return '#818cf8'; // Mid revenue - Light Indigo
+                                return '#a5b4fc'; // Low revenue - Soft Violet
+                            };
+
                             return (
-                                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: '10px' }}>
-                                    <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', height: '100%', alignItems: 'flex-end' }}>
+                                <div 
+                                    key={i} 
+                                    onClick={() => setSelectedBar(isSelected ? null : i)}
+                                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end', gap: '10px', cursor: 'pointer' }}
+                                >
+                                    <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '100%', alignItems: 'center' }}>
+                                        <AnimatePresence>
+                                            {isSelected && (
+                                                <motion.div 
+                                                    initial={{ opacity: 0, y: 10, scale: 0.5 }}
+                                                    animate={{ opacity: 1, y: -5, scale: 1 }}
+                                                    exit={{ opacity: 0, y: 10, scale: 0.5 }}
+                                                    style={{ 
+                                                        position: 'absolute', 
+                                                        top: `calc(${100 - (data.revenue / maxRevenue) * 100}% - 35px)`,
+                                                        background: '#1e293b',
+                                                        color: 'white',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '6px',
+                                                        fontSize: '0.65rem',
+                                                        fontWeight: 900,
+                                                        whiteSpace: 'nowrap',
+                                                        zIndex: 10,
+                                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                                                    }}
+                                                >
+                                                    Rs {data.revenue.toLocaleString()}
+                                                    <div style={{ 
+                                                        position: 'absolute', 
+                                                        bottom: '-4px', 
+                                                        left: '50%', 
+                                                        transform: 'translateX(-50%) rotate(45deg)', 
+                                                        width: '8px', 
+                                                        height: '8px', 
+                                                        background: '#1e293b' 
+                                                    }} />
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                         <motion.div 
                                             initial={{ height: 0 }}
-                                            animate={{ height: `${(data.revenue / maxRevenue) * 100}%` }}
+                                            animate={{ height: `${ratio * 100}%` }}
+                                            whileHover={{ scaleX: 1.1, opacity: 0.9 }}
                                             style={{ 
                                                 width: '100%', 
                                                 maxWidth: '35px',
-                                                background: isToday ? '#10b981' : '#6366f1', 
+                                                background: getBarColor(), 
                                                 borderRadius: '6px 6px 4px 4px',
-                                                boxShadow: isToday ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none'
+                                                boxShadow: isToday ? '0 4px 12px rgba(16, 185, 129, 0.2)' : 'none',
+                                                transition: 'background 0.3s'
                                             }}
                                         />
                                     </div>
-                                    <span style={{ fontSize: '0.65rem', fontWeight: 900, color: isToday ? '#10b981' : '#64748b' }}>{data.day}</span>
+                                    <span style={{ fontSize: '0.65rem', fontWeight: 900, color: isToday ? '#10b981' : (isSelected ? '#0f172a' : '#64748b') }}>{data.day}</span>
                                 </div>
                             );
                         })}
@@ -234,41 +288,95 @@ const Dashboard = () => {
                     <h4 style={{ fontSize: '1.1rem', fontWeight: 950, color: '#0f172a', marginBottom: '4px' }}>Settlement Distribution</h4>
                     <p style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 600, marginBottom: '20px' }}>Revenue channels</p>
 
-                    <div style={{ display: 'flex', flexDirection: window.innerWidth <= 480 ? 'column' : 'row', gap: '20px', alignItems: 'center' }}>
-                        <div style={{ position: 'relative', width: '140px', height: '140px', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', flexDirection: window.innerWidth <= 480 ? 'column' : 'row', gap: '25px', alignItems: 'center' }}>
+                        <div style={{ position: 'relative', width: '180px', height: '180px', flexShrink: 0 }}>
                             <svg viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)', width: '100%', height: '100%' }}>
+                                {/* Background thin ring for zero data */}
+                                <circle cx="50" cy="50" r="38" fill="transparent" stroke="#f1f5f9" strokeWidth="8" />
+                                
                                 {paymentStats.map((stat, i) => {
                                     let offset = 0;
                                     for(let j=0; j<i; j++) offset += paymentStats[j].percent;
+                                    const isSelected = activeSegment === i;
+                                    const color = stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : stat.label === 'Card' ? '#6366f1' : '#0ea5e9';
+                                    
                                     return (
-                                        <circle
-                                            key={i}
-                                            cx="50" cy="50" r="40"
-                                            fill="transparent"
-                                            stroke={stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : stat.label === 'Card' ? '#6366f1' : '#0ea5e9'}
-                                            strokeWidth="12"
-                                            strokeDasharray={`${stat.percent} 100`}
-                                            strokeDashoffset={-offset}
-                                        />
+                                        <g key={i} onClick={() => setActiveSegment(isSelected ? null : i)} style={{ cursor: 'pointer' }}>
+                                            <motion.circle
+                                                cx="50" cy="50" r="38"
+                                                fill="transparent"
+                                                stroke={color}
+                                                strokeWidth={isSelected ? 12 : 10}
+                                                strokeDasharray={`${stat.percent} 100`}
+                                                strokeDashoffset={-offset}
+                                                initial={{ pathLength: 0 }}
+                                                animate={{ pathLength: 1 }}
+                                                transition={{ duration: 1, delay: 0.5 + (i * 0.1) }}
+                                                style={{ 
+                                                    filter: isSelected ? `drop-shadow(0 0 6px ${color}80)` : 'none',
+                                                    transition: 'stroke-width 0.3s, filter 0.3s'
+                                                }}
+                                            />
+                                        </g>
                                     );
                                 })}
                             </svg>
-                            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                                <span style={{ fontSize: '1.2rem', fontWeight: 950 }}>{filteredHistory.length}</span>
-                                <span style={{ fontSize: '0.5rem', fontWeight: 900, color: '#64748b' }}>TOTAL TX</span>
+                            
+                            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+                                <AnimatePresence mode="wait">
+                                    {activeSegment !== null ? (
+                                        <motion.div 
+                                            key="info"
+                                            initial={{ opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.8 }}
+                                            style={{ textAlign: 'center' }}
+                                        >
+                                            <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#64748b', display: 'block' }}>{paymentStats[activeSegment].label.toUpperCase()}</span>
+                                            <span style={{ fontSize: '1.1rem', fontWeight: 950, color: '#0f172a' }}>{paymentStats[activeSegment].percent.toFixed(0)}%</span>
+                                        </motion.div>
+                                    ) : (
+                                        <motion.div key="total" initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ textAlign: 'center' }}>
+                                            <span style={{ fontSize: '1.4rem', fontWeight: 950, color: '#0f172a' }}>{filteredHistory.length}</span>
+                                            <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#64748b', display: 'block' }}>TOTAL TX</span>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         </div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, width: '100%' }}>
-                            {paymentStats.map((stat, i) => (
-                                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#f8fafc', borderRadius: '10px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : stat.label === 'Card' ? '#6366f1' : '#0ea5e9' }}></div>
-                                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#475569' }}>{stat.label}</span>
-                                    </div>
-                                    <span style={{ fontSize: '0.8rem', fontWeight: 950, color: '#0f172a' }}>{stat.percent.toFixed(0)}%</span>
-                                </div>
-                            ))}
+                            {paymentStats.map((stat, i) => {
+                                const isSelected = activeSegment === i;
+                                const color = stat.label === 'Cash' ? '#10b981' : stat.label === 'Credit' ? '#f59e0b' : stat.label === 'Card' ? '#6366f1' : '#0ea5e9';
+                                return (
+                                    <motion.div 
+                                        key={i} 
+                                        onClick={() => setActiveSegment(isSelected ? null : i)}
+                                        whileHover={{ x: 5 }}
+                                        style={{ 
+                                            display: 'flex', 
+                                            justifyContent: 'space-between', 
+                                            alignItems: 'center', 
+                                            padding: '10px 15px', 
+                                            background: isSelected ? `${color}10` : '#f8fafc', 
+                                            borderRadius: '12px',
+                                            border: `1px solid ${isSelected ? color : 'transparent'}`,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.3s'
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, boxShadow: `0 0 6px ${color}` }}></div>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isSelected ? '#0f172a' : '#475569' }}>{stat.label}</span>
+                                        </div>
+                                        <div style={{ textAlign: 'right' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 950, color: '#0f172a', display: 'block' }}>{stat.percent.toFixed(0)}%</span>
+                                            {isSelected && <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#64748b' }}>Rs {stat.value.toLocaleString()}</span>}
+                                        </div>
+                                    </motion.div>
+                                );
+                            })}
                         </div>
                     </div>
                 </motion.div>
@@ -281,31 +389,84 @@ const Dashboard = () => {
                 gap: '20px' 
             }}>
                 
-                {/* RECENT SETTLEMENTS */}
-                <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '24px', overflow: 'hidden' }}>
-                    <div style={{ padding: '15px 20px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h5 style={{ fontWeight: 950, fontSize: '0.9rem', color: '#0f172a' }}>RECENT SETTLEMENTS</h5>
-                        <button onClick={() => navigate('/history')} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}>ALL <ChevronRight size={14} /></button>
+                {/* RECENT SETTLEMENTS FEED */}
+                <div style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+                    <div style={{ padding: '20px 25px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc' }}>
+                        <div>
+                            <h5 style={{ fontWeight: 950, fontSize: '0.9rem', color: '#0f172a' }}>ACTIVITY FEED</h5>
+                            <p style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 700 }}>Real-time transaction log</p>
+                        </div>
+                        <button onClick={() => navigate('/history')} style={{ background: 'white', border: '1px solid #e2e8f0', color: '#6366f1', padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            VIEW REGISTRY <ChevronRight size={14} />
+                        </button>
                     </div>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                            <tbody>
-                                {filteredHistory.slice(0, 6).map((sale, i) => (
-                                    <tr key={sale.id} style={{ borderBottom: i === 5 ? 'none' : '1px solid #f1f5f9' }}>
-                                        <td style={{ padding: '15px 20px' }}>
-                                            <div style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.85rem' }}>{sale.customer_name || 'WALK-IN'}</div>
-                                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>{sale.payment_method} Settlement</div>
-                                        </td>
-                                        <td style={{ padding: '15px 20px', fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>
-                                            {new Date(sale.created_at).toLocaleDateString()}
-                                        </td>
-                                        <td style={{ padding: '15px 20px', textAlign: 'right', fontWeight: 950, color: '#0f172a' }}>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        {filteredHistory.slice(0, 6).map((sale, i) => {
+                            const items = sale.sale_items || sale.items || [];
+                            const mainItem = items[0]?.name || 'Unknown Item';
+                            const otherCount = items.length - 1;
+                            const method = sale.payment_method || 'Cash';
+                            
+                            return (
+                                <motion.div 
+                                    key={sale.id}
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: i * 0.1 }}
+                                    whileHover={{ background: '#f8fafc' }}
+                                    style={{ 
+                                        padding: '15px 25px', 
+                                        borderBottom: i === 5 ? 'none' : '1px solid #f1f5f9',
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center',
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => navigate('/history')}
+                                >
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flex: 1 }}>
+                                        <div style={{ 
+                                            width: '40px', 
+                                            height: '40px', 
+                                            borderRadius: '12px', 
+                                            background: method === 'Cash' ? '#ecfdf5' : method === 'Credit' ? '#fff7ed' : '#eef2ff',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            color: method === 'Cash' ? '#10b981' : method === 'Credit' ? '#f59e0b' : '#6366f1'
+                                        }}>
+                                            {method === 'Cash' ? <DollarSign size={18} /> : method === 'Credit' ? <Users size={18} /> : <CreditCard size={18} />}
+                                        </div>
+                                        <div style={{ overflow: 'hidden' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                                                <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {mainItem}
+                                                </span>
+                                                {otherCount > 0 && (
+                                                    <span style={{ fontSize: '0.6rem', fontWeight: 900, background: '#f1f5f9', color: '#64748b', padding: '2px 6px', borderRadius: '4px' }}>
+                                                        +{otherCount} MORE
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                <span>{new Date(sale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span>•</span>
+                                                <span style={{ color: '#64748b' }}>{sale.customer_name || 'WALK-IN'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{ textAlign: 'right', marginLeft: '15px' }}>
+                                        <div style={{ fontWeight: 950, color: '#0f172a', fontSize: '0.95rem' }}>
                                             Rs {sale.total.toLocaleString()}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                        </div>
+                                        <div style={{ fontSize: '0.6rem', fontWeight: 800, color: method === 'Cash' ? '#10b981' : '#64748b', textTransform: 'uppercase' }}>
+                                            {method}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
                     </div>
                 </div>
 
