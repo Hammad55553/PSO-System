@@ -300,86 +300,80 @@ function AppContent() {
       )}
 
       <main className="main-area">
-        <header className="app-header no-print">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-            {isMobile && !isBillingMode && (
-              <button 
-                className="erp-btn-icon"
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                style={{ border: 'none', background: '#f1f5f9', color: '#1e293b' }}
-              >
-                <Menu size={20} />
-              </button>
-            )}
-            {isBillingMode && (
-              <div 
-                onClick={(e) => handleProtectedNavigation(e, '/')}
-                style={{ cursor: 'pointer', color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none', fontWeight: 800, fontSize: '0.8rem', background: '#eff6ff', padding: '6px 12px', borderRadius: '6px' }}
-              >
-                <LayoutDashboard size={18} /> DASHBOARD / MENU
-              </div>
-            )}
-
-            {/* HYBRID CONNECTION STATUS */}
-            <div className="header-status-badges" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isOnline ? '#dcfce7' : '#fee2e2', padding: '6px 12px', borderRadius: '4px', border: `1px solid ${isOnline ? '#166534' : '#991b1b'}` }}>
-              {isOnline ? <Wifi size={14} color="#166534" /> : <WifiOff size={14} color="#991b1b" />}
-              <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#166534' }}>{isOnline ? 'CLOUD SYNC: ACTIVE' : 'OFFLINE MODE: LOCAL SAVE'}</span>
-            </div>
-
-            {isOnline && (
-              <div className="header-status-badges" style={{ background: '#0ea5e9', border: 'none', borderRadius: '4px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', color: 'white' }}>
-                <div style={{ width: '8px', height: '8px', background: '#fff', borderRadius: '50%', animation: 'pulse 1.5s infinite' }}></div>
-                <span style={{ fontSize: '0.65rem', fontWeight: 900 }}>LIVE CLOUD SYNC: ACTIVE</span>
-              </div>
-            )}
-
-            <button 
-              onClick={() => dispatch(openCalculator())}
-              style={{ 
-                background: '#10b981', 
-                border: 'none', 
-                color: 'white', 
-                padding: '6px 12px', 
-                borderRadius: '4px', 
-                fontWeight: 900, 
-                fontSize: '0.7rem', 
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s'
-              }}
-            >
-              <Hash size={14} /> CALCULATOR (F3)
-            </button>
-          </div>
-
-          <div className="flex items-center gap-6" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <div className="text-right header-user-info">
-              <p className="text-[10px] font-800 text-slate-500" style={{ marginBottom: '2px' }}>OPERATOR: {user?.role?.toUpperCase()}</p>
-              <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1e293b', textTransform: 'capitalize' }}>{user?.name}</p>
-            </div>
+        {!isBillingMode && (
+          <header className="app-header no-print">
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center font-900 shadow-xl border border-white/20" style={{ width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: 'white' }}>
-                {user?.name?.charAt(0)?.toUpperCase()}
+              {isMobile && !isBillingMode && (
+                <button 
+                  className="erp-btn-icon"
+                  onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                  style={{ border: 'none', background: '#f1f5f9', color: '#1e293b' }}
+                >
+                  <Menu size={20} />
+                </button>
+              )}
+              
+              {/* HYBRID CONNECTION STATUS */}
+              <div className="header-status-badges" style={{ display: 'flex', alignItems: 'center', gap: '6px', background: isOnline ? '#dcfce7' : '#fee2e2', padding: '6px 12px', borderRadius: '4px', border: `1px solid ${isOnline ? '#166534' : '#991b1b'}` }}>
+                {isOnline ? <Wifi size={14} color="#166534" /> : <WifiOff size={14} color="#991b1b" />}
+                <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#166534' }}>{isOnline ? 'CLOUD SYNC: ACTIVE' : 'OFFLINE MODE: LOCAL SAVE'}</span>
               </div>
-              <button
-                onClick={() => dispatch(logout())}
-                style={{
-                  background: '#fff1f1',
-                  border: '1px solid #fee2e2',
-                  color: '#ef4444',
-                  padding: '8px',
-                  borderRadius: '8px',
-                  cursor: 'pointer'
+
+              {isOnline && (
+                <div className="header-status-badges" style={{ background: '#0ea5e9', border: 'none', borderRadius: '4px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '6px', color: 'white' }}>
+                  <div style={{ width: '8px', height: '8px', background: '#fff', borderRadius: '50%', animation: 'pulse 1.5s infinite' }}></div>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 900 }}>LIVE CLOUD SYNC: ACTIVE</span>
+                </div>
+              )}
+
+              <button 
+                onClick={() => dispatch(openCalculator())}
+                style={{ 
+                  background: '#10b981', 
+                  border: 'none', 
+                  color: 'white', 
+                  padding: '6px 12px', 
+                  borderRadius: '4px', 
+                  fontWeight: 900, 
+                  fontSize: '0.7rem', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'all 0.2s'
                 }}
-                title="Logout from Terminal"
               >
-                <LogOut size={18} />
+                <Hash size={14} /> CALCULATOR (F3)
               </button>
             </div>
-          </div>
-        </header>
+
+            <div className="flex items-center gap-6" style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+              <div className="text-right header-user-info">
+                <p className="text-[10px] font-800 text-slate-500" style={{ marginBottom: '2px' }}>OPERATOR: {user?.role?.toUpperCase()}</p>
+                <p style={{ fontSize: '1rem', fontWeight: 900, color: '#1e293b', textTransform: 'capitalize' }}>{user?.name}</p>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl flex items-center justify-center font-900 shadow-xl border border-white/20" style={{ width: '40px', height: '40px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '900', color: 'white' }}>
+                  {user?.name?.charAt(0)?.toUpperCase()}
+                </div>
+                <button
+                  onClick={() => dispatch(logout())}
+                  style={{
+                    background: '#fff1f1',
+                    border: '1px solid #fee2e2',
+                    color: '#ef4444',
+                    padding: '8px',
+                    borderRadius: '8px',
+                    cursor: 'pointer'
+                  }}
+                  title="Logout from Terminal"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
+            </div>
+          </header>
+        )}
 
         <div className="view-container">
           <Routes>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Trash2, Edit3, UserPlus, Search, Phone, History, ArrowDownCircle, ArrowUpCircle, User, CreditCard, Share2, FileText, Image as ImageIcon, Download, Eye, X, MessageCircle } from 'lucide-react';
+import { Trash2, Edit3, UserPlus, Search, Phone, History, ArrowDownCircle, ArrowUpCircle, User, CreditCard, Share2, FileText, Image as ImageIcon, Download, Eye, X, MessageCircle, HelpCircle } from 'lucide-react';
 import { addCustomer, updateBalance, deleteCustomer, editCustomer } from '../store/slices/customerSlice';
 import toast from 'react-hot-toast';
 import { supabase } from '../supabase';
@@ -313,8 +313,26 @@ const CreditManagement = () => {
                                             <tr style={{ background: '#f8fafc' }}>
                                                 <th style={{ padding: '10px 15px', fontWeight: 900, fontSize: '0.75rem' }}>Date & Time</th>
                                                 <th style={{ padding: '10px 15px', fontWeight: 900, fontSize: '0.75rem' }}>Note / Detail</th>
-                                                <th style={{ padding: '10px 15px', fontWeight: 900, fontSize: '0.75rem' }}>Debit (+)</th>
-                                                <th style={{ padding: '10px 15px', fontWeight: 900, fontSize: '0.75rem' }}>Credit (-)</th>
+                                                <th style={{ padding: '10px 15px', fontWeight: 900, fontSize: '0.75rem' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                        Debit (+)
+                                                        <HelpCircle 
+                                                            size={12} 
+                                                            style={{ cursor: 'help', color: '#6366f1' }} 
+                                                            onClick={() => toast("DEBIT (+): Ye woh raqam hai jo aapne customer se LENI hai (Udhaar / Bill).", { icon: 'ℹ️' })}
+                                                        />
+                                                    </div>
+                                                </th>
+                                                <th style={{ padding: '10px 15px', fontWeight: 900, fontSize: '0.75rem' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                                        Credit (-)
+                                                        <HelpCircle 
+                                                            size={12} 
+                                                            style={{ cursor: 'help', color: '#10b981' }} 
+                                                            onClick={() => toast("CREDIT (-): Ye woh raqam hai jo customer ne aapko WAPAS di hai (Wasuli / Jama).", { icon: '✅' })}
+                                                        />
+                                                    </div>
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -479,8 +497,18 @@ const CreditManagement = () => {
                                             <tr style={{ background: '#f1f5f9', borderBottom: '2px solid #0f172a' }}>
                                                 <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 900 }}>DATE</th>
                                                 <th style={{ padding: '10px', textAlign: 'left', fontSize: '0.7rem', fontWeight: 900 }}>DESCRIPTION</th>
-                                                <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.7rem', fontWeight: 900 }}>DEBIT (+)</th>
-                                                <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.7rem', fontWeight: 900 }}>CREDIT (-)</th>
+                                                <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.7rem', fontWeight: 900 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                                                        DEBIT (+)
+                                                        <HelpCircle size={10} style={{ cursor: 'help' }} onClick={() => toast("DEBIT (+): Udhaar / Bill Amount", { icon: 'ℹ️' })} />
+                                                    </div>
+                                                </th>
+                                                <th style={{ padding: '10px', textAlign: 'right', fontSize: '0.7rem', fontWeight: 900 }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                                                        CREDIT (-)
+                                                        <HelpCircle size={10} style={{ cursor: 'help' }} onClick={() => toast("CREDIT (-): Wasuli / Jama Amount", { icon: '✅' })} />
+                                                    </div>
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>

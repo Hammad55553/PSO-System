@@ -27,7 +27,9 @@ import {
     CheckCircle,
     Wallet,
     RefreshCw,
-    Hash
+    Hash,
+    Wifi,
+    WifiOff
 } from 'lucide-react';
 import { addToSyncQueue } from '../utils/offlineSync';
 import { useNavigate } from 'react-router-dom';
@@ -79,6 +81,7 @@ const POS = () => {
     const [onlineProvider, setOnlineProvider] = useState('JazzCash');
     const [onlineAccount, setOnlineAccount] = useState('');
     const [suggestion, setSuggestion] = useState('');
+    const [manualAdjustment, setManualAdjustment] = useState(0);
 
     // UI States
     const [showCustomerSearch, setShowCustomerSearch] = useState(false);
@@ -90,11 +93,24 @@ const POS = () => {
     const [pendingPrint, setPendingPrint] = useState(true);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
     const [mobileTab, setMobileTab] = useState('browse'); // browse, cart
+    const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 1024);
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+
         window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
     }, []);
 
 
@@ -173,7 +189,8 @@ const POS = () => {
         if (existing) {
             setCart(cart.map(c => c.id === product.id ? { ...c, quantity: c.quantity + 1 } : c));
         } else {
-            setCart([{ ...product, quantity: 1, discount: 0, reason: '' }, ...cart]);
+            const initialPrice = isDoctorMode ? (product.doctor_price || product.price) : product.price;
+            setCart([{ ...product, quantity: 1, discount: 0, reason: '', custom_price: initialPrice }, ...cart]);
         }
         setSearchTerm('');
         searchInputRef.current?.focus();
@@ -208,20 +225,20 @@ const POS = () => {
 
     // CALCULATIONS
     const subtotal = cart.reduce((acc, c) => {
-        const itemPrice = isDoctorMode ? (c.doctor_price || c.price) : c.price;
+        const itemPrice = c.custom_price !== undefined ? c.custom_price : (isDoctorMode ? (c.doctor_price || c.price) : c.price);
         return acc + (itemPrice * c.quantity);
     }, 0);
     const itemDiscounts = cart.reduce((acc, c) => acc + (c.discount || 0), 0);
 
     // ITEM-BASED TAX CALCULATION (Default 0% unless set in Inventory)
     const tax = cart.reduce((acc, c) => {
-        const itemPrice = isDoctorMode ? (c.doctor_price || c.price) : c.price;
+        const itemPrice = c.custom_price !== undefined ? c.custom_price : (isDoctorMode ? (c.doctor_price || c.price) : c.price);
         const taxableAmount = (itemPrice * c.quantity) - (c.discount || 0);
         const itemTax = taxableAmount * (c.tax_percent || 0) / 100;
         return acc + itemTax;
     }, 0);
 
-    const finalTotal = subtotal - itemDiscounts - globalDiscount + tax;
+    const finalTotal = subtotal - itemDiscounts - globalDiscount + tax + manualAdjustment;
     const changeAmount = cashReceived ? parseFloat(cashReceived) - finalTotal : 0;
 
     useEffect(() => {
@@ -248,6 +265,7 @@ const POS = () => {
         setCustomerPhone('');
         setOnlineAccount('');
         setOnlineProvider('JazzCash');
+        setManualAdjustment(0);
     };
 
     const handleCheckout = async (shouldPrint = true) => {
@@ -305,7 +323,7 @@ const POS = () => {
                 sale_id: finalSaleId,
                 product_id: item.id,
                 quantity: item.quantity,
-                price: isDoctorMode ? (item.doctor_price || item.price) : item.price,
+                price: item.custom_price !== undefined ? item.custom_price : (isDoctorMode ? (item.doctor_price || item.price) : item.price),
                 buy_price: item.buy_price || 0,
                 reason: item.reason || null
             }));
@@ -451,30 +469,67 @@ const POS = () => {
                     color: 'white',
                     display: 'flex',
                     alignItems: 'center',
-                    padding: isMobile ? '10px 12px' : '0 20px', 
+                    padding: isMobile ? '10px 12px' : '0 20px',
                     gap: isMobile ? '6px' : '30px',
-                    height: isMobile ? '50px' : '50px'
-
+                    height: isMobile ? '45px' : '48px',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
                 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ background: '#10b981', padding: '4px', borderRadius: '4px' }}><Zap size={18} color="white" /></div>
-                        <span style={{ fontWeight: 950, fontSize: isMobile ? '0.75rem' : '0.9rem', letterSpacing: '0.5px' }}>MEDICAL POS <small style={{ color: '#34d399', fontWeight: 700 }}>PHARMACY EDITION</small></span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                        <button
+                            onClick={() => navigate('/')}
+                            style={{
+                                background: 'rgba(255,255,255,0.1)',
+                                border: 'none',
+                                color: 'white',
+                                padding: '8px 12px',
+                                borderRadius: '6px',
+                                fontWeight: 800,
+                                fontSize: '0.75rem',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            <LayoutGrid size={16} /> DASHBOARD
+                        </button>
+                        <div style={{ height: '24px', borderLeft: '1px solid rgba(255,255,255,0.2)' }}></div>
+                        
+                        {/* CONNECTION STATUS BADGE */}
+                        <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '6px', 
+                            background: isOnline ? '#059669' : '#991b1b', 
+                            padding: '4px 10px', 
+                            borderRadius: '4px', 
+                            border: '1px solid rgba(255,255,255,0.2)' 
+                        }}>
+                            {isOnline ? <Wifi size={12} color="white" /> : <WifiOff size={12} color="white" />}
+                            {!isMobile && (
+                                <span style={{ fontSize: '0.6rem', fontWeight: 900, color: 'white' }}>
+                                    {isOnline ? 'CLOUD ACTIVE' : 'OFFLINE MODE'}
+                                </span>
+                            )}
+                        </div>
+
+                        <div style={{ height: '24px', borderLeft: '1px solid rgba(255,255,255,0.2)' }}></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <img src={logo} alt="Bilal Vet" style={{ height: isMobile ? '24px' : '28px', objectFit: 'contain' }} />
+                            {!isMobile && <span style={{ fontWeight: 950, fontSize: '0.85rem', letterSpacing: '0.5px' }}>MEDICAL POS <small style={{ color: '#34d399', fontWeight: 700 }}>PHARMACY EDITION</small></span>}
+                        </div>
                     </div>
 
                     {!isMobile ? (
                         <div style={{ marginLeft: 'auto', display: 'flex', gap: '25px', alignItems: 'center' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#a7f3d0' }}>
-                                <div style={{ width: '8px', height: '8px', background: '#34d399', borderRadius: '50%' }}></div>
-                                PHARMACIST ON DUTY
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                                <span style={{ fontSize: '0.65rem', fontWeight: 900, color: '#34d399' }}>PHARMACIST ON DUTY</span>
+                                <span style={{ fontSize: '0.9rem', fontWeight: 900, textTransform: 'capitalize' }}>{user?.name}</span>
                             </div>
-                            <div style={{ height: '20px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}></div>
-                            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'white' }}>
-                                SESSION: {activeShift ? new Date(activeShift.start_time || activeShift.startTime).toLocaleTimeString() : 'OFFLINE'}
-                            </span>
-                            <div style={{ height: '20px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}></div>
+                            <div style={{ height: '30px', borderLeft: '1px solid rgba(255,255,255,0.1)' }}></div>
                             <button
                                 onClick={() => dispatch(openCalculator())}
-                                style={{ background: '#10b981', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '4px', fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer' }}
+                                style={{ background: '#10b981', border: 'none', color: 'white', padding: '8px 15px', borderRadius: '6px', fontWeight: 900, fontSize: '0.7rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                             >
                                 <Hash size={14} /> CALCULATOR (F3)
                             </button>
@@ -489,10 +544,10 @@ const POS = () => {
 
                 {/* 2. OPERATIONAL GRID */}
                 <div style={{
-                    display: 'grid', 
-                    gridTemplateColumns: isMobile ? '1fr' : '220px 1fr 350px', 
-                    gap: isMobile ? '10px' : '2px', 
-                    padding: isMobile ? '0' : '2px', 
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : '220px 1fr 350px',
+                    gap: isMobile ? '10px' : '2px',
+                    padding: isMobile ? '0' : '2px',
                     overflow: 'hidden',
                     gridTemplateRows: isMobile ? 'auto 1fr' : 'none'
                 }}>
@@ -509,7 +564,7 @@ const POS = () => {
                                         key={cat}
                                         onClick={() => setSelectedCategory(cat)}
                                         style={{
-                                            padding: '15px 20px',
+                                            padding: '10px 15px',
                                             border: 'none',
                                             borderBottom: '1px solid #f1f5f9',
                                             background: selectedCategory === cat ? '#ecfdf5' : 'transparent',
@@ -525,9 +580,9 @@ const POS = () => {
                                     </button>
                                 ))}
                             </div>
-                            <div style={{ background: '#064e3b', padding: '15px', color: 'white' }}>
-                                <p style={{ fontSize: '0.65rem', fontWeight: 900, color: '#34d399', marginBottom: '10px' }}>HOTKEYS</p>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.65rem', fontWeight: 700 }}>
+                            <div style={{ background: '#064e3b', padding: '10px 15px', color: 'white' }}>
+                                <p style={{ fontSize: '0.6rem', fontWeight: 900, color: '#34d399', marginBottom: '5px' }}>HOTKEYS</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.6rem', fontWeight: 700 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F1:</span> <span>Search Drug</span></div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F2:</span> <span>Patient</span></div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>F3:</span> <span>Calculator</span></div>
@@ -581,17 +636,17 @@ const POS = () => {
                     }}>
 
                         {/* SEARCH HEADER */}
-                        <div style={{ background: 'white', padding: '15px', display: 'flex', gap: '10px' }}>
+                        <div style={{ background: 'white', padding: '8px 15px', display: 'flex', gap: '10px' }}>
                             <div style={{ position: 'relative', flex: 1 }}>
-                                <Search size={20} style={{ position: 'absolute', left: '15px', top: '15px', color: '#059669' }} />
+                                <Search size={18} style={{ position: 'absolute', left: '15px', top: '12px', color: '#059669', zIndex: 3 }} />
                                 <div style={{ position: 'relative', width: '100%' }}>
                                     {/* GHOST SUGGESTION */}
                                     {suggestion && searchTerm && (
                                         <div style={{
                                             position: 'absolute',
-                                            left: '50px',
-                                            top: '15px',
-                                            fontSize: '1.1rem',
+                                            left: '45px',
+                                            top: '10px',
+                                            fontSize: '1rem',
                                             fontWeight: 800,
                                             color: '#cbd5e1',
                                             pointerEvents: 'none',
@@ -604,8 +659,8 @@ const POS = () => {
                                     <input
                                         ref={searchInputRef}
                                         type="text"
-                                        placeholder="F1: SEARCH MEDICINE..."
-                                        style={{ width: '100%', padding: '15px 15px 15px 50px', fontSize: '1.1rem', fontWeight: 800, border: '2px solid #cbd5e1', borderRadius: '6px', outline: 'none', background: 'transparent', position: 'relative', zIndex: 2 }}
+                                        placeholder="F1: SEARCH DRUG..."
+                                        style={{ width: '100%', padding: '10px 15px 10px 45px', fontSize: '1rem', fontWeight: 800, border: '2px solid #cbd5e1', borderRadius: '6px', outline: 'none', background: 'transparent', position: 'relative', zIndex: 2 }}
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         onKeyDown={(e) => {
@@ -625,7 +680,7 @@ const POS = () => {
                                     <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', zIndex: 100, boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #cbd5e1', borderRadius: '0 0 6px 6px', maxHeight: '400px', overflowY: 'auto' }}>
                                         {filteredInventory.map(item => (
                                             <div key={item.id} style={{ borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div onClick={() => addToCart(item)} style={{ padding: '15px 20px', cursor: 'pointer', flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div onClick={() => addToCart(item)} style={{ padding: '10px 15px', cursor: 'pointer', flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                     <div style={{ display: 'flex', flexDirection: 'column' }}>
                                                         <span style={{ fontSize: '0.95rem', fontWeight: 900, color: '#1e293b' }}>{item.name}</span>
                                                         <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748b', display: 'flex', gap: '8px' }}>
@@ -696,18 +751,18 @@ const POS = () => {
                             <table style={{ width: '100%', borderCollapse: 'collapse', position: 'relative', zIndex: 1 }}>
                                 <thead style={{ position: 'sticky', top: 0, background: '#065f46', color: 'white', fontSize: '0.75rem', fontWeight: 900, textAlign: 'left' }}>
                                     <tr>
-                                        <th style={{ padding: '12px 20px' }}>MEDICINE NAME / FORMULA</th>
-                                        <th style={{ padding: '12px 20px', width: '100px' }}>PRICE</th>
-                                        <th style={{ padding: '12px 20px', width: '150px' }}>QTY</th>
-                                        <th style={{ padding: '12px 20px', width: '100px' }}>DISC</th>
-                                        <th style={{ padding: '12px 20px', width: '120px', textAlign: 'right' }}>NET Rs</th>
-                                        <th style={{ padding: '12px 20px', width: '50px' }}></th>
+                                        <th style={{ padding: '8px 15px' }}>MEDICINE NAME / FORMULA</th>
+                                        <th style={{ padding: '8px 15px', width: '100px' }}>PRICE</th>
+                                        <th style={{ padding: '8px 15px', width: '150px' }}>QTY</th>
+                                        <th style={{ padding: '8px 15px', width: '100px' }}>DISC</th>
+                                        <th style={{ padding: '8px 15px', width: '120px', textAlign: 'right' }}>NET Rs</th>
+                                        <th style={{ padding: '8px 15px', width: '50px' }}></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {cart.map((item, idx) => (
                                         <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                            <td style={{ padding: '15px 20px' }}>
+                                            <td style={{ padding: '8px 15px' }}>
                                                 <div style={{ fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     {item.name}
                                                     {item.quantity > (inventory.find(i => i.id === item.id)?.stock || 0) && (
@@ -742,25 +797,28 @@ const POS = () => {
                                                     </div>
                                                 )}
                                             </td>
-                                            <td style={{ padding: '15px 20px', fontWeight: 900 }}>
-                                                {item.quantity > (inventory.find(i => i.id === item.id)?.stock || 0) ? (
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                        <label style={{ fontSize: '0.5rem', color: '#64748b', fontWeight: 900 }}>SALE PRICE</label>
-                                                        <input
-                                                            type="number"
-                                                            style={{ width: '80px', padding: '4px', border: '1px solid #cbd5e1', borderRadius: '4px', fontWeight: 900, fontSize: '0.9rem' }}
-                                                            value={item.price}
-                                                            onChange={(e) => updateCartItem(item.id, 'price', parseFloat(e.target.value) || 0)}
-                                                        />
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <span style={{ color: isDoctorMode ? '#6366f1' : '#1e293b' }}>{isDoctorMode ? (item.doctor_price || item.price) : item.price}</span>
-                                                        {isDoctorMode && <div style={{ fontSize: '0.5rem', fontWeight: 900 }}>DR. RATE</div>}
-                                                    </>
-                                                )}
+                                            <td style={{ padding: '8px 15px', fontWeight: 900 }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                    <label style={{ fontSize: '0.5rem', color: '#64748b', fontWeight: 900 }}>PRICE</label>
+                                                    <input
+                                                        type="number"
+                                                        style={{
+                                                            width: '80px',
+                                                            padding: '4px',
+                                                            border: '1px solid #cbd5e1',
+                                                            borderRadius: '4px',
+                                                            fontWeight: 900,
+                                                            fontSize: '0.9rem',
+                                                            background: item.custom_price !== (isDoctorMode ? (item.doctor_price || item.price) : item.price) ? '#f0f9ff' : 'white',
+                                                            color: item.custom_price !== (isDoctorMode ? (item.doctor_price || item.price) : item.price) ? '#0369a1' : 'inherit'
+                                                        }}
+                                                        value={item.custom_price !== undefined ? item.custom_price : (isDoctorMode ? (item.doctor_price || item.price) : item.price)}
+                                                        onChange={(e) => updateCartItem(item.id, 'custom_price', parseFloat(e.target.value) || 0)}
+                                                    />
+                                                    {isDoctorMode && <div style={{ fontSize: '0.5rem', fontWeight: 900, color: '#6366f1' }}>DOCTOR RATE</div>}
+                                                </div>
                                             </td>
-                                            <td style={{ padding: '15px 20px' }}>
+                                            <td style={{ padding: '8px 15px' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                                                     <button onClick={() => updateCartItem(item.id, 'quantity', Math.max(1, item.quantity - 1))} style={{ width: '30px', height: '30px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 900 }}>-</button>
                                                     <input
@@ -774,7 +832,7 @@ const POS = () => {
                                                     <button onClick={() => updateCartItem(item.id, 'quantity', item.quantity + 1)} style={{ width: '30px', height: '30px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', fontWeight: 900 }}>+</button>
                                                 </div>
                                             </td>
-                                            <td style={{ padding: '15px 20px' }}>
+                                            <td style={{ padding: '8px 15px' }}>
                                                 <input
                                                     type="number"
                                                     value={item.discount || 0}
@@ -782,8 +840,10 @@ const POS = () => {
                                                     style={{ width: '70px', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', textAlign: 'center', fontWeight: 800 }}
                                                 />
                                             </td>
-                                            <td style={{ padding: '15px 20px', textAlign: 'right', fontWeight: 950, fontSize: '1.1rem', color: isDoctorMode ? '#4338ca' : '#065f46' }}>Rs {((isDoctorMode ? (item.doctor_price || item.price) : item.price) * item.quantity - (item.discount || 0)).toLocaleString()}</td>
-                                            <td style={{ padding: '15px 20px', textAlign: 'right' }}>
+                                            <td style={{ padding: '8px 15px', textAlign: 'right', fontWeight: 950, fontSize: '1.1rem', color: isDoctorMode ? '#4338ca' : '#065f46' }}>
+                                                Rs {((item.custom_price !== undefined ? item.custom_price : (isDoctorMode ? (item.doctor_price || item.price) : item.price)) * item.quantity - (item.discount || 0)).toLocaleString()}
+                                            </td>
+                                            <td style={{ padding: '8px 15px', textAlign: 'right' }}>
                                                 <button onClick={() => removeFromCart(item.id)} style={{ color: '#ecfdf5', border: 'none', background: '#fee2e2', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}><X size={14} color="#ef4444" /></button>
                                             </td>
                                         </tr>
@@ -801,7 +861,7 @@ const POS = () => {
 
                         {/* MIDDLE FOOTER */}
                         {!isMobile && (
-                            <div style={{ background: '#f8fafc', padding: '12px 20px', borderTop: '2px solid #e2e8f0', display: 'flex', gap: '15px' }}>
+                            <div style={{ background: '#f8fafc', padding: '8px 15px', borderTop: '2px solid #e2e8f0', display: 'flex', gap: '15px' }}>
                                 <button onClick={handleParkBill} style={{ padding: '10px 20px', background: '#334155', color: 'white', border: 'none', borderRadius: '4px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <Pause size={16} /> HOLD BILL
                                 </button>
@@ -828,28 +888,28 @@ const POS = () => {
                     }}>
 
                         {/* COMPACT HEADER WITH PATIENT ICON */}
-                        <div style={{ padding: '12px 20px', background: '#ecfdf5', borderBottom: '1px solid #d1fae5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ padding: '8px 15px', background: '#ecfdf5', borderBottom: '1px solid #d1fae5', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <button
                                     onClick={() => setShowCustomerSearch(true)}
-                                    style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
+                                    style={{ background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s' }}
                                     title="Select Patient (F2)"
                                 >
-                                    <UserPlus size={22} />
+                                    <UserPlus size={18} />
                                 </button>
                                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                    <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#065f46' }}>PATIENT NAME</span>
+                                    <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#065f46' }}>PATIENT NAME</span>
                                     {selectedCustomer ? (
-                                        <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#065f46' }}>
+                                        <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#065f46' }}>
                                             {selectedCustomer.name?.toUpperCase()}
                                         </span>
                                     ) : (
                                         <input
                                             type="text"
-                                            placeholder="WALK-IN CUSTOME"
+                                            placeholder="WALK-IN"
                                             value={walkingCustomerName}
                                             onChange={(e) => setWalkingCustomerName(e.target.value)}
-                                            style={{ border: 'none', borderBottom: '1px dashed #059669', background: 'transparent', fontSize: '0.8rem', fontWeight: 800, color: '#065f46', outline: 'none', padding: '2px 0', width: '150px' }}
+                                            style={{ border: 'none', borderBottom: '1px dashed #059669', background: 'transparent', fontSize: '0.75rem', fontWeight: 800, color: '#065f46', outline: 'none', padding: '1px 0', width: '120px' }}
                                         />
                                     )}
                                 </div>
@@ -886,7 +946,15 @@ const POS = () => {
                         <div style={{ padding: '10px 20px', background: isDoctorMode ? '#6366f1' : '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '0.75rem', fontWeight: 900, color: isDoctorMode ? 'white' : '#64748b' }}>APPLY DOCTOR PRICES?</span>
                             <div
-                                onClick={() => setIsDoctorMode(!isDoctorMode)}
+                                onClick={() => {
+                                    const nextMode = !isDoctorMode;
+                                    setIsDoctorMode(nextMode);
+                                    // Update all existing items in cart to match new mode
+                                    setCart(cart.map(item => ({
+                                        ...item,
+                                        custom_price: nextMode ? (item.doctor_price || item.price) : item.price
+                                    })));
+                                }}
                                 style={{
                                     width: '50px',
                                     height: '24px',
@@ -910,7 +978,7 @@ const POS = () => {
                             </div>
                         </div>
 
-                        {/* FINANCIAL SUMMARY */}
+                        {/* FINANCIAL SUMMARY & PAYMENTS (SCROLLABLE) */}
                         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', padding: '15px 20px' }}>
                             <div style={{ marginBottom: '15px' }}>
                                 <button
@@ -938,10 +1006,35 @@ const POS = () => {
                                 )}
                             </div>
 
-                            <div style={{ background: '#064e3b', padding: '15px', borderRadius: '12px', color: 'white', textAlign: 'center', marginBottom: '15px' }}>
-                                <span style={{ fontSize: '0.6rem', fontWeight: 900, color: '#34d399', display: 'block', marginBottom: '2px' }}>FINAL AMOUNT TO PAY</span>
-                                <div style={{ fontSize: '1.8rem', fontWeight: 950 }}>Rs {Math.round(finalTotal).toLocaleString()}</div>
-                                <span style={{ fontSize: '0.6rem', opacity: 0.8 }}>{tax > 0 ? 'Tax included' : 'No Tax added'}</span>
+                            <div style={{ background: '#064e3b', padding: '10px', borderRadius: '10px', color: 'white', textAlign: 'center', marginBottom: '10px', position: 'relative' }}>
+                                <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#34d399', display: 'block', marginBottom: '1px' }}>FINAL AMOUNT TO PAY</span>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 950 }}>Rs {Math.max(0, Math.round(finalTotal)).toLocaleString()}</div>
+                                <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '6px', alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <label style={{ fontSize: '0.45rem', fontWeight: 900, color: '#34d399' }}>OVERRIDE TOTAL?</label>
+                                        <input
+                                            type="number"
+                                            placeholder="Set Total"
+                                            style={{ width: '70px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', fontSize: '0.7rem', fontWeight: 900, borderRadius: '4px', textAlign: 'center', padding: '2px', outline: 'none' }}
+                                            onBlur={(e) => {
+                                                const target = parseFloat(e.target.value);
+                                                if (!isNaN(target)) {
+                                                    const currentWithoutAdj = subtotal - itemDiscounts - globalDiscount + tax;
+                                                    setManualAdjustment(target - currentWithoutAdj);
+                                                }
+                                            }}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                        <label style={{ fontSize: '0.45rem', fontWeight: 900, color: '#fbbf24' }}>ADJUSTMENT (Rs)</label>
+                                        <input
+                                            type="number"
+                                            style={{ width: '70px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fbbf24', fontSize: '0.7rem', fontWeight: 900, borderRadius: '4px', textAlign: 'center', padding: '2px', outline: 'none' }}
+                                            value={manualAdjustment}
+                                            onChange={(e) => setManualAdjustment(parseFloat(e.target.value) || 0)}
+                                        />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* PAYMENT METHODS */}
@@ -958,7 +1051,7 @@ const POS = () => {
                                             key={method.id}
                                             onClick={() => setPaymentMethod(method.id)}
                                             style={{
-                                                padding: '8px 5px',
+                                                padding: '6px 4px',
                                                 borderRadius: '8px',
                                                 border: '2px solid',
                                                 borderColor: paymentMethod === method.id ? '#059669' : '#e2e8f0',
@@ -967,7 +1060,7 @@ const POS = () => {
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 alignItems: 'center',
-                                                gap: '4px',
+                                                gap: '3px',
                                                 cursor: 'pointer'
                                             }}
                                         >
@@ -978,7 +1071,7 @@ const POS = () => {
                                 </div>
 
                                 {(paymentMethod === 'Online' || paymentMethod === 'Card') && (
-                                    <div style={{ background: paymentMethod === 'Online' ? '#f0f9ff' : '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid', borderColor: paymentMethod === 'Online' ? '#bae6fd' : '#e2e8f0', marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div style={{ background: paymentMethod === 'Online' ? '#f0f9ff' : '#f8fafc', padding: '10px', borderRadius: '10px', border: '1px solid', borderColor: paymentMethod === 'Online' ? '#bae6fd' : '#e2e8f0', marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                         {paymentMethod === 'Online' && (
                                             <div style={{ display: 'flex', gap: '8px' }}>
                                                 {[
@@ -1058,25 +1151,32 @@ const POS = () => {
                                     </div>
                                 )}
                             </div>
+                        </div>
 
-                            {/* ACTIONS */}
-                            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
-                                <button
-                                    disabled={isCheckingOut}
-                                    onClick={() => { setPendingPrint(false); setShowConfirm(true); }}
-                                    style={{ flex: 1, padding: '12px', background: isCheckingOut ? '#94a3b8' : '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 950, cursor: isCheckingOut ? 'not-allowed' : 'pointer' }}
-                                >
-                                    {isCheckingOut ? '...' : 'FINISH (F9)'}
-                                </button>
-                                <button
-                                    disabled={isCheckingOut}
-                                    onClick={() => { setPendingPrint(true); setShowConfirm(true); }}
-                                    style={{ flex: 2, padding: '12px', background: isCheckingOut ? '#94a3b8' : '#059669', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.95rem', fontWeight: 950, cursor: isCheckingOut ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                                >
-                                    {isCheckingOut ? <RefreshCw size={16} className="animate-spin" /> : <Printer size={16} />}
-                                    {isCheckingOut ? 'SAVING...' : 'PRINT & FINISH (F10)'}
-                                </button>
-                            </div>
+                        {/* STICKY ACTIONS FOOTER */}
+                        <div style={{
+                            padding: '10px 15px',
+                            background: '#f8fafc',
+                            borderTop: '1px solid #e2e8f0',
+                            display: 'flex',
+                            gap: '8px',
+                            boxShadow: '0 -4px 6px -1px rgba(0, 0, 0, 0.05)'
+                        }}>
+                            <button
+                                disabled={isCheckingOut}
+                                onClick={() => { setPendingPrint(false); setShowConfirm(true); }}
+                                style={{ flex: 1, padding: '12px', background: isCheckingOut ? '#94a3b8' : '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 950, cursor: isCheckingOut ? 'not-allowed' : 'pointer' }}
+                            >
+                                {isCheckingOut ? '...' : 'FINISH (F9)'}
+                            </button>
+                            <button
+                                disabled={isCheckingOut}
+                                onClick={() => { setPendingPrint(true); setShowConfirm(true); }}
+                                style={{ flex: 2, padding: '12px', background: isCheckingOut ? '#94a3b8' : '#059669', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.95rem', fontWeight: 950, cursor: isCheckingOut ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                            >
+                                {isCheckingOut ? <RefreshCw size={16} className="animate-spin" /> : <Printer size={16} />}
+                                {isCheckingOut ? 'SAVING...' : 'PRINT & FINISH (F10)'}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1113,41 +1213,75 @@ const POS = () => {
 
                 {/* CUSTOMER SEARCH MODAL */}
                 {showCustomerSearch && (
-                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div style={{ background: 'white', width: '550px', borderRadius: '12px', overflow: 'hidden' }}>
-                            <div style={{ background: '#064e3b', padding: '20px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h3 style={{ fontSize: '1.2rem', fontWeight: 900 }}>PATIENT REGISTRY SEARCH</h3>
-                                <button onClick={() => setShowCustomerSearch(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><X size={24} /></button>
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+                        <div style={{ background: 'white', width: '550px', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }}>
+                            <div style={{ background: '#064e3b', padding: '25px', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <h3 style={{ fontSize: '1.2rem', fontWeight: 950, letterSpacing: '-0.5px' }}>PATIENT REGISTRY</h3>
+                                    <p style={{ fontSize: '0.7rem', opacity: 0.8, fontWeight: 700, marginTop: '2px' }}>Search and select account for billing</p>
+                                </div>
+                                <button onClick={() => { setShowCustomerSearch(false); setCustomerSearchTerm(''); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={20} /></button>
                             </div>
                             <div style={{ padding: '20px' }}>
                                 <div style={{ position: 'relative', marginBottom: '20px' }}>
-                                    <Search size={20} style={{ position: 'absolute', left: '15px', top: '15px', color: '#94a3b8' }} />
-                                    <input autoFocus placeholder="Search by Patient Name, ID or Mobile..." style={{ width: '100%', padding: '15px 15px 15px 50px', borderRadius: '8px', border: '2px solid #cbd5e1', fontSize: '1.1rem', fontWeight: 700 }} />
+                                    <Search size={22} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#10b981' }} />
+                                    <input
+                                        autoFocus
+                                        placeholder="Type Name, Mobile or Address..."
+                                        style={{ width: '100%', padding: '15px 15px 15px 50px', borderRadius: '12px', border: '2px solid #e2e8f0', fontSize: '1.1rem', fontWeight: 800, outline: 'none', transition: 'all 0.2s', color: '#1e293b' }}
+                                        value={customerSearchTerm}
+                                        onChange={(e) => setCustomerSearchTerm(e.target.value)}
+                                        onFocus={(e) => e.target.style.borderColor = '#10b981'}
+                                        onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                                    />
                                 </div>
-                                <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr', gap: '10px' }}>
-                                    {customers.map(c => (
-                                        <button
-                                            key={c.id}
-                                            onClick={() => { setSelectedCustomer(c); setShowCustomerSearch(false); }}
-                                            style={{ width: '100%', textAlign: 'left', padding: '0', border: 'none', background: 'transparent', cursor: 'pointer' }}
-                                        >
-                                            <div style={{ padding: '20px', border: '1px solid #f1f5f9', borderRadius: '8px', background: '#f8fafc' }} onMouseOver={e => e.currentTarget.style.borderColor = '#10b981'} onMouseOut={e => e.currentTarget.style.borderColor = '#f1f5f9'}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <div>
-                                                        <div style={{ fontWeight: 900, fontSize: '1.1rem', color: '#065f46' }}>{c.name?.toUpperCase()}</div>
-                                                        <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 700 }}>A/C ID: {c.id} | PH: {c.phone}</div>
-                                                    </div>
-                                                    <div style={{ textAlign: 'right' }}>
-                                                        <div style={{ fontSize: '0.7rem', fontWeight: 900, color: '#94a3b8' }}>DUE BALANCE</div>
-                                                        <div style={{ fontWeight: 900, color: '#ef4444' }}>Rs {c.balance.toLocaleString()}</div>
+                                <div style={{ maxHeight: '400px', overflowY: 'auto', display: 'grid', gridTemplateColumns: '1fr', gap: '12px', padding: '5px' }}>
+                                    {customers
+                                        .filter(c =>
+                                            c.name?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+                                            c.phone?.includes(customerSearchTerm) ||
+                                            c.address?.toLowerCase().includes(customerSearchTerm.toLowerCase()) ||
+                                            c.id?.toString().includes(customerSearchTerm)
+                                        )
+                                        .map(c => (
+                                            <button
+                                                key={c.id}
+                                                onClick={() => {
+                                                    setSelectedCustomer(c);
+                                                    setShowCustomerSearch(false);
+                                                    setCustomerSearchTerm('');
+                                                }}
+                                                style={{ width: '100%', textAlign: 'left', padding: '0', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                                            >
+                                                <div style={{
+                                                    padding: '15px 20px',
+                                                    border: '1px solid #f1f5f9',
+                                                    borderRadius: '12px',
+                                                    background: '#ffffff',
+                                                    borderLeft: `5px solid ${c.balance > 0 ? '#ef4444' : '#10b981'}`,
+                                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                                                    transition: 'transform 0.2s, box-shadow 0.2s'
+                                                }} onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)'; }} onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.05)'; }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                            <div style={{ width: '40px', height: '40px', background: c.balance > 0 ? '#fff1f1' : '#ecfdf5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.balance > 0 ? '#ef4444' : '#10b981' }}>
+                                                                <User size={20} />
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontWeight: 950, fontSize: '1.1rem', color: '#1e293b' }}>{c.name?.toUpperCase()}</div>
+                                                                <div style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 800 }}>ADD: {c.address || 'N/A'} • PH: {c.phone}</div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ textAlign: 'right' }}>
+                                                            <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#94a3b8' }}>DUE BALANCE</div>
+                                                            <div style={{ fontWeight: 950, color: c.balance > 0 ? '#ef4444' : '#059669', fontSize: '1.1rem' }}>Rs {(c.balance || 0).toLocaleString()}</div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </button>
-                                    ))}
+                                            </button>
+                                        ))}
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 )}
@@ -1226,62 +1360,62 @@ const POS = () => {
 
                 {/* 3. MOBILE NAVIGATION FOOTER */}
                 {isMobile && (
-                    <div style={{ 
-                        background: 'white', 
-                        borderTop: '2px solid #e2e8f0', 
-                        display: 'flex', 
-                        padding: '10px 15px', 
-                        gap: '15px', 
+                    <div style={{
+                        background: 'white',
+                        borderTop: '2px solid #e2e8f0',
+                        display: 'flex',
+                        padding: '10px 15px',
+                        gap: '15px',
                         zIndex: 1000,
                         boxShadow: '0 -4px 15px rgba(0,0,0,0.05)'
                     }}>
-                        <button 
-                            onClick={() => setMobileTab('browse')} 
-                            style={{ 
-                                flex: 1, 
-                                padding: '12px', 
-                                background: mobileTab === 'browse' ? '#ecfdf5' : 'transparent', 
-                                color: mobileTab === 'browse' ? '#059669' : '#64748b', 
-                                border: 'none', 
-                                borderRadius: '12px', 
-                                fontWeight: 950, 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
-                                gap: '8px', 
-                                fontSize: '0.8rem' 
+                        <button
+                            onClick={() => setMobileTab('browse')}
+                            style={{
+                                flex: 1,
+                                padding: '12px',
+                                background: mobileTab === 'browse' ? '#ecfdf5' : 'transparent',
+                                color: mobileTab === 'browse' ? '#059669' : '#64748b',
+                                border: 'none',
+                                borderRadius: '12px',
+                                fontWeight: 950,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                fontSize: '0.8rem'
                             }}
                         >
                             <Search size={18} /> BROWSE
                         </button>
-                        <button 
-                            onClick={() => setMobileTab('cart')} 
-                            style={{ 
-                                flex: 1, 
-                                padding: '12px', 
-                                background: mobileTab === 'cart' ? '#ecfdf5' : 'transparent', 
-                                color: mobileTab === 'cart' ? '#059669' : '#64748b', 
-                                border: 'none', 
-                                borderRadius: '12px', 
-                                fontWeight: 950, 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                justifyContent: 'center', 
-                                gap: '8px', 
-                                position: 'relative', 
-                                fontSize: '0.8rem' 
+                        <button
+                            onClick={() => setMobileTab('cart')}
+                            style={{
+                                flex: 1,
+                                padding: '12px',
+                                background: mobileTab === 'cart' ? '#ecfdf5' : 'transparent',
+                                color: mobileTab === 'cart' ? '#059669' : '#64748b',
+                                border: 'none',
+                                borderRadius: '12px',
+                                fontWeight: 950,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '8px',
+                                position: 'relative',
+                                fontSize: '0.8rem'
                             }}
                         >
                             <ShoppingCart size={18} /> CART
                             {cart.length > 0 && (
-                                <span style={{ 
-                                    position: 'absolute', 
-                                    top: '5px', 
-                                    right: '20%', 
-                                    background: '#ef4444', 
-                                    color: 'white', 
-                                    fontSize: '0.65rem', 
-                                    padding: '2px 6px', 
+                                <span style={{
+                                    position: 'absolute',
+                                    top: '5px',
+                                    right: '20%',
+                                    background: '#ef4444',
+                                    color: 'white',
+                                    fontSize: '0.65rem',
+                                    padding: '2px 6px',
                                     borderRadius: '10px',
                                     fontWeight: 900
                                 }}>
