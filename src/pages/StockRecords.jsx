@@ -25,7 +25,7 @@ const StockRecords = () => {
     const [timeRange, setTimeRange] = useState('All Time');
     const [expandedProduct, setExpandedProduct] = useState(null);
 
-    const categories = ['All', ...new Set(inventory.map(i => i.category))];
+    const categories = ['All', ...new Set(inventory.map(i => i.category).filter(Boolean))];
 
     // Calculate Daily Sales for each product based on filtered time range
     const productStats = useMemo(() => {
@@ -41,6 +41,9 @@ const StockRecords = () => {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
         const filteredSales = sales.filter(sale => {
+            // Exclude returned sales — their units must not count as "sold".
+            if (sale.status === 'Returned') return false;
+
             const saleDate = new Date(sale.created_at);
             if (timeRange === 'Today') return saleDate >= startOfToday;
             if (timeRange === 'Yesterday') return saleDate >= startOfYesterday && saleDate < startOfToday;
@@ -66,7 +69,7 @@ const StockRecords = () => {
         });
         
         return stats;
-    }, [sales]);
+    }, [sales, timeRange]); // recompute when the time range changes (was missing)
 
     const filteredInventory = inventory.filter(item => {
         const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -169,7 +172,7 @@ const StockRecords = () => {
                                 <th style={{ padding: '15px 25px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b' }}>PRODUCT DETAILS</th>
                                 <th style={{ padding: '15px 25px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b' }}>OPENING STOCK</th>
                                 <th style={{ padding: '15px 25px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b' }}>CURRENT STOCK</th>
-                                <th style={{ padding: '15px 25px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b' }}>TOTAL SOLD</th>
+                                <th style={{ padding: '15px 25px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b' }}>{timeRange === 'All Time' ? 'TOTAL SOLD' : `SOLD (${timeRange.toUpperCase()})`}</th>
                                 <th style={{ padding: '15px 25px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b' }}>STATUS</th>
                                 <th style={{ padding: '15px 25px', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', textAlign: 'right' }}>ANALYSIS</th>
                             </tr>

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import { Camera, Upload, Trash2, FileText, Search, Plus, X, Eye, Edit2, CheckCircle2, Clock, AlertCircle, RotateCw, ZoomIn, ZoomOut, Maximize2, Crop, Minus } from 'lucide-react';
+import { Camera, Upload, Trash2, FileText, Search, Plus, X, Eye, Edit2, CheckCircle2, Clock, AlertCircle, RotateCw, ZoomIn, ZoomOut, Maximize2, Crop, Minus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '../supabase';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import LoadingProgress from '../components/LoadingProgress';
 
 const BillManagement = () => {
     const { user } = useSelector(state => state.auth);
@@ -13,8 +14,71 @@ const BillManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [viewBill, setViewBill] = useState(null);
     const [loading, setLoading] = useState(false);
+    // Percentage for the first paper-bills load (this screen can hold many
+    // scanned bill images, so it's one of the heavier data screens).
+    const [initialLoading, setInitialLoading] = useState(true);
+    const [loadPct, setLoadPct] = useState(0);
+    // Filters + pagination for the bills list.
+    const [statusFilter, setStatusFilter] = useState('all');   // all | Paid | Unpaid | Partially Paid
+    const [typeFilter, setTypeFilter] = useState('all');       // all | Purchase | Sale
+    const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const PAGE_SIZE = 12;
+    // Device (gallery/file) picker.
+    const galleryInputRef = useRef(null);
+    // Mobile camera picker (uses capture attr; works on phones/tablets).
+    const cameraInputRef = useRef(null);
+    // Live webcam capture (for desktop, where the capture attr does nothing).
+    const [showWebcam, setShowWebcam] = useState(false);
+    const videoRef = useRef(null);
+    const streamRef = useRef(null);
     const [viewerScale, setViewerScale] = useState(1);
     const [viewerRotation, setViewerRotation] = useState(0);
+    // Pan (drag) offset for the zoomed image + drag tracking refs.
+    const [viewerPos, setViewerPos] = useState({ x: 0, y: 0 });
+    const dragState = useRef({ dragging: false, startX: 0, startY: 0, baseX: 0, baseY: 0 });
+
+    const resetViewer = () => {
+        setViewerScale(1);
+        setViewerRotation(0);
+        setViewerPos({ x: 0, y: 0 });
+    };
+
+    // Drag to pan (works with mouse + touch).
+    const onDragStart = (clientX, clientY) => {
+        if (viewerScale <= 1) return; // only pan when zoomed in
+        dragState.current = {
+            dragging: true,
+            startX: clientX, startY: clientY,
+            baseX: viewerPos.x, baseY: viewerPos.y,
+        };
+    };
+    const onDragMove = (clientX, clientY) => {
+        if (!dragState.current.dragging) return;
+        setViewerPos({
+            x: dragState.current.baseX + (clientX - dragState.current.startX),
+            y: dragState.current.baseY + (clientY - dragState.current.startY),
+        });
+    };
+    const onDragEnd = () => { dragState.current.dragging = false; };
+
+    // Mouse wheel to zoom; double-click toggles zoom in/out.
+    const onWheelZoom = (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.2 : -0.2;
+        setViewerScale(s => {
+            const next = Math.min(4, Math.max(1, +(s + delta).toFixed(2)));
+            if (next === 1) setViewerPos({ x: 0, y: 0 }); // recenter at 100%
+            return next;
+        });
+    };
+    const onDoubleClickZoom = () => {
+        setViewerScale(s => {
+            if (s > 1) { setViewerPos({ x: 0, y: 0 }); return 1; }
+            return 2;
+        });
+    };
 
     const [editingBill, setEditingBill] = useState(null);
     const [isCropping, setIsCropping] = useState(false);
@@ -44,13 +108,106 @@ const BillManagement = () => {
     }, []);
 
     const fetchBills = async () => {
+        // Animate the percentage upward while the (potentially large) image-
+        // heavy bills load, so the user sees progress instead of a blank screen.
+        let pct = 0;
+        const timer = setInterval(() => {
+            pct = Math.min(pct + 12, 90); // creep toward 90% until data arrives
+            setLoadPct(pct);
+        }, 120);
+
         const { data, error } = await supabase
             .from('paper_bills')
             .select('*')
             .order('date', { ascending: false });
-        
+
+        clearInterval(timer);
+        setLoadPct(100);
+
         if (data) setBills(data);
         if (error) console.error(error);
+
+        // Hide the loader shortly after hitting 100% (only matters first time).
+        setTimeout(() => setInitialLoading(false), 350);
+    };
+
+    // Decide what "Camera" should do based on the device.
+    const isMobileDevice = /Android|iPhone|iPad|iPod|Mobile/i.test(
+        typeof navigator !== 'undefined' ? navigator.userAgent : ''
+    );
+
+    const handleCameraClick = () => {
+        if (isMobileDevice) {
+            // Phones/tablets: the capture attribute opens the native camera.
+            cameraInputRef.current?.click();
+        } else {
+            // Desktop: open a live webcam modal (capture attr is ignored here).
+            openWebcam();
+        }
+    };
+
+    const openWebcam = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'environment' }, audio: false
+            });
+            streamRef.current = stream;
+            setShowWebcam(true);
+            // Attach after the modal renders.
+            setTimeout(() => {
+                if (videoRef.current) videoRef.current.srcObject = stream;
+            }, 100);
+        } catch (err) {
+            console.error('Webcam error:', err);
+            toast.error('Camera not available. Please allow camera access, or use Device instead.');
+        }
+    };
+
+    const closeWebcam = () => {
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(t => t.stop());
+            streamRef.current = null;
+        }
+        setShowWebcam(false);
+    };
+
+    const capturePhoto = () => {
+        const video = videoRef.current;
+        if (!video) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        // Reuse the same compression pipeline as file uploads.
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        processImageDataUrl(dataUrl);
+        closeWebcam();
+    };
+
+    // Clean up the webcam stream if the component unmounts while open.
+    useEffect(() => () => {
+        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+    }, []);
+
+    // Shared: take a data URL, resize/compress it, store on newBill.image.
+    const processImageDataUrl = (dataUrl) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+            const MAX = 1200;
+            if (width > height) {
+                if (width > MAX) { height *= MAX / width; width = MAX; }
+            } else {
+                if (height > MAX) { width *= MAX / height; height = MAX; }
+            }
+            canvas.width = width;
+            canvas.height = height;
+            canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+            setNewBill(prev => ({ ...prev, image: canvas.toDataURL('image/jpeg', 0.7) }));
+        };
+        img.src = dataUrl;
     };
 
     const handleImageUpload = (e) => {
@@ -196,10 +353,39 @@ const BillManagement = () => {
         }
     };
 
-    const filteredBills = bills.filter(b => 
-        b.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        b.note?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Combined filtering: search text + payment status + type + date range.
+    const filteredBills = useMemo(() => {
+        return bills.filter(b => {
+            const matchesSearch =
+                b.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                b.note?.toLowerCase().includes(searchTerm.toLowerCase());
+            if (!matchesSearch) return false;
+
+            if (statusFilter !== 'all' && b.status !== statusFilter) return false;
+            if (typeFilter !== 'all' && b.type !== typeFilter) return false;
+
+            if (dateFrom && new Date(b.date) < new Date(dateFrom)) return false;
+            // include the whole "to" day by comparing against end of that day
+            if (dateTo && new Date(b.date) > new Date(dateTo + 'T23:59:59')) return false;
+
+            return true;
+        });
+    }, [bills, searchTerm, statusFilter, typeFilter, dateFrom, dateTo]);
+
+    // Pagination: only render one page of cards at a time so a large number of
+    // image-heavy bills doesn't slow the screen down.
+    const totalPages = Math.max(1, Math.ceil(filteredBills.length / PAGE_SIZE));
+    const safePage = Math.min(currentPage, totalPages);
+    const pagedBills = filteredBills.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+    // Whenever a filter changes, jump back to page 1.
+    useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, typeFilter, dateFrom, dateTo]);
+
+    const clearFilters = () => {
+        setStatusFilter('all'); setTypeFilter('all');
+        setDateFrom(''); setDateTo(''); setSearchTerm('');
+    };
+    const hasActiveFilters = statusFilter !== 'all' || typeFilter !== 'all' || dateFrom || dateTo || searchTerm;
 
     // Financial Summary Logic
     const summary = useMemo(() => {
@@ -210,6 +396,11 @@ const BillManagement = () => {
             return acc;
         }, { toReceive: 0, toPay: 0 });
     }, [bills]);
+
+    // First load of this data-heavy screen shows a percentage loader.
+    if (initialLoading) {
+        return <LoadingProgress progress={loadPct} label="Loading paper bills" fullscreen={false} />;
+    }
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px', overflow: 'hidden' }}>
@@ -266,26 +457,106 @@ const BillManagement = () => {
                     </div>
                 </div>
 
-                <div style={{ 
-                    padding: '15px 25px', 
-                    borderBottom: '1px solid #f1f5f9', 
-                    display: 'flex', 
-                    flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
-                    justifyContent: 'space-between', 
-                    alignItems: window.innerWidth <= 768 ? 'stretch' : 'center',
-                    gap: '15px'
+                <div style={{
+                    padding: '15px 25px',
+                    borderBottom: '1px solid #f1f5f9',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px'
                 }}>
-                    <div style={{ position: 'relative', width: window.innerWidth <= 768 ? '100%' : '300px' }}>
-                        <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                        <input
-                            style={{ width: '100%', padding: '10px 10px 10px 40px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600 }}
-                            placeholder="Search by supplier or bill title..."
-                            value={searchTerm}
-                            onChange={e => setSearchTerm(e.target.value)}
-                        />
+                    {/* Row 1: search + record count */}
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
+                        justifyContent: 'space-between',
+                        alignItems: window.innerWidth <= 768 ? 'stretch' : 'center',
+                        gap: '12px'
+                    }}>
+                        <div style={{ position: 'relative', width: window.innerWidth <= 768 ? '100%' : '300px' }}>
+                            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                            <input
+                                style={{ width: '100%', padding: '10px 10px 10px 40px', border: '1px solid #e2e8f0', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600 }}
+                                placeholder="Search by supplier or bill title..."
+                                value={searchTerm}
+                                onChange={e => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748b', textAlign: window.innerWidth <= 768 ? 'center' : 'right' }}>
+                            Showing {filteredBills.length} of {bills.length} Records
+                        </div>
                     </div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#64748b', textAlign: window.innerWidth <= 768 ? 'center' : 'right' }}>
-                        Showing {filteredBills.length} Digital Records
+
+                    {/* Row 2: status pills + type + date range + clear */}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+                        {/* Status pills */}
+                        <div style={{ display: 'flex', gap: '6px', background: '#f1f5f9', padding: '4px', borderRadius: '10px' }}>
+                            {[
+                                { key: 'all', label: 'All' },
+                                { key: 'Paid', label: 'Paid' },
+                                { key: 'Unpaid', label: 'Unpaid' },
+                                { key: 'Partially Paid', label: 'Partial' },
+                            ].map(opt => {
+                                const active = statusFilter === opt.key;
+                                const activeBg = opt.key === 'Paid' ? '#16a34a'
+                                    : opt.key === 'Unpaid' ? '#ef4444'
+                                    : opt.key === 'Partially Paid' ? '#f59e0b' : '#0f172a';
+                                return (
+                                    <button
+                                        key={opt.key}
+                                        onClick={() => setStatusFilter(opt.key)}
+                                        style={{
+                                            padding: '7px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                                            fontSize: '0.72rem', fontWeight: 800,
+                                            background: active ? activeBg : 'transparent',
+                                            color: active ? 'white' : '#64748b',
+                                            transition: 'all 0.15s'
+                                        }}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Type dropdown */}
+                        <select
+                            value={typeFilter}
+                            onChange={e => setTypeFilter(e.target.value)}
+                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 800, color: '#334155', background: 'white', cursor: 'pointer' }}
+                        >
+                            <option value="all">All Types</option>
+                            <option value="Purchase">Purchase (Dena)</option>
+                            <option value="Sale">Sale (Lena)</option>
+                        </select>
+
+                        {/* Date range */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Clock size={14} color="#94a3b8" />
+                            <input
+                                type="date"
+                                value={dateFrom}
+                                onChange={e => setDateFrom(e.target.value)}
+                                title="From date"
+                                style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}
+                            />
+                            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8' }}>–</span>
+                            <input
+                                type="date"
+                                value={dateTo}
+                                onChange={e => setDateTo(e.target.value)}
+                                title="To date"
+                                style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}
+                            />
+                        </div>
+
+                        {hasActiveFilters && (
+                            <button
+                                onClick={clearFilters}
+                                style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                            >
+                                <X size={13} /> Clear
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -295,7 +566,7 @@ const BillManagement = () => {
                         gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', 
                         gap: '20px' 
                     }}>
-                        {filteredBills.map(bill => (
+                        {pagedBills.map(bill => (
                             <div key={bill.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', transition: 'all 0.2s', position: 'relative', display: 'flex', flexDirection: 'column' }}>
                                 {bill.image ? (
                                     <div style={{ height: '160px', overflow: 'hidden', position: 'relative', cursor: 'pointer' }} onClick={() => setViewBill(bill)}>
@@ -350,10 +621,108 @@ const BillManagement = () => {
                             </div>
                         ))}
                     </div>
+
+                    {/* Empty state when filters match nothing */}
+                    {filteredBills.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
+                            <FileText size={40} style={{ opacity: 0.4, marginBottom: '12px' }} />
+                            <p style={{ fontWeight: 800, fontSize: '0.95rem', color: '#64748b' }}>No bills match your filters</p>
+                            {hasActiveFilters && (
+                                <button onClick={clearFilters} style={{ marginTop: '12px', padding: '8px 16px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', color: '#2563eb', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer' }}>
+                                    Clear filters
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
+
+                {/* Pagination controls */}
+                {totalPages > 1 && (
+                    <div style={{
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        padding: '14px 25px', borderTop: '1px solid #f1f5f9', background: '#f8fafc', flexWrap: 'wrap'
+                    }}>
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={safePage === 1}
+                            style={{
+                                padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                                background: safePage === 1 ? '#f1f5f9' : 'white',
+                                color: safePage === 1 ? '#cbd5e1' : '#334155',
+                                fontSize: '0.75rem', fontWeight: 800,
+                                cursor: safePage === 1 ? 'not-allowed' : 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '4px'
+                            }}
+                        >
+                            <ChevronLeft size={15} /> Prev
+                        </button>
+
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter(pg => pg === 1 || pg === totalPages || Math.abs(pg - safePage) <= 1)
+                            .map((pg, idx, arr) => (
+                                <React.Fragment key={pg}>
+                                    {idx > 0 && pg - arr[idx - 1] > 1 && (
+                                        <span style={{ color: '#cbd5e1', fontWeight: 800, padding: '0 2px' }}>…</span>
+                                    )}
+                                    <button
+                                        onClick={() => setCurrentPage(pg)}
+                                        style={{
+                                            minWidth: '36px', padding: '8px 0', borderRadius: '8px',
+                                            border: pg === safePage ? 'none' : '1px solid #e2e8f0',
+                                            background: pg === safePage ? '#0f172a' : 'white',
+                                            color: pg === safePage ? 'white' : '#334155',
+                                            fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer'
+                                        }}
+                                    >
+                                        {pg}
+                                    </button>
+                                </React.Fragment>
+                            ))}
+
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={safePage === totalPages}
+                            style={{
+                                padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0',
+                                background: safePage === totalPages ? '#f1f5f9' : 'white',
+                                color: safePage === totalPages ? '#cbd5e1' : '#334155',
+                                fontSize: '0.75rem', fontWeight: 800,
+                                cursor: safePage === totalPages ? 'not-allowed' : 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '4px'
+                            }}
+                        >
+                            Next <ChevronRight size={15} />
+                        </button>
+                    </div>
+                )}
             </div>
 
             {/* Modal for adding bill */}
+            {/* LIVE WEBCAM MODAL (desktop camera capture) */}
+            {showWebcam && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+                    <div style={{ background: '#0f172a', borderRadius: '20px', padding: '20px', width: '100%', maxWidth: '640px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ color: 'white', fontWeight: 900, fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Camera size={20} /> Take a Photo
+                            </h3>
+                            <button type="button" onClick={closeWebcam} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><X size={22} /></button>
+                        </div>
+                        <div style={{ background: '#000', borderRadius: '12px', overflow: 'hidden', aspectRatio: '4/3' }}>
+                            <video ref={videoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button type="button" onClick={closeWebcam} style={{ flex: 1, padding: '14px', borderRadius: '12px', border: '1px solid #334155', background: '#1e293b', color: '#cbd5e1', fontWeight: 800, cursor: 'pointer' }}>
+                                Cancel
+                            </button>
+                            <button type="button" onClick={capturePhoto} style={{ flex: 2, padding: '14px', borderRadius: '12px', border: 'none', background: '#2563eb', color: 'white', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                <Camera size={18} /> CAPTURE PHOTO
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {isModalOpen && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: window.innerWidth <= 480 ? 'flex-end' : 'center', justifyContent: 'center', zIndex: 1000 }}>
                     <div style={{ 
@@ -450,55 +819,74 @@ const BillManagement = () => {
                                 </motion.div>
                             )}
 
-                            <div>
-                                <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>{editingBill ? 'REPLACE PHOTO (OPTIONAL)' : 'ATTACH BILL PHOTO'}</label>
-                                <div style={{ border: '2px dashed #e2e8f0', borderRadius: '12px', height: '100px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
-                                    {newBill.image ? (
-                                        <img src={newBill.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                    ) : (
-                                        <>
-                                            <Upload size={20} color="#94a3b8" />
-                                            <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8' }}>Select image</span>
-                                        </>
-                                    )}
-                                    <input 
-                                        type="file" 
-                                        accept="image/*"
-                                        onChange={handleImageUpload}
-                                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
-                                    />
-                                </div>
-                            </div>
                             <div style={{ position: 'relative' }}>
                                 <label style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b', display: 'block', marginBottom: '8px' }}>{editingBill ? 'REPLACE PHOTO (OPTIONAL)' : 'ATTACH BILL PHOTO'}</label>
                                 
                                 {!isCropping ? (
                                     <div style={{ position: 'relative' }}>
-                                        <div style={{ border: '2px dashed #e2e8f0', borderRadius: '12px', height: '140px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px', position: 'relative', overflow: 'hidden', cursor: 'pointer' }}>
-                                            {newBill.image ? (
-                                                <>
-                                                    <img src={newBill.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                                                    <button 
-                                                        type="button"
-                                                        onClick={() => { setIsCropping(true); if(!originalImage) setOriginalImage(newBill.image); }}
-                                                        style={{ position: 'absolute', top: '10px', right: '10px', background: '#0f172a', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', zIndex: 10 }}
-                                                    >
-                                                        <Crop size={14} /> CROP IMAGE
-                                                    </button>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Upload size={20} color="#94a3b8" />
-                                                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8' }}>Select image</span>
-                                                </>
-                                            )}
-                                            <input 
-                                                type="file" 
-                                                accept="image/*"
-                                                onChange={handleImageUpload}
-                                                style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
-                                            />
-                                        </div>
+                                        {newBill.image ? (
+                                            /* Image already chosen: show preview + crop + change */
+                                            <div style={{ border: '2px dashed #e2e8f0', borderRadius: '12px', height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                                                <img src={newBill.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => { setIsCropping(true); if(!originalImage) setOriginalImage(newBill.image); }}
+                                                    style={{ position: 'absolute', top: '10px', right: '10px', background: '#0f172a', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', zIndex: 10 }}
+                                                >
+                                                    <Crop size={14} /> CROP
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setNewBill({ ...newBill, image: '' })}
+                                                    style={{ position: 'absolute', top: '10px', left: '10px', background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', zIndex: 10 }}
+                                                >
+                                                    <X size={14} /> CHANGE
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            /* No image yet: let the user choose Camera or Device */
+                                            <div style={{ display: 'flex', gap: '12px' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCameraClick}
+                                                    style={{ flex: 1, border: '2px dashed #cbd5e1', borderRadius: '12px', height: '110px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#f8fafc', cursor: 'pointer', transition: 'all 0.15s' }}
+                                                    onMouseOver={e => { e.currentTarget.style.borderColor = '#2563eb'; e.currentTarget.style.background = '#eff6ff'; }}
+                                                    onMouseOut={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
+                                                >
+                                                    <div style={{ background: '#dbeafe', padding: '10px', borderRadius: '50%', color: '#2563eb' }}><Camera size={22} /></div>
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#1e293b' }}>Camera</span>
+                                                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8' }}>Take a photo</span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => galleryInputRef.current?.click()}
+                                                    style={{ flex: 1, border: '2px dashed #cbd5e1', borderRadius: '12px', height: '110px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', background: '#f8fafc', cursor: 'pointer', transition: 'all 0.15s' }}
+                                                    onMouseOver={e => { e.currentTarget.style.borderColor = '#16a34a'; e.currentTarget.style.background = '#f0fdf4'; }}
+                                                    onMouseOut={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
+                                                >
+                                                    <div style={{ background: '#dcfce7', padding: '10px', borderRadius: '50%', color: '#16a34a' }}><Upload size={22} /></div>
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: '#1e293b' }}>Device</span>
+                                                    <span style={{ fontSize: '0.6rem', fontWeight: 700, color: '#94a3b8' }}>Choose from files</span>
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* Hidden inputs: camera (capture) + gallery (no capture) */}
+                                        <input
+                                            ref={cameraInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            onChange={handleImageUpload}
+                                            style={{ display: 'none' }}
+                                        />
+                                        <input
+                                            ref={galleryInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            style={{ display: 'none' }}
+                                        />
                                     </div>
                                 ) : (
                                     <div style={{ position: 'relative', background: '#0f172a', borderRadius: '12px', padding: '10px', overflow: 'hidden' }}>
@@ -581,41 +969,55 @@ const BillManagement = () => {
                         flexDirection: window.innerWidth <= 768 ? 'column' : 'row',
                         height: window.innerWidth <= 768 ? '95vh' : '80vh' 
                     }}>
-                        <div style={{ 
-                            flex: 1, 
-                            background: '#0f172a', 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            justifyContent: 'center', 
-                            overflow: 'hidden',
-                            position: 'relative',
-                            minHeight: window.innerWidth <= 768 ? '50%' : 'auto',
-                            cursor: viewerScale > 1 ? 'grab' : 'default'
-                        }}>
+                        <div
+                            onWheel={onWheelZoom}
+                            onDoubleClick={onDoubleClickZoom}
+                            onMouseDown={(e) => onDragStart(e.clientX, e.clientY)}
+                            onMouseMove={(e) => onDragMove(e.clientX, e.clientY)}
+                            onMouseUp={onDragEnd}
+                            onMouseLeave={onDragEnd}
+                            onTouchStart={(e) => { const t = e.touches[0]; onDragStart(t.clientX, t.clientY); }}
+                            onTouchMove={(e) => { const t = e.touches[0]; onDragMove(t.clientX, t.clientY); }}
+                            onTouchEnd={onDragEnd}
+                            style={{
+                                flex: 1,
+                                background: '#0f172a',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                overflow: 'hidden',
+                                position: 'relative',
+                                minHeight: window.innerWidth <= 768 ? '50%' : 'auto',
+                                cursor: viewerScale > 1 ? (dragState.current.dragging ? 'grabbing' : 'grab') : 'default',
+                                touchAction: 'none',
+                                userSelect: 'none'
+                            }}
+                        >
                             <motion.div
-                                animate={{ scale: viewerScale, rotate: viewerRotation }}
-                                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                                animate={{ scale: viewerScale, rotate: viewerRotation, x: viewerPos.x, y: viewerPos.y }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 35 }}
                                 style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             >
-                                <img 
-                                    src={viewBill.image} 
-                                    alt="Full Bill" 
-                                    style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }} 
+                                <img
+                                    src={viewBill.image}
+                                    alt="Full Bill"
+                                    draggable={false}
+                                    style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', pointerEvents: 'none' }}
                                 />
                             </motion.div>
 
                             {/* Floating Controls */}
                             <div style={{ position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', padding: '8px 15px', borderRadius: '30px', display: 'flex', gap: '15px', alignItems: 'center', border: '1px solid rgba(255,255,255,0.1)', zIndex: 10 }}>
-                                <button onClick={() => setViewerScale(Math.max(0.5, viewerScale - 0.2))} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }} title="Zoom Out"><ZoomOut size={20} /></button>
+                                <button onClick={() => setViewerScale(s => { const n = Math.max(1, +(s - 0.2).toFixed(2)); if (n === 1) setViewerPos({ x: 0, y: 0 }); return n; })} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }} title="Zoom Out"><ZoomOut size={20} /></button>
                                 <span style={{ color: 'white', fontSize: '0.75rem', fontWeight: 900, minWidth: '40px', textAlign: 'center' }}>{Math.round(viewerScale * 100)}%</span>
-                                <button onClick={() => setViewerScale(Math.min(3, viewerScale + 0.2))} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }} title="Zoom In"><ZoomIn size={20} /></button>
+                                <button onClick={() => setViewerScale(s => Math.min(4, +(s + 0.2).toFixed(2)))} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }} title="Zoom In"><ZoomIn size={20} /></button>
                                 <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.2)' }} />
                                 <button onClick={() => setViewerRotation(viewerRotation + 90)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }} title="Rotate"><RotateCw size={20} /></button>
-                                <button onClick={() => { setViewerScale(1); setViewerRotation(0); }} style={{ background: 'none', border: 'none', color: 'white', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer' }}>RESET</button>
+                                <button onClick={resetViewer} style={{ background: 'none', border: 'none', color: 'white', fontSize: '0.6rem', fontWeight: 900, cursor: 'pointer' }}>RESET</button>
                             </div>
 
                             {window.innerWidth <= 768 && (
-                                <button onClick={() => { setViewBill(null); setViewerScale(1); setViewerRotation(0); }} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.2)', border: 'none', padding: '10px', borderRadius: '50%', cursor: 'pointer', color: 'white', backdropFilter: 'blur(5px)' }}><X size={24} /></button>
+                                <button onClick={() => { setViewBill(null); resetViewer(); }} style={{ position: 'absolute', top: '15px', right: '15px', background: 'rgba(255,255,255,0.2)', border: 'none', padding: '10px', borderRadius: '50%', cursor: 'pointer', color: 'white', backdropFilter: 'blur(5px)' }}><X size={24} /></button>
                             )}
                         </div>
                         <div style={{ 
@@ -629,7 +1031,7 @@ const BillManagement = () => {
                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                 <h3 style={{ fontWeight: 950, fontSize: '1.2rem' }}>Bill Details</h3>
                                 {window.innerWidth > 768 && (
-                                    <button onClick={() => { setViewBill(null); setViewerScale(1); setViewerRotation(0); }} style={{ background: '#f1f5f9', border: 'none', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}><X size={20} /></button>
+                                    <button onClick={() => { setViewBill(null); resetViewer(); }} style={{ background: '#f1f5f9', border: 'none', padding: '8px', borderRadius: '50%', cursor: 'pointer' }}><X size={20} /></button>
                                 )}
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : 'repeat(auto-fit, minmax(140px, 1fr))', gap: '15px' }}>
@@ -655,7 +1057,7 @@ const BillManagement = () => {
                                 <p style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700 }}>Operator: {viewBill.created_by || 'System'}</p>
                             </div>
                              {window.innerWidth <= 768 && (
-                                <button onClick={() => { setViewBill(null); setViewerScale(1); setViewerRotation(0); }} style={{ width: '100%', padding: '15px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 900, marginTop: '10px' }}>CLOSE VIEWER</button>
+                                <button onClick={() => { setViewBill(null); resetViewer(); }} style={{ width: '100%', padding: '15px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 900, marginTop: '10px' }}>CLOSE VIEWER</button>
                             )}
                         </div>
                     </div>

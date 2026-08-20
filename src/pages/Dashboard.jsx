@@ -33,15 +33,20 @@ const Dashboard = () => {
     const [selectedBar, setSelectedBar] = React.useState(null);
 
     // 1. DATA PROCESSING FOR CHARTS
-    const filteredHistory = useMemo(() => 
-        isAdmin ? history : history.filter(s => (s.seller_name || s.sellerName) === user?.name || s.seller_id === user?.uid)
-    , [history, isAdmin, user]);
+    const filteredHistory = useMemo(() => {
+        // Exclude Returned sales everywhere on the dashboard — a returned invoice
+        // must not count toward revenue, profit, trends or payment breakdown.
+        const valid = (history || []).filter(s => s.status !== 'Returned');
+        return isAdmin
+            ? valid
+            : valid.filter(s => (s.seller_name || s.sellerName) === user?.name || s.seller_id === user?.uid);
+    }, [history, isAdmin, user]);
 
-    const totalSales = useMemo(() => filteredHistory.reduce((acc, s) => acc + s.total, 0), [filteredHistory]);
-    const totalReceivables = useMemo(() => customers.reduce((acc, c) => acc + (c.balance || 0), 0), [customers]);
+    const totalSales = useMemo(() => filteredHistory.reduce((acc, s) => acc + (Number(s.total) || 0), 0), [filteredHistory]);
+    const totalReceivables = useMemo(() => customers.reduce((acc, c) => acc + (Number(c.balance) || 0), 0), [customers]);
     const today = new Date().toISOString().split('T')[0];
     const todaySales = useMemo(() => filteredHistory.filter(s => new Date(s.created_at || s.date).toISOString().split('T')[0] === today), [filteredHistory, today]);
-    const todayRevenue = useMemo(() => todaySales.reduce((acc, s) => acc + s.total, 0), [todaySales]);
+    const todayRevenue = useMemo(() => todaySales.reduce((acc, s) => acc + (Number(s.total) || 0), 0), [todaySales]);
 
     // Revenue Trend (Last 7 Days)
     const revenueTrend = useMemo(() => {
@@ -55,7 +60,7 @@ const Dashboard = () => {
             const daySales = filteredHistory.filter(s => new Date(s.created_at || s.date).toISOString().split('T')[0] === day);
             return {
                 day: new Date(day).toLocaleDateString('en-US', { weekday: 'short' }),
-                revenue: daySales.reduce((sum, s) => sum + s.total, 0)
+                revenue: daySales.reduce((sum, s) => sum + (Number(s.total) || 0), 0)
             };
         });
     }, [filteredHistory]);
@@ -65,8 +70,9 @@ const Dashboard = () => {
         const stats = { Cash: 0, Credit: 0, Card: 0, Online: 0 };
         filteredHistory.forEach(s => {
             const method = s.payment_method || s.paymentMethod || 'Cash';
-            if (stats[method] !== undefined) stats[method] += s.total;
-            else stats['Cash'] += s.total; // Default/Fallback
+            const amt = Number(s.total) || 0;
+            if (stats[method] !== undefined) stats[method] += amt;
+            else stats['Cash'] += amt; // Default/Fallback
         });
         const total = Object.values(stats).reduce((a, b) => a + b, 0) || 1;
         return Object.entries(stats).map(([label, value]) => ({
@@ -90,7 +96,8 @@ const Dashboard = () => {
         }, 0);
     };
 
-    const totalProfit = isAdmin ? calculateProfit(history) : 0;
+    // Use filteredHistory (returned sales already excluded) instead of raw history.
+    const totalProfit = isAdmin ? calculateProfit(filteredHistory) : 0;
     const maxRevenue = Math.max(...revenueTrend.map(d => d.revenue)) || 1000;
 
     return (

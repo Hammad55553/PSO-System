@@ -93,35 +93,60 @@ const SalesHistory = ({ isReturnsPage = false }) => {
         }
     };
 
+    const handleExportCSV = () => {
+        if (!filteredSales || filteredSales.length === 0) {
+            toast.error('No records to export');
+            return;
+        }
+        const headers = ['Invoice', 'Customer', 'Date', 'Operator', 'Payment', 'Status', 'Total'];
+        const rows = filteredSales.map(s => {
+            const invoiceNo = s.invoice_no ? (100000 + parseInt(s.invoice_no)) : (s.id?.toString().slice(-6).toUpperCase());
+            // Wrap each field in quotes and escape internal quotes for safe CSV.
+            return [
+                invoiceNo,
+                s.customer_name || 'Walk-in',
+                new Date(s.created_at).toLocaleString(),
+                s.seller_name || 'N/A',
+                s.payment_method || 'Cash',
+                s.status || 'Paid',
+                s.total || 0
+            ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+        });
+
+        const csv = [headers.join(','), ...rows].join('\n');
+        const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${isReturnsPage ? 'returns' : 'sales'}_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success(`Exported ${filteredSales.length} records`);
+    };
+
     const handleReturn = async (sale) => {
         if (sale.status === 'Returned') return;
-        if (window.confirm('Authorize Full Return? Stock will be updated accordingly.')) {
+        if (window.confirm('Authorize Full Return? Stock, shift totals and customer credit will all be reversed.')) {
             try {
-                // 1. Update Sale Status
-                const { error: saleError } = await supabase
-                    .from('sales')
-                    .update({ status: 'Returned' })
-                    .eq('id', sale.id);
+                // Everything (double-return guard, stock + total_sold revert,
+                // shift sales adjustment, credit balance reversal, status update)
+                // now happens ATOMICALLY inside the Postgres function
+                // process_sale_return — so a double click or two terminals can
+                // never revert the same sale twice or leave data half-updated.
+                const { data, error } = await supabase
+                    .rpc('process_sale_return', { p_sale_id: sale.id });
 
-                if (saleError) throw saleError;
+                if (error) throw error;
 
-                // 2. Revert Stocks
-                if (sale.sale_items) {
-                    for (const item of sale.sale_items) {
-                        const { data: invItem } = await supabase
-                            .from('inventory')
-                            .select('stock')
-                            .eq('id', item.product_id)
-                            .single();
-                        
-                        const newStock = (invItem?.stock || 0) + item.quantity;
-                        await supabase
-                            .from('inventory')
-                            .update({ stock: newStock })
-                            .eq('id', item.product_id);
-                    }
+                if (data === 'ALREADY_RETURNED') {
+                    toast.error('This invoice has already been returned.');
+                    setSelectedSale(null);
+                    return;
                 }
 
+                // Update local state immediately so the row shows "Returned"
+                // right away (the realtime refetch will confirm shortly after).
+                dispatch(returnSale(sale.id));
                 toast.success(`INV #${sale.id} Successfully Reversed`);
                 setSelectedSale(null);
             } catch (err) {
@@ -218,7 +243,7 @@ const SalesHistory = ({ isReturnsPage = false }) => {
                                 )}
                             </div>
 
-                            <button style={{ padding: '10px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', flex: 1 }}>
+                            <button onClick={handleExportCSV} style={{ padding: '10px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', flex: 1 }}>
                                 <Download size={14} />
                                 <span style={{ fontSize: '0.75rem', fontWeight: 800 }}>CSV</span>
                             </button>

@@ -425,3 +425,35 @@ body {
 .qty-input-no-spin {
   -moz-appearance: textfield;
 }
+
+/* ============================================================
+   PRINT STYLES
+   Screen: .print-only is hidden. Print: everything is hidden
+   except the .print-only block, which lays out a clean report.
+   ============================================================ */
+.print-only { display: none; }
+
+@media print {
+  /* Hide the whole app UI when printing. */
+  body * { visibility: hidden !important; }
+
+  /* Show only the print report and its contents. */
+  .print-only, .print-only * { visibility: visible !important; }
+
+  .print-only {
+    display: block !important;
+    position: absolute;
+    left: 0; top: 0;
+    width: 100%;
+    padding: 0;
+    background: #fff;
+    color: #000;
+  }
+
+  /* Elements explicitly marked no-print stay hidden. */
+  .no-print, .no-print * { display: none !important; visibility: hidden !important; }
+
+  @page { size: A4; margin: 14mm; }
+
+  html, body { background: #fff !important; }
+}

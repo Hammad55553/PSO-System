@@ -117,10 +117,23 @@ const Inventory = () => {
                 if (error) addToSyncQueue('inventory', 'update', data, editingItem.id);
                 else toast.success('Synced to Cloud');
             } else {
+                // Show the item instantly with a temp id...
                 dispatch(addItem(optimisticData));
-                const { error } = await supabase.from('inventory').insert([data]);
-                if (error) addToSyncQueue('inventory', 'insert', data);
-                else toast.success('Synced to Cloud');
+                // ...then replace it with the REAL row from the DB (which has the
+                // real UUID). Without this the new item kept a fake Date.now() id,
+                // so editing/deleting/restocking it before a reload would fail.
+                const { data: saved, error } = await supabase
+                    .from('inventory')
+                    .insert([data])
+                    .select()
+                    .single();
+                if (error) {
+                    addToSyncQueue('inventory', 'insert', data);
+                } else {
+                    dispatch(deleteItem(tempId));   // remove the temp entry
+                    dispatch(addItem(saved));       // add the real one
+                    toast.success('Synced to Cloud');
+                }
             }
 
             playDone();

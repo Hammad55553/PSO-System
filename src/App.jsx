@@ -1,30 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { HashRouter as Router, Routes, Route, useLocation, Link, Navigate, useNavigate } from 'react-router-dom';
 import { Provider } from 'react-redux';
 import { store } from './store';
 import { Toaster } from 'react-hot-toast';
-import { LayoutDashboard, Menu, X, Wifi, WifiOff, Box, Hash } from 'lucide-react';
+import { LayoutDashboard, Menu, X, Wifi, WifiOff, Box, Hash, Loader2 } from 'lucide-react';
 import Calculator from './components/Calculator';
 
 import Sidebar from './components/Sidebar';
-import Dashboard from './pages/Dashboard';
-import Inventory from './pages/Inventory';
-import POS from './pages/POS';
-import SalesHistory from './pages/SalesHistory';
-import ShiftManagement from './pages/ShiftManagement';
-import CreditManagement from './pages/CreditManagement';
-import Settings from './pages/Settings';
-import Reports from './pages/Reports';
-import ProfitMastery from './pages/ProfitMastery';
-import ProductInsights from './pages/ProductInsights';
-import OrderManagement from './pages/OrderManagement';
-import BillManagement from './pages/BillManagement';
-import ExpiryManagement from './pages/ExpiryManagement';
-import ShortageBook from './pages/ShortageBook';
-import ExpenseTracker from './pages/ExpenseTracker';
-import SupplierManagement from './pages/SupplierManagement';
-import Trash from './pages/Trash';
-import StockRecords from './pages/StockRecords';
+import LoadingProgress from './components/LoadingProgress';
+
+// PERFORMANCE: Pages are lazy-loaded so the initial bundle stays small and
+// each screen's code (POS ~94KB, Settings ~112KB, etc.) is only fetched when
+// the user actually navigates to it. This dramatically speeds up first paint.
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const POS = lazy(() => import('./pages/POS'));
+const SalesHistory = lazy(() => import('./pages/SalesHistory'));
+const ShiftManagement = lazy(() => import('./pages/ShiftManagement'));
+const CreditManagement = lazy(() => import('./pages/CreditManagement'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Reports = lazy(() => import('./pages/Reports'));
+const ProfitMastery = lazy(() => import('./pages/ProfitMastery'));
+const ProductInsights = lazy(() => import('./pages/ProductInsights'));
+const OrderManagement = lazy(() => import('./pages/OrderManagement'));
+const BillManagement = lazy(() => import('./pages/BillManagement'));
+const ExpiryManagement = lazy(() => import('./pages/ExpiryManagement'));
+const ShortageBook = lazy(() => import('./pages/ShortageBook'));
+const ExpenseTracker = lazy(() => import('./pages/ExpenseTracker'));
+const SupplierManagement = lazy(() => import('./pages/SupplierManagement'));
+const Trash = lazy(() => import('./pages/Trash'));
+const StockRecords = lazy(() => import('./pages/StockRecords'));
 
 import { supabase } from './supabase';
 import { useDispatch, useSelector } from 'react-redux';
@@ -41,9 +46,16 @@ import { setSuppliers } from './store/slices/suppliersSlice';
 import { setOrders } from './store/slices/ordersSlice';
 import { processSyncQueue } from './utils/offlineSync';
 import Login from './pages/Login';
-import Register from './pages/Register';
-import UserManagement from './pages/UserManagement';
+const Register = lazy(() => import('./pages/Register'));
+const UserManagement = lazy(() => import('./pages/UserManagement'));
 import { toggleCalculator, openCalculator, closeCalculator } from './store/slices/uiSlice';
+
+// Lightweight fallback shown while a lazy page chunk is loading.
+const PageLoader = () => (
+  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', width: '100%' }}>
+    <Loader2 size={40} color="#2563eb" className="animate-spin" />
+  </div>
+);
 
 import welcomeSound from './assets/Welcome.mp3';
 
@@ -51,6 +63,52 @@ function AppContent() {
   const dispatch = useDispatch();
   const { isAuthenticated, user } = useSelector(state => state.auth);
   const isAdmin = user?.role === 'admin';
+
+  // SECURITY: Never trust localStorage alone for auth. On mount (and whenever
+  // Supabase reports an auth change) verify there is a real, valid session and
+  // that the profile is still active + that the cached role matches the DB.
+  // If anything is off, force logout. This closes the "set pso_user in console
+  // to become admin" bypass — the DB is the source of truth.
+  useEffect(() => {
+    let cancelled = false;
+
+    const verifySession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      // No valid Supabase session but local state says logged in -> purge.
+      if (!session?.user) {
+        if (isAuthenticated) dispatch(logout());
+        return;
+      }
+
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role, status')
+        .eq('id', session.user.id)
+        .single();
+
+      if (cancelled) return;
+
+      // Profile missing, disabled, or role tampered with -> purge.
+      if (error || !profile || profile.status !== 'active' ||
+          (user && user.role !== profile.role)) {
+        dispatch(logout());
+      }
+    };
+
+    verifySession();
+
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') dispatch(logout());
+    });
+
+    return () => {
+      cancelled = true;
+      sub?.subscription?.unsubscribe();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const location = useLocation();
   const isBillingMode = location.pathname === '/pos' || location.pathname === '/returns';
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -65,6 +123,9 @@ function AppContent() {
   const isCalculatorOpen = useSelector(state => state.ui.isCalculatorOpen);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+  // Percentage loader state for the heavy initial data load (8 tables).
+  const [loadProgress, setLoadProgress] = useState(0);
+  const [showInitialLoader, setShowInitialLoader] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 1024);
@@ -155,20 +216,39 @@ function AppContent() {
 
     let channels = [];
 
-    const fetchData = async () => {
+    const fetchData = async (withProgress = false) => {
         if (!isAuthenticated) return;
         setIsSyncing(true);
+
+        // Show the percentage loader only for the heavy initial load, not for
+        // background realtime refreshes (those should be silent).
+        if (withProgress) {
+            setShowInitialLoader(true);
+            setLoadProgress(0);
+        }
+
+        // Each of the 8 table fetches bumps the percentage as it finishes, so
+        // the user sees real progress (e.g. 12% → 25% → …) instead of a frozen
+        // spinner. We still run them in parallel for speed.
+        const TOTAL_STEPS = 8;
+        let done = 0;
+        const tick = () => {
+            done += 1;
+            if (withProgress) setLoadProgress(Math.round((done / TOTAL_STEPS) * 100));
+        };
+        const track = (p) => p.then((r) => { tick(); return r; });
+
         try {
-            // 1. Initial Fetch
+            // 1. Initial Fetch (parallel, but each reports progress on finish)
             const [inv, cust, sales, shifts, short, exp, sup, ord] = await Promise.all([
-                supabase.from('inventory').select('*').is('deleted_at', null),
-                supabase.from('customers').select('*').is('deleted_at', null),
-                supabase.from('sales').select('*, sale_items(*)').is('deleted_at', null),
-                supabase.from('shifts').select('*'),
-                supabase.from('shortage').select('*'),
-                supabase.from('expenses').select('*'),
-                supabase.from('suppliers').select('*').is('deleted_at', null),
-                supabase.from('orders').select('*').is('deleted_at', null)
+                track(supabase.from('inventory').select('*').is('deleted_at', null)),
+                track(supabase.from('customers').select('*').is('deleted_at', null)),
+                track(supabase.from('sales').select('*, sale_items(*)').is('deleted_at', null)),
+                track(supabase.from('shifts').select('*')),
+                track(supabase.from('shortage').select('*')),
+                track(supabase.from('expenses').select('*')),
+                track(supabase.from('suppliers').select('*').is('deleted_at', null)),
+                track(supabase.from('orders').select('*').is('deleted_at', null))
             ]);
 
             if (inv.data) dispatch(setInventory(inv.data));
@@ -190,28 +270,54 @@ function AppContent() {
             console.error(err);
         } finally {
             setIsSyncing(false);
+            if (withProgress) {
+                setLoadProgress(100);
+                // Hold at 100% briefly so the fill animation completes, then hide.
+                setTimeout(() => setShowInitialLoader(false), 400);
+            }
         }
     };
 
+    // PERFORMANCE: A single sale can fire several postgres_changes events in a
+    // burst (sales + sale_items + inventory stock update). Previously each event
+    // triggered a full re-fetch of every table, hammering Supabase bandwidth and
+    // egress. Debounce so a burst of changes results in ONE refetch ~800ms later.
+    let debounceTimer = null;
+    const debouncedFetch = () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => fetchData(), 800);
+    };
+
     if (isAuthenticated) {
-        fetchData();
+        // OFFLINE-FIRST: If we already have cached data in Redux (restored from
+        // localStorage on reload), show it INSTANTLY and refresh silently in the
+        // background — no full-screen loader, no waiting. The percentage loader
+        // only appears on a genuine cold start (empty cache / first ever login).
+        const hasCachedData =
+            (store.getState().inventory?.items?.length || 0) > 0 ||
+            (store.getState().sales?.history?.length || 0) > 0;
+
+        fetchData(!hasCachedData);
         processSyncQueue();
 
         const mainChannel = supabase.channel('db-changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, () => fetchData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, () => fetchData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => fetchData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, () => fetchData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'shortage' }, () => fetchData())
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchData())
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'inventory' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'shifts' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'shortage' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'expenses' }, debouncedFetch)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, debouncedFetch)
             .subscribe();
-        
+
         channels.push(mainChannel);
     }
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      clearTimeout(debounceTimer);
       channels.forEach(ch => supabase.removeChannel(ch));
     };
   }, [isAuthenticated, dispatch]);
@@ -259,10 +365,12 @@ function AppContent() {
     return (
       <>
         <Toaster position="top-right" />
-        <Routes>
-          <Route path="/register" element={<Register />} />
-          <Route path="*" element={<Login />} />
-        </Routes>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/register" element={<Register />} />
+            <Route path="*" element={<Login />} />
+          </Routes>
+        </Suspense>
       </>
     );
   }
@@ -376,6 +484,7 @@ function AppContent() {
         )}
 
         <div className="view-container">
+          <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/shift" element={<ShiftManagement />} />
@@ -400,10 +509,16 @@ function AppContent() {
             <Route path="/users" element={isAdmin ? <UserManagement /> : <Navigate to="/" />} />
             <Route path="/settings" element={isAdmin ? <Settings /> : <Navigate to="/" />} />
           </Routes>
+          </Suspense>
         </div>
       </main>
 
       <Calculator isOpen={isCalculatorOpen} onClose={() => dispatch(closeCalculator())} />
+
+      {/* Percentage loader for the heavy initial data load (8 tables) */}
+      {showInitialLoader && (
+        <LoadingProgress progress={loadProgress} label="Loading clinic data" fullscreen />
+      )}
 
       {/* SAFETY LOCK MODAL */}
       {showPinModal && (

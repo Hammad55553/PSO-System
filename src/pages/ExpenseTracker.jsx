@@ -26,18 +26,22 @@ const ExpenseTracker = () => {
     
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
     const [formData, setFormData] = useState({
         category: 'Utilities',
         amount: '',
-        description: ''
+        title: '',   // main expense name (DB column `title`, required)
+        notes: ''    // optional extra note (DB column `notes`)
     });
 
     const categories = ['Utilities', 'Rent', 'Salary', 'Medical Supplies', 'Marketing', 'Maintenance', 'Others'];
 
     const filteredExpenses = useMemo(() => {
-        return list.filter(e => 
-            e.description.toLowerCase().includes(searchTerm.toLowerCase()) || 
-            e.category.toLowerCase().includes(searchTerm.toLowerCase())
+        const term = searchTerm.toLowerCase();
+        return list.filter(e =>
+            (e.title || '').toLowerCase().includes(term) ||
+            (e.notes || '').toLowerCase().includes(term) ||
+            (e.category || '').toLowerCase().includes(term)
         );
     }, [list, searchTerm]);
 
@@ -50,29 +54,42 @@ const ExpenseTracker = () => {
 
     const handleAdd = async (e) => {
         e.preventDefault();
-        if (!formData.amount || !formData.description) {
-            toast.error('Please fill all fields');
+        // title + amount are required (title is NOT NULL in the DB — this was
+        // the bug: expenses without a title silently failed to insert).
+        if (!formData.amount || !formData.title.trim()) {
+            toast.error('Please enter a title and amount');
             return;
         }
+
         const expense = {
+            title: formData.title.trim(),
             category: formData.category,
             amount: parseFloat(formData.amount) || 0,
-            description: formData.description,
-            added_by: user.name || 'System'
+            notes: formData.notes.trim() || null,
+            added_by: user?.name || 'System'
         };
 
+        setIsSaving(true);
         try {
-            const { error } = await supabase
+            // Return the inserted row so we get the real id + created_at, then
+            // push it into Redux immediately — the list updates without a reload.
+            const { data, error } = await supabase
                 .from('expenses')
-                .insert([expense]);
-            
+                .insert([expense])
+                .select()
+                .single();
+
             if (error) throw error;
-            toast.success('Expense recorded in Supabase');
-            setFormData({ category: 'Utilities', amount: '', description: '' });
+
+            dispatch(addExpense(data));
+            toast.success('Expense saved');
+            setFormData({ category: 'Utilities', amount: '', title: '', notes: '' });
             setIsModalOpen(false);
         } catch (err) {
-            toast.error('Failed to save expense');
             console.error(err);
+            toast.error('Failed to save expense: ' + (err.message || ''));
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -83,10 +100,12 @@ const ExpenseTracker = () => {
                 .from('expenses')
                 .delete()
                 .eq('id', id);
-            
+
             if (error) throw error;
-            toast.success('Expense Deleted from Supabase');
+            dispatch(removeExpense(id)); // update UI immediately
+            toast.success('Expense deleted');
         } catch (err) {
+            console.error(err);
             toast.error('Delete failed');
         }
     };
@@ -195,7 +214,12 @@ const ExpenseTracker = () => {
                                         </span>
                                     </td>
                                     <td style={{ padding: '15px 20px', fontSize: '0.8rem', fontWeight: 800, color: '#1e293b' }}>
-                                        {expense.description}
+                                        {expense.title}
+                                        {expense.notes && (
+                                            <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: '#94a3b8', marginTop: '2px' }}>
+                                                {expense.notes}
+                                            </span>
+                                        )}
                                     </td>
                                     <td style={{ padding: '15px 20px', fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>
                                         {expense.added_by?.toUpperCase() || 'SYSTEM'}
@@ -241,26 +265,36 @@ const ExpenseTracker = () => {
                                 </select>
                             </div>
                             <div>
-                                <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>AMOUNT (Rs)</label>
-                                <input 
+                                <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>EXPENSE TITLE *</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Electricity Bill"
+                                    style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 700 }}
+                                    value={formData.title}
+                                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>AMOUNT (Rs) *</label>
+                                <input
                                     type="number"
-                                    placeholder="0.00" 
+                                    placeholder="0.00"
                                     style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '1.2rem', fontWeight: 950, color: '#ef4444' }}
                                     value={formData.amount}
                                     onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                                 />
                             </div>
                             <div>
-                                <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>DESCRIPTION / NOTES</label>
-                                <textarea 
-                                    placeholder="e.g. Electricity bill for March" 
-                                    style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 700, minHeight: '100px' }}
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                <label style={{ fontSize: '0.7rem', fontWeight: 900, color: '#64748b', display: 'block', marginBottom: '8px' }}>NOTES (OPTIONAL)</label>
+                                <textarea
+                                    placeholder="e.g. March month, meter #1234"
+                                    style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 700, minHeight: '80px' }}
+                                    value={formData.notes}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                                 />
                             </div>
-                            <button type="submit" style={{ width: '100%', padding: '15px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '1rem', cursor: 'pointer' }}>
-                                SAVE EXPENSE ENTRY
+                            <button type="submit" disabled={isSaving} style={{ width: '100%', padding: '15px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 900, fontSize: '1rem', cursor: isSaving ? 'not-allowed' : 'pointer', opacity: isSaving ? 0.7 : 1 }}>
+                                {isSaving ? 'SAVING…' : 'SAVE EXPENSE ENTRY'}
                             </button>
                         </form>
                     </div>

@@ -20,7 +20,8 @@ import {
     Activity,
     CreditCard,
     DollarSign,
-    Box
+    Box,
+    Printer
 } from 'lucide-react';
 import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
@@ -35,20 +36,25 @@ const Reports = () => {
     const { user } = useSelector(state => state.auth);
 
     const [isSaving, setIsSaving] = useState(false);
-    const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
+    const today = new Date().toISOString().split('T')[0];
+    const [dateFilter, setDateFilter] = useState(today);   // FROM date
+    const [dateTo, setDateTo] = useState(today);           // TO date
     const [selectedSale, setSelectedSale] = useState(null);
 
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(false);
 
-    // Fetch Sales for Selected Date
+    // Fetch Sales for the selected date RANGE (from → to, inclusive).
     React.useEffect(() => {
         const fetchSales = async () => {
             setLoading(true);
             try {
-                // Get start and end of the selected day
-                const startOfDay = `${dateFilter}T00:00:00.000Z`;
-                const endOfDay = `${dateFilter}T23:59:59.999Z`;
+                // Guard: if the user sets "to" before "from", swap them.
+                const from = dateFilter <= dateTo ? dateFilter : dateTo;
+                const to = dateFilter <= dateTo ? dateTo : dateFilter;
+
+                const startOfDay = `${from}T00:00:00.000Z`;
+                const endOfDay = `${to}T23:59:59.999Z`;
 
                 const { data, error } = await supabase
                     .from('sales')
@@ -68,7 +74,7 @@ const Reports = () => {
         };
 
         fetchSales();
-    }, [dateFilter]);
+    }, [dateFilter, dateTo]);
 
     const filteredSales = sales;
 
@@ -162,21 +168,46 @@ const Reports = () => {
                     <p style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: 600 }}>Real-time business intelligence and financial reconciliation.</p>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: window.innerWidth <= 480 ? 'column' : 'row', gap: '15px', alignItems: 'center', width: window.innerWidth <= 768 ? '100%' : 'auto' }}>
-                    <div style={{ position: 'relative', width: '100%' }}>
-                        <Calendar size={18} style={{ position: 'absolute', left: '15px', top: '15px', color: '#10b981', zIndex: 1 }} />
+                <div className="no-print" style={{ display: 'flex', flexDirection: window.innerWidth <= 768 ? 'column' : 'row', gap: '12px', alignItems: window.innerWidth <= 768 ? 'stretch' : 'center', width: window.innerWidth <= 768 ? '100%' : 'auto', flexWrap: 'wrap' }}>
+                    {/* FROM date */}
+                    <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: '15px', top: '-8px', background: 'white', padding: '0 6px', fontSize: '0.6rem', fontWeight: 900, color: '#10b981' }}>FROM</span>
+                        <Calendar size={16} style={{ position: 'absolute', left: '14px', top: '16px', color: '#10b981', zIndex: 1 }} />
                         <input
                             type="date"
-                            className="erp-input"
-                            style={{ paddingLeft: '45px', fontWeight: 800, border: '2px solid #e2e8f0', borderRadius: '12px', height: '48px', width: '100%', fontSize: '1rem', background: '#f8fafc' }}
+                            max={dateTo}
+                            style={{ paddingLeft: '40px', fontWeight: 800, border: '2px solid #e2e8f0', borderRadius: '12px', height: '48px', fontSize: '0.9rem', background: '#f8fafc' }}
                             value={dateFilter}
                             onChange={(e) => setDateFilter(e.target.value)}
                         />
                     </div>
+                    {/* TO date */}
+                    <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: '15px', top: '-8px', background: 'white', padding: '0 6px', fontSize: '0.6rem', fontWeight: 900, color: '#10b981' }}>TO</span>
+                        <Calendar size={16} style={{ position: 'absolute', left: '14px', top: '16px', color: '#10b981', zIndex: 1 }} />
+                        <input
+                            type="date"
+                            min={dateFilter}
+                            style={{ paddingLeft: '40px', fontWeight: 800, border: '2px solid #e2e8f0', borderRadius: '12px', height: '48px', fontSize: '0.9rem', background: '#f8fafc' }}
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                        />
+                    </div>
+
+                    {/* PRINT */}
+                    <button
+                        onClick={() => window.print()}
+                        disabled={filteredSales.length === 0}
+                        style={{ height: '48px', padding: '0 20px', background: filteredSales.length === 0 ? '#e2e8f0' : '#2563eb', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: filteredSales.length === 0 ? 'not-allowed' : 'pointer' }}
+                    >
+                        <Printer size={18} /> PRINT
+                    </button>
+
+                    {/* ARCHIVE */}
                     <button
                         onClick={handleSaveReport}
                         disabled={isSaving || filteredSales.length === 0}
-                        style={{ height: '48px', width: window.innerWidth <= 480 ? '100%' : 'auto', padding: '0 25px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.2)' }}
+                        style={{ height: '48px', padding: '0 20px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.2)' }}
                     >
                         {isSaving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
                         ARCHIVE DSR
@@ -594,6 +625,90 @@ const Reports = () => {
                     </div>
                 </div>
             )}
+
+            {/* ============ PRINT-ONLY CLEAN REPORT ============ */}
+            {/* Hidden on screen (.print-only), rendered only when printing. */}
+            <div className="print-only">
+                <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '16px' }}>
+                    <img src={logo} alt="logo" style={{ height: '55px', marginBottom: '6px' }} />
+                    <h1 style={{ fontSize: '20px', fontWeight: 900, margin: 0 }}>Bilal Veterinary Clinic</h1>
+                    <p style={{ fontSize: '13px', margin: '2px 0', fontWeight: 700 }}>Daily Sales Report (DSR)</p>
+                    <p style={{ fontSize: '12px', margin: 0 }}>
+                        {dateFilter === dateTo
+                            ? `Date: ${new Date(dateFilter).toLocaleDateString()}`
+                            : `Period: ${new Date(dateFilter).toLocaleDateString()} — ${new Date(dateTo).toLocaleDateString()}`}
+                    </p>
+                    <p style={{ fontSize: '11px', margin: '2px 0', color: '#333' }}>
+                        Generated: {new Date().toLocaleString()} &nbsp;|&nbsp; By: {user?.name || 'System'}
+                    </p>
+                </div>
+
+                {/* Summary */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px', fontSize: '12px' }}>
+                    <tbody>
+                        <tr>
+                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 800 }}>Total Revenue</td>
+                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right', fontWeight: 900 }}>Rs {totalRevenue.toLocaleString()}</td>
+                            <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 800 }}>Total Transactions</td>
+                            <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right', fontWeight: 900 }}>{totalTransactions}</td>
+                        </tr>
+                        {isAdmin && (
+                            <tr>
+                                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 800 }}>Total Profit</td>
+                                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right', fontWeight: 900 }}>Rs {totalProfit.toLocaleString()}</td>
+                                <td style={{ border: '1px solid #000', padding: '8px', fontWeight: 800 }}>Avg / Invoice</td>
+                                <td style={{ border: '1px solid #000', padding: '8px', textAlign: 'right', fontWeight: 900 }}>Rs {totalTransactions ? Math.round(totalRevenue / totalTransactions).toLocaleString() : 0}</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+
+                {/* Payment breakdown */}
+                <h3 style={{ fontSize: '13px', fontWeight: 900, margin: '0 0 6px' }}>Payment Breakdown</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '16px', fontSize: '12px' }}>
+                    <tbody>
+                        {Object.entries(paymentStats).map(([m, v]) => (
+                            <tr key={m}>
+                                <td style={{ border: '1px solid #000', padding: '6px 8px', fontWeight: 700 }}>{m}</td>
+                                <td style={{ border: '1px solid #000', padding: '6px 8px', textAlign: 'right', fontWeight: 800 }}>Rs {v.toLocaleString()}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+
+                {/* Invoice list */}
+                <h3 style={{ fontSize: '13px', fontWeight: 900, margin: '0 0 6px' }}>Invoices ({filteredSales.length})</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                    <thead>
+                        <tr style={{ background: '#eee' }}>
+                            <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>#</th>
+                            <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>Time</th>
+                            <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>Customer</th>
+                            <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left' }}>Payment</th>
+                            <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'right' }}>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filteredSales.map((s, i) => (
+                            <tr key={s.id}>
+                                <td style={{ border: '1px solid #000', padding: '5px 6px' }}>{s.invoice_no ? (100000 + parseInt(s.invoice_no)) : (i + 1)}</td>
+                                <td style={{ border: '1px solid #000', padding: '5px 6px' }}>{new Date(s.created_at).toLocaleString()}</td>
+                                <td style={{ border: '1px solid #000', padding: '5px 6px' }}>{s.customer_name || 'Walk-in'}</td>
+                                <td style={{ border: '1px solid #000', padding: '5px 6px' }}>{s.payment_method || 'Cash'}</td>
+                                <td style={{ border: '1px solid #000', padding: '5px 6px', textAlign: 'right', fontWeight: 700 }}>Rs {(s.total || 0).toLocaleString()}</td>
+                            </tr>
+                        ))}
+                        <tr style={{ background: '#eee' }}>
+                            <td colSpan={4} style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 900 }}>TOTAL</td>
+                            <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 900 }}>Rs {totalRevenue.toLocaleString()}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style={{ textAlign: 'center', fontSize: '10px', marginTop: '20px', color: '#333' }}>
+                    — Computer generated report · Bilal Veterinary Clinic —
+                </p>
+            </div>
         </div>
     );
 };

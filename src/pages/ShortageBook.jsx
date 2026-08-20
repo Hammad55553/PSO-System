@@ -13,7 +13,7 @@ import {
     MoreVertical,
     X
 } from 'lucide-react';
-import { addToShortage, removeFromShortage, updateShortageStatus } from '../store/slices/shortageSlice';
+import { addToShortage, removeFromShortage, updateShortageStatus, setShortageItems } from '../store/slices/shortageSlice';
 import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
 
@@ -30,25 +30,41 @@ const ShortageBook = () => {
 
     const handleAddManual = async (e) => {
         e.preventDefault();
-        if (!newItemName) return;
-        const item = {
-            name: newItemName,
-            demand_count: 1,
-            status: 'pending',
-            notes: ''
-        };
+        const name = newItemName.trim();
+        if (!name) return;
+
+        // If this medicine is already in the book, bump its demand_count
+        // instead of creating a duplicate entry.
+        const existing = items.find(i => (i.name || '').toLowerCase() === name.toLowerCase());
 
         try {
-            const { error } = await supabase
-                .from('shortage')
-                .insert([item]);
-            
-            if (error) throw error;
-            toast.success('Added to Shortage Book (Supabase)');
+            if (existing) {
+                const newCount = (existing.demand_count || 1) + 1;
+                const { data, error } = await supabase
+                    .from('shortage')
+                    .update({ demand_count: newCount, status: 'pending' })
+                    .eq('id', existing.id)
+                    .select()
+                    .single();
+                if (error) throw error;
+                dispatch(updateShortageStatus({ id: existing.id, status: 'pending' }));
+                dispatch(setShortageItems(items.map(i => i.id === existing.id ? (data || { ...i, demand_count: newCount }) : i)));
+                toast.success('Demand increased');
+            } else {
+                const { data, error } = await supabase
+                    .from('shortage')
+                    .insert([{ name, demand_count: 1, status: 'pending', notes: '' }])
+                    .select()
+                    .single();
+                if (error) throw error;
+                dispatch(addToShortage(data));
+                toast.success('Added to Shortage Book');
+            }
             setNewItemName('');
             setIsModalOpen(false);
         } catch (err) {
-            toast.error('Failed to add demand');
+            console.error(err);
+            toast.error('Failed to add demand: ' + (err.message || ''));
         }
     };
 
@@ -58,10 +74,12 @@ const ShortageBook = () => {
                 .from('shortage')
                 .update({ status })
                 .eq('id', id);
-            
+
             if (error) throw error;
+            dispatch(updateShortageStatus({ id, status })); // reflect immediately
             toast.success(`Marked as ${status}`);
         } catch (err) {
+            console.error(err);
             toast.error('Status update failed');
         }
     };
@@ -73,10 +91,12 @@ const ShortageBook = () => {
                 .from('shortage')
                 .delete()
                 .eq('id', id);
-            
+
             if (error) throw error;
-            toast.success('Entry Removed from Supabase');
+            dispatch(removeFromShortage(id)); // reflect immediately
+            toast.success('Entry removed');
         } catch (err) {
+            console.error(err);
             toast.error('Delete failed');
         }
     };

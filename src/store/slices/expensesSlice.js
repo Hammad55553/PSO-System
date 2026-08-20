@@ -7,14 +7,10 @@ const expensesSlice = createSlice({
     },
     reducers: {
         addExpense: (state, action) => {
-            state.list.unshift({
-                id: Date.now(),
-                date: new Date().toISOString(),
-                category: action.payload.category,
-                amount: parseFloat(action.payload.amount) || 0,
-                description: action.payload.description,
-                addedBy: action.payload.addedBy || 'System'
-            });
+            // Payload is the real row returned by Supabase (has id, title,
+            // notes, category, amount, created_at, added_by). Just prepend it
+            // so the list matches the database exactly.
+            state.list.unshift(action.payload);
         },
         removeExpense: (state, action) => {
             state.list = state.list.filter(e => e.id !== action.payload);

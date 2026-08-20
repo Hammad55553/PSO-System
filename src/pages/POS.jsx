@@ -274,6 +274,21 @@ const POS = () => {
         if (cart.length === 0) { toast.error('Add items first!'); return; }
         if (paymentMethod === 'Credit' && !selectedCustomer) { toast.error('Select an Account!'); return; }
 
+        // STOCK GUARD: block accidental over-selling. Selling more than the
+        // available stock is only allowed when the line has an external-sourcing
+        // `reason` (item brought in from outside). Without a reason, a quantity
+        // above stock would push inventory negative — stop and warn instead.
+        const overSold = cart.find(c => {
+            const inv = inventory.find(i => i.id === c.id);
+            const available = inv ? (inv.stock || 0) : 0;
+            return !c.reason && c.quantity > available;
+        });
+        if (overSold) {
+            const inv = inventory.find(i => i.id === overSold.id);
+            toast.error(`Not enough stock for "${overSold.name}" (have ${inv?.stock || 0}, need ${overSold.quantity}). Add a sourcing reason to sell beyond stock.`);
+            return;
+        }
+
         // ONLINE & CARD VALIDATION
         if ((paymentMethod === 'Online' || paymentMethod === 'Card') && !customerPhone) {
             toast.error(`CUSTOMER PHONE IS MANDATORY FOR ${paymentMethod.toUpperCase()} PAYMENT!`);

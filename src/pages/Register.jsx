@@ -10,7 +10,10 @@ const Register = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [role, setRole] = useState('user');
+    // SECURITY: role is NEVER chosen by the user at signup. All new accounts
+    // are created as 'user' with 'pending' status and must be promoted by an
+    // admin from User Management. This prevents self-granting admin access.
+    const role = 'user';
     const [isLoading, setIsLoading] = useState(false);
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -141,16 +144,11 @@ const Register = () => {
                         </div>
                     </div>
 
-                    <div style={{ marginBottom: '25px' }}>
-                        <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 900, color: '#64748b', textTransform: 'uppercase', marginBottom: '5px' }}>Account Role</label>
-                        <select
-                            style={{ width: '100%', padding: '10px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 700, outline: 'none', background: 'white' }}
-                            value={role}
-                            onChange={e => setRole(e.target.value)}
-                        >
-                            <option value="user">Terminal Operator</option>
-                            <option value="admin">System Administrator</option>
-                        </select>
+                    <div style={{ marginBottom: '25px', padding: '12px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <ShieldCheck size={18} color="#10b981" />
+                        <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b' }}>
+                            New accounts are created as Terminal Operators and require Admin approval before access is granted.
+                        </span>
                     </div>
 
                     <button

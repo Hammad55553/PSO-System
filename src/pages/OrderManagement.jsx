@@ -32,6 +32,8 @@ import {
 } from 'lucide-react';
 import { supabase } from '../supabase';
 import toast from 'react-hot-toast';
+import { setInventory } from '../store/slices/inventorySlice';
+import { setOrders, addOrder, updateOrderStatus, deleteOrder } from '../store/slices/ordersSlice';
 
 const OrderManagement = () => {
     const dispatch = useDispatch();
@@ -101,19 +103,26 @@ const OrderManagement = () => {
 
         try {
             if (editingOrder) {
-                const { error } = await supabase
+                const { data, error } = await supabase
                     .from('orders')
                     .update(payload)
-                    .eq('id', editingOrder.id);
+                    .eq('id', editingOrder.id)
+                    .select()
+                    .single();
 
                 if (error) throw error;
+                // Reflect the edit in Redux immediately.
+                dispatch(setOrders(orders.map(o => o.id === editingOrder.id ? (data || { ...o, ...payload }) : o)));
                 toast.success('Order Booking Updated!');
             } else {
-                const { error } = await supabase
+                const { data, error } = await supabase
                     .from('orders')
-                    .insert([payload]);
+                    .insert([payload])
+                    .select()
+                    .single();
 
                 if (error) throw error;
+                dispatch(addOrder(data)); // show new order instantly
                 toast.success('Order booked successfully!');
             }
             setIsModalOpen(false);
@@ -146,8 +155,10 @@ const OrderManagement = () => {
                     .eq('id', id);
 
                 if (error) throw error;
+                dispatch(deleteOrder(id)); // remove from list immediately
                 toast.success("Order record moved to Trash");
             } catch (err) {
+                console.error(err);
                 toast.error('Action failed');
             }
         } else if (type === 'item') {
@@ -175,49 +186,83 @@ const OrderManagement = () => {
 
     const handleMarkReceived = async (order, pushToStock = true) => {
         if (processingOrderId) return;
+
+        // GUARD: never process an already-received order again. Without this a
+        // double click (or two terminals) could add the stock twice, corrupting
+        // inventory. We check the current DB status, not just the local copy.
+        if (order.status === 'Received') {
+            toast.error('This order is already received.');
+            return;
+        }
+
         if (!window.confirm(pushToStock ? 'Complete delivery and ADD items to stock?' : 'Mark as Delivered/Completed WITHOUT changing inventory?')) return;
 
         setProcessingOrderId(order.id);
 
         try {
-            const { error: orderError } = await supabase
+            // Flip status Pending -> Received atomically; if another process
+            // already flipped it, this returns 0 rows and we stop (no double add).
+            const { data: flipped, error: orderError } = await supabase
                 .from('orders')
                 .update({ status: 'Received' })
-                .eq('id', order.id);
+                .eq('id', order.id)
+                .neq('status', 'Received')
+                .select();
 
             if (orderError) throw orderError;
+            if (!flipped || flipped.length === 0) {
+                toast.error('This order was already received.');
+                return;
+            }
+
+            // Track inventory changes to also update Redux immediately.
+            const invUpdates = [];
 
             if (pushToStock && order.items) {
+                const missing = [];
                 for (const item of order.items) {
                     const existing = inventory.find(i => i.name.toLowerCase() === item.name.toLowerCase());
-                    if (existing) {
-                        const currentStock = parseFloat(existing.stock || 0);
-                        const incomingQty = parseFloat(item.qty || 0);
+                    if (!existing) { missing.push(item.name); continue; }
 
-                        let updatedInv;
-                        if (order.type === 'Outgoing') {
-                            updatedInv = { stock: currentStock - incomingQty };
-                        } else {
-                            const currentBuyPrice = parseFloat(existing.buy_price || 0);
-                            const incomingBuyPrice = parseFloat(item.price || existing.buy_price);
-                            const totalStock = currentStock + incomingQty;
-                            const averageBuyPrice = ((currentStock * currentBuyPrice) + (incomingQty * incomingBuyPrice)) / (totalStock || 1);
+                    const currentStock = parseFloat(existing.stock || 0);
+                    const incomingQty = parseFloat(item.qty || 0);
 
-                            updatedInv = {
-                                stock: totalStock,
-                                buy_price: parseFloat(averageBuyPrice.toFixed(2))
-                            };
-                        }
-
-                        const { error: invError } = await supabase
-                            .from('inventory')
-                            .update(updatedInv)
-                            .eq('id', existing.id);
-
-                        if (invError) throw invError;
+                    let updatedInv;
+                    if (order.type === 'Outgoing') {
+                        updatedInv = { stock: currentStock - incomingQty };
+                    } else {
+                        const currentBuyPrice = parseFloat(existing.buy_price || 0);
+                        const incomingBuyPrice = parseFloat(item.price || existing.buy_price);
+                        const totalStock = currentStock + incomingQty;
+                        const averageBuyPrice = ((currentStock * currentBuyPrice) + (incomingQty * incomingBuyPrice)) / (totalStock || 1);
+                        updatedInv = { stock: totalStock, buy_price: parseFloat(averageBuyPrice.toFixed(2)) };
                     }
+
+                    const { error: invError } = await supabase
+                        .from('inventory')
+                        .update(updatedInv)
+                        .eq('id', existing.id);
+                    if (invError) throw invError;
+
+                    invUpdates.push({ id: existing.id, ...updatedInv });
+                }
+
+                // Keep the local inventory (Redux) in sync so POS/Inventory show
+                // the new stock immediately without waiting for a refetch.
+                if (invUpdates.length > 0) {
+                    const newInventory = inventory.map(inv => {
+                        const u = invUpdates.find(x => x.id === inv.id);
+                        return u ? { ...inv, ...u } : inv;
+                    });
+                    dispatch(setInventory(newInventory));
+                }
+
+                if (missing.length > 0) {
+                    toast('Not in inventory (skipped): ' + missing.join(', '), { icon: '⚠️' });
                 }
             }
+
+            dispatch(updateOrderStatus({ id: order.id, status: 'Received' }));
 
             const msg = order.type === 'Outgoing' ? 'Supply Delivered & Stock Deducted!' : 'Order Received & Stock Merged!';
             toast.success(pushToStock ? msg : `Order Marked as Completed.`);

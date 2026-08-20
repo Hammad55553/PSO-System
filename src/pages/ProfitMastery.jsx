@@ -52,13 +52,24 @@ const ProfitMastery = () => {
 
     const filteredSales = React.useMemo(() => {
         if (!allSales) return [];
-        if (showAllHistory) return allSales;
-        return allSales.filter(sale => {
+        // IMPORTANT: exclude Returned sales — a returned invoice must not count
+        // toward revenue, cost or profit (that was inflating the numbers).
+        // Deleted sales are already filtered out before they reach Redux.
+        const valid = allSales.filter(s => s.status !== 'Returned');
+
+        if (showAllHistory) return valid;
+        return valid.filter(sale => {
             if (!sale.created_at) return false;
             const saleDate = new Date(sale.created_at).toISOString().split('T')[0];
             return saleDate === dateFilter;
         });
     }, [allSales, dateFilter, showAllHistory]);
+
+    // Count of valid (non-returned) sales — shown in the header.
+    const validSalesCount = React.useMemo(
+        () => (allSales || []).filter(s => s.status !== 'Returned').length,
+        [allSales]
+    );
 
     const totalRevenue = React.useMemo(() => filteredSales.reduce((acc, s) => acc + (Number(s.total) || 0), 0), [filteredSales]);
     
@@ -227,7 +238,7 @@ const ProfitMastery = () => {
                     </h2>
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '5px' }}>
                         <p style={{ color: '#94a3b8', fontWeight: 600, fontSize: window.innerWidth <= 480 ? '0.8rem' : '1rem' }}>Deep-dive into your margins.</p>
-                        <span style={{ background: '#334155', color: '#34d399', padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 900 }}>{allSales?.length || 0} TOTAL SALES</span>
+                        <span style={{ background: '#334155', color: '#34d399', padding: '4px 10px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 900 }}>{validSalesCount} TOTAL SALES</span>
                     </div>
                 </div>
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'center', width: window.innerWidth <= 768 ? '100%' : 'auto', flexDirection: window.innerWidth <= 480 ? 'column' : 'row' }}>

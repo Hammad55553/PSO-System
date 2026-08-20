@@ -35,8 +35,23 @@ const ShiftManagement = () => {
 
     const handleStart = async (e) => {
         e.preventDefault();
+
+        // Guard: never open a second active shift for the same operator.
+        // Check the DB (source of truth), not just local state.
+        const { data: existing } = await supabase
+            .from('shifts')
+            .select('id')
+            .eq('staff_id', user?.uid || user?.id)
+            .eq('status', 'active')
+            .limit(1);
+
+        if (existing && existing.length > 0) {
+            toast.error('You already have an active shift. Close it before starting a new one.');
+            return;
+        }
+
         const staffName = user?.name || 'Authorized Operator';
-        const shiftData = { 
+        const shiftData = {
             staff_name: staffName,
             staff_id: user?.uid || user?.id,
             opening_cash: parseFloat(openingCash) || 0,
