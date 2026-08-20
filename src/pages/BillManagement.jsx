@@ -402,8 +402,9 @@ const BillManagement = () => {
         return <LoadingProgress progress={loadPct} label="Loading paper bills" fullscreen={false} />;
     }
 
+    const isMobile = window.innerWidth <= 768;
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: isMobile ? '12px' : '20px', overflowY: isMobile ? 'auto' : 'hidden', overflowX: 'hidden' }}>
             <header style={{ 
                 display: 'flex', 
                 flexDirection: window.innerWidth <= 600 ? 'column' : 'row',
@@ -431,15 +432,15 @@ const BillManagement = () => {
                 </button>
             </header>
 
-            <div style={{ background: 'white', borderRadius: '15px', border: '1px solid #e2e8f0', flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ background: 'white', borderRadius: '15px', border: '1px solid #e2e8f0', flex: isMobile ? 'none' : 1, display: 'flex', flexDirection: 'column', overflow: isMobile ? 'visible' : 'hidden' }}>
                 {/* FINANCIAL SUMMARY BAR */}
-                <div style={{ 
-                    padding: '15px 25px', 
-                    background: '#f8fafc', 
-                    borderBottom: '1px solid #e2e8f0', 
-                    display: 'flex', 
+                <div style={{
+                    padding: isMobile ? '12px 15px' : '15px 25px',
+                    background: '#f8fafc',
+                    borderBottom: '1px solid #e2e8f0',
+                    display: 'flex',
                     flexDirection: window.innerWidth <= 640 ? 'column' : 'row',
-                    gap: '15px'
+                    gap: isMobile ? '10px' : '15px'
                 }}>
                     <div style={{ flex: 1, background: 'white', padding: '12px 20px', borderRadius: '12px', border: '1px solid #dcfce7', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
@@ -458,7 +459,7 @@ const BillManagement = () => {
                 </div>
 
                 <div style={{
-                    padding: '15px 25px',
+                    padding: isMobile ? '12px 15px' : '15px 25px',
                     borderBottom: '1px solid #f1f5f9',
                     display: 'flex',
                     flexDirection: 'column',
@@ -488,8 +489,8 @@ const BillManagement = () => {
 
                     {/* Row 2: status pills + type + date range + clear */}
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
-                        {/* Status pills */}
-                        <div style={{ display: 'flex', gap: '6px', background: '#f1f5f9', padding: '4px', borderRadius: '10px' }}>
+                        {/* Status pills — full width & evenly split on mobile */}
+                        <div style={{ display: 'flex', gap: '4px', background: '#f1f5f9', padding: '4px', borderRadius: '10px', width: isMobile ? '100%' : 'auto' }}>
                             {[
                                 { key: 'all', label: 'All' },
                                 { key: 'Paid', label: 'Paid' },
@@ -505,7 +506,8 @@ const BillManagement = () => {
                                         key={opt.key}
                                         onClick={() => setStatusFilter(opt.key)}
                                         style={{
-                                            padding: '7px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+                                            flex: isMobile ? 1 : 'none',
+                                            padding: isMobile ? '9px 4px' : '7px 14px', borderRadius: '8px', border: 'none', cursor: 'pointer',
                                             fontSize: '0.72rem', fontWeight: 800,
                                             background: active ? activeBg : 'transparent',
                                             color: active ? 'white' : '#64748b',
@@ -518,41 +520,41 @@ const BillManagement = () => {
                             })}
                         </div>
 
-                        {/* Type dropdown */}
+                        {/* Type dropdown — full width on mobile */}
                         <select
                             value={typeFilter}
                             onChange={e => setTypeFilter(e.target.value)}
-                            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 800, color: '#334155', background: 'white', cursor: 'pointer' }}
+                            style={{ padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 800, color: '#334155', background: 'white', cursor: 'pointer', width: isMobile ? '100%' : 'auto' }}
                         >
                             <option value="all">All Types</option>
                             <option value="Purchase">Purchase (Dena)</option>
                             <option value="Sale">Sale (Lena)</option>
                         </select>
 
-                        {/* Date range */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Clock size={14} color="#94a3b8" />
+                        {/* Date range — full width, inputs share the row on mobile */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: isMobile ? '100%' : 'auto' }}>
+                            <Clock size={14} color="#94a3b8" style={{ flexShrink: 0 }} />
                             <input
                                 type="date"
                                 value={dateFrom}
                                 onChange={e => setDateFrom(e.target.value)}
                                 title="From date"
-                                style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}
+                                style={{ flex: isMobile ? 1 : 'none', minWidth: 0, padding: '9px 8px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}
                             />
-                            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8' }}>–</span>
+                            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', flexShrink: 0 }}>–</span>
                             <input
                                 type="date"
                                 value={dateTo}
                                 onChange={e => setDateTo(e.target.value)}
                                 title="To date"
-                                style={{ padding: '7px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}
+                                style={{ flex: isMobile ? 1 : 'none', minWidth: 0, padding: '9px 8px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 700, color: '#334155' }}
                             />
                         </div>
 
                         {hasActiveFilters && (
                             <button
                                 onClick={clearFilters}
-                                style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                                style={{ width: isMobile ? '100%' : 'auto', justifyContent: 'center', padding: '9px 12px', borderRadius: '8px', border: '1px solid #fecaca', background: '#fef2f2', color: '#ef4444', fontSize: '0.72rem', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
                             >
                                 <X size={13} /> Clear
                             </button>
@@ -560,11 +562,11 @@ const BillManagement = () => {
                     </div>
                 </div>
 
-                <div style={{ flex: 1, overflowY: 'auto', padding: window.innerWidth <= 480 ? '15px' : '20px' }}>
-                    <div style={{ 
-                        display: 'grid', 
-                        gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))', 
-                        gap: '20px' 
+                <div style={{ flex: isMobile ? 'none' : 1, overflowY: isMobile ? 'visible' : 'auto', padding: window.innerWidth <= 480 ? '15px' : '20px' }}>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: window.innerWidth <= 480 ? '1fr' : 'repeat(auto-fill, minmax(280px, 1fr))',
+                        gap: isMobile ? '12px' : '20px'
                     }}>
                         {pagedBills.map(bill => (
                             <div key={bill.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', overflow: 'hidden', transition: 'all 0.2s', position: 'relative', display: 'flex', flexDirection: 'column' }}>
